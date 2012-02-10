@@ -63,7 +63,7 @@ static nagios_macros *mac;
 #define DISPLAY_SERVICEGROUPS           2
 
 int process_cgivars(void);
-void document_header();
+void my_document_header();
 json_object *service_to_json(servicestatus *s);
 json_object *host_to_json(host *h);
 json_object *build_result(int code, char *comment);
@@ -151,7 +151,7 @@ int main(void) {
 	reset_cgi_vars();
 
 	/* return headers */
-	document_header();
+	my_document_header();
 
 	/* read the CGI configuration file */
 	result = read_cgi_config_file(get_cgi_config_location());
@@ -462,7 +462,7 @@ int process_cgivars(void) {
 	return error;
 }
 
-void document_header() {
+void my_document_header() {
         char date_time[MAX_DATETIME_LENGTH];
         time_t expire_time;
 
