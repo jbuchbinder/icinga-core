@@ -2,10 +2,10 @@
 -- pgsql.sql
 -- DB definition for Postgresql
 --
--- Copyright (c) 2009-2011 Icinga Development Team (http://www.icinga.org)
+-- Copyright (c) 2009-2013 Icinga Development Team (http://www.icinga.org)
 --
 -- initial version: 2009-05-13 Markus Manzke
--- current version: 2010-07-20 Michael Friedrich <michael.friedrich@univie.ac.at>
+-- current version: 2012-04-19 Michael Friedrich <michael.friedrich@univie.ac.at>
 --
 -- --------------------------------------------------------
 
@@ -13,14 +13,13 @@
 -- Functions
 --
 
-CREATE OR REPLACE FUNCTION from_unixtime(integer) RETURNS timestamp AS '
-	 SELECT to_timestamp($1)::timestamp AS result
-' LANGUAGE 'SQL';
+CREATE OR REPLACE FUNCTION from_unixtime(integer) RETURNS timestamp with time zone AS '
+         SELECT to_timestamp($1) AS result
+' LANGUAGE sql;
 
--- timestamp without time zone (i.e. 1973-11-29 21:33:09)
-CREATE OR REPLACE FUNCTION unix_timestamp(timestamp) RETURNS bigint AS '
-	SELECT EXTRACT(EPOCH FROM $1)::bigint AS result;
-' LANGUAGE 'SQL';
+CREATE OR REPLACE FUNCTION unix_timestamp(timestamp with time zone) RETURNS bigint AS '
+        SELECT EXTRACT(EPOCH FROM $1)::bigint AS result;
+' LANGUAGE sql;
 
 
 -- -----------------------------------------
@@ -32,9 +31,10 @@ BEGIN
         IF EXISTS( SELECT * FROM icinga_dbversion WHERE name='idoutils')
         THEN
                 UPDATE icinga_dbversion
-                SET version=version_i WHERE name='idoutils';
+                SET version=version_i, modify_time=NOW()
+		WHERE name='idoutils';
         ELSE
-                INSERT INTO icinga_dbversion (dbversion_id, name, version) VALUES ('1', 'idoutils', version_i);
+                INSERT INTO icinga_dbversion (dbversion_id, name, version, create_time, modify_time) VALUES ('1', 'idoutils', version_i, NOW(), NOW());
         END IF;
 
         RETURN;
@@ -403,6 +403,8 @@ CREATE TABLE  icinga_dbversion (
   dbversion_id bigserial,
   name TEXT  default '',
   version TEXT  default '',
+  create_time timestamp with time zone default '1970-01-01 00:00:00',
+  modify_time timestamp with time zone default '1970-01-01 00:00:00',
   CONSTRAINT PK_dbversion_id PRIMARY KEY (dbversion_id) ,
   CONSTRAINT UQ_dbversion UNIQUE (name)
 ) ;
@@ -433,6 +435,8 @@ CREATE TABLE  icinga_downtimehistory (
   actual_end_time timestamp with time zone default '1970-01-01 00:00:00',
   actual_end_time_usec INTEGER  default 0,
   was_cancelled INTEGER  default 0,
+  is_in_effect INTEGER  default 0,
+  trigger_time timestamp with time zone default '1970-01-01 00:00:00',
   CONSTRAINT PK_downtimehistory_id PRIMARY KEY (downtimehistory_id) ,
   CONSTRAINT UQ_downtimehistory UNIQUE (instance_id,object_id,entry_time,internal_downtime_id)
 ) ;
@@ -926,6 +930,7 @@ CREATE TABLE  icinga_programstatus (
   last_command_check timestamp with time zone default '1970-01-01 00:00:00',
   last_log_rotation timestamp with time zone default '1970-01-01 00:00:00',
   notifications_enabled INTEGER  default 0,
+  disable_notif_expire_time timestamp with time zone default '1970-01-01 00:00:00',
   active_service_checks_enabled INTEGER  default 0,
   passive_service_checks_enabled INTEGER  default 0,
   active_host_checks_enabled INTEGER  default 0,
@@ -981,6 +986,8 @@ CREATE TABLE  icinga_scheduleddowntime (
   was_started INTEGER  default 0,
   actual_start_time timestamp with time zone default '1970-01-01 00:00:00',
   actual_start_time_usec INTEGER  default 0,
+  is_in_effect INTEGER  default 0,
+  trigger_time timestamp with time zone default '1970-01-01 00:00:00',
   CONSTRAINT PK_scheduleddowntime_id PRIMARY KEY (scheduleddowntime_id) ,
   CONSTRAINT UQ_scheduleddowntime UNIQUE (instance_id,object_id,entry_time,internal_downtime_id)
 ) ;
@@ -1602,13 +1609,31 @@ CREATE INDEX services_combined_object_idx ON icinga_services(service_object_id, 
 
 -- statehistory
 CREATE INDEX statehist_i_id_o_id_s_ty_s_ti on icinga_statehistory(instance_id, object_id, state_type, state_time);
+--#2274
+create index statehist_state_idx on icinga_statehistory(object_id,state);
 
 -- SLA statehistory
 CREATE INDEX slahist_i_id_o_id_s_ti_s_s_ti_e on icinga_slahistory(instance_id,object_id,start_time,end_time);
+
+-- #2618
+CREATE INDEX cntgrpmbrs_cgid_coid ON icinga_contactgroup_members (contactgroup_id,contact_object_id);
+CREATE INDEX hstgrpmbrs_hgid_hoid ON icinga_hostgroup_members (hostgroup_id,host_object_id);
+CREATE INDEX hstcntgrps_hid_cgoid ON icinga_host_contactgroups (host_id,contactgroup_object_id);
+CREATE INDEX hstprnthsts_hid_phoid ON icinga_host_parenthosts (host_id,parent_host_object_id);
+CREATE INDEX runtimevars_iid_varn ON icinga_runtimevariables (instance_id,varname);
+CREATE INDEX sgmbrs_sgid_soid ON icinga_servicegroup_members (servicegroup_id,service_object_id);
+CREATE INDEX scgrps_sid_cgoid ON icinga_service_contactgroups (service_id,contactgroup_object_id);
+CREATE INDEX tperiod_tid_d_ss_es ON icinga_timeperiod_timeranges (timeperiod_id,day,start_sec,end_sec);
+
+-- #3649
+CREATE INDEX sla_idx_sthist ON icinga_statehistory (object_id, state_time DESC);
+CREATE INDEX sla_idx_dohist ON icinga_downtimehistory (object_id, actual_start_time, actual_end_time);
+CREATE INDEX sla_idx_obj ON icinga_objects (objecttype_id, is_active, name1);
+
 
 -- -----------------------------------------
 -- set dbversion
 -- -----------------------------------------
 
-SELECT updatedbversion('1.6.0');
+SELECT updatedbversion('1.9.0');
 

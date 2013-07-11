@@ -3,8 +3,8 @@
  * Icinga Common Header File
  *
  * Copyright (c) 1999-2009 Ethan Galstad (egalstad@nagios.org)
- * Copyright (c) 2009-2011 Nagios Core Development Team and Community Contributors
- * Copyright (c) 2009-2011 Icinga Development Team (http://www.icinga.org)
+ * Copyright (c) 2009-2013 Nagios Core Development Team and Community Contributors
+ * Copyright (c) 2009-2013 Icinga Development Team (http://www.icinga.org)
  *
  * License:
  *
@@ -19,7 +19,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  ************************************************************************/
 
 #include "shared.h"
@@ -27,8 +27,8 @@
 #define PROGRAM_NAME "Icinga"
 #define PROGRAM_NAME_UC "ICINGA"
 #define PROGRAM_NAME_LC "icinga"
-#define PROGRAM_VERSION "1.7.0-dev"
-#define PROGRAM_MODIFICATION_DATE "03-01-2012"
+#define PROGRAM_VERSION "1.9.3"
+#define PROGRAM_MODIFICATION_DATE "07-07-2013"
 
 /*#define DEBUG_CHECK_IPC 1 */
 /*#define DEBUG_CHECK_IPC2 1*/
@@ -316,6 +316,9 @@
 #define CMD_ACKNOWLEDGE_HOST_PROBLEM_EXPIRE		174
 #define CMD_ACKNOWLEDGE_SVC_PROBLEM_EXPIRE		175
 
+/* for disabled notifications expiry */
+#define CMD_DISABLE_NOTIFICATIONS_EXPIRE_TIME		176
+
 /* custom command introduced in Nagios 3.x */
 #define CMD_CUSTOM_COMMAND                              999
 
@@ -434,6 +437,25 @@
 #define FALSE				0
 #endif
 
+/** character map initialization for .bss-allocated char maps */
+#define CHAR_MAP_INIT(k) { \
+        k, k, k, k, k, k, k, k, k, k, k, k, k, k, k, k, \
+        k, k, k, k, k, k, k, k, k, k, k, k, k, k, k, k, \
+        k, k, k, k, k, k, k, k, k, k, k, k, k, k, k, k, \
+        k, k, k, k, k, k, k, k, k, k, k, k, k, k, k, k, \
+        k, k, k, k, k, k, k, k, k, k, k, k, k, k, k, k, \
+        k, k, k, k, k, k, k, k, k, k, k, k, k, k, k, k, \
+        k, k, k, k, k, k, k, k, k, k, k, k, k, k, k, k, \
+        k, k, k, k, k, k, k, k, k, k, k, k, k, k, k, k, \
+        k, k, k, k, k, k, k, k, k, k, k, k, k, k, k, k, \
+        k, k, k, k, k, k, k, k, k, k, k, k, k, k, k, k, \
+        k, k, k, k, k, k, k, k, k, k, k, k, k, k, k, k, \
+        k, k, k, k, k, k, k, k, k, k, k, k, k, k, k, k, \
+        k, k, k, k, k, k, k, k, k, k, k, k, k, k, k, k, \
+        k, k, k, k, k, k, k, k, k, k, k, k, k, k, k, k, \
+        k, k, k, k, k, k, k, k, k, k, k, k, k, k, k, k, \
+        k, k, k, k, k, k, k, k, k, k, k, k, k, k, k, k, \
+        }
 
 /****************** HOST CONFIG FILE READING OPTIONS ********************/
 
@@ -492,7 +514,6 @@
 #define MAX_EXTERNAL_COMMAND_LENGTH             8192    /* max length of an external command */
 
 #define MAX_DATETIME_LENGTH			48
-
 
 /************************* MODIFIED ATTRIBUTES **************************/
 

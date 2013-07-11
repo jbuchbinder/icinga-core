@@ -2,7 +2,7 @@
  *
  * DBHANDLERS.H - IDO2DB DB Handler Include File
  * Copyright (c) 2005-2006 Ethan Galstad
- * Copyright (c) 2009-2011 Icinga Development Team (http://www.icinga.org)
+ * Copyright (c) 2009-2013 Icinga Development Team (http://www.icinga.org)
  *
  ************************************************************************/
 
@@ -25,7 +25,8 @@ int ido2db_object_hashfunc(const char *,const char *,int);
 int ido2db_compare_object_hashdata(const char *,const char *,const char *,const char *);
 
 int ido2db_set_all_objects_as_inactive(ido2db_idi *);
-int ido2db_set_object_as_active(ido2db_idi *,int,unsigned long);
+int ido2db_set_objects_as_active(ido2db_idi *idi, unsigned long *object_ids, int count);
+int ido2db_set_object_as_active(ido2db_idi *,unsigned long);
 
 int ido2db_handle_logentry(ido2db_idi *);
 int ido2db_handle_processdata(ido2db_idi *);
@@ -72,5 +73,6 @@ int ido2db_handle_timeperiodefinition(ido2db_idi *);
 int ido2db_handle_contactdefinition(ido2db_idi *);
 int ido2db_handle_contactgroupdefinition(ido2db_idi *);
 int ido2db_save_custom_variables(ido2db_idi *,int, unsigned long, char *, unsigned long);
+int ido2db_handle_object_enable_disable(ido2db_idi *, int);
 
 #endif

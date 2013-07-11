@@ -18,7 +18,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  *****************************************************************************/
 
@@ -89,10 +89,16 @@
 
 
 /**** Logging Functions ****/
+/* __printf__ etc. are gnu specific,not usable with cc */
+#if __GNUC__ > 2 || (__GNUC__ == 2 && __GNUC_MINOR__ > 4)
 void logit(int,int,const char *, ...)
 	__attribute__((__format__(__printf__, 3, 4)));
 int log_debug_info(int,int,const char *,...)
 	__attribute__((__format__(__printf__, 3, 4)));
+#else
+	void logit(int,int,const char *, ...);
+	int log_debug_info(int,int,const char *,...);
+#endif /* gnu */
 
 #ifndef NSCGI
 int write_to_all_logs(char *,unsigned long);            /* writes a string to main log file and syslog facility */
@@ -106,6 +112,9 @@ int rotate_log_file(time_t);			     	/* rotates the main log file */
 int write_log_file_info(time_t *); 			/* records log file/version info */
 int open_debug_log(void);
 int close_debug_log(void);
+FILE *open_log_file(void);
+int close_log_file(void);
+int fix_log_file_owner(uid_t, gid_t);
 
 #endif /* !NSCGI */
 

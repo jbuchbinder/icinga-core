@@ -2,11 +2,12 @@
  * IDO2DB.C - IDO To Database Daemon
  *
  * Copyright (c) 2005-2008 Ethan Galstad
- * Copyright (c) 2009-2011 Icinga Development Team (http://www.icinga.org)
+ * Copyright (c) 2009-2013 Icinga Development Team (http://www.icinga.org)
  *
  **************************************************************/
 
 /*#define DEBUG_MEMORY 1*/
+/*#define DEBUG_IDO2DB2 1*/
 
 #ifdef DEBUG_MEMORY
 #include <mcheck.h>
@@ -23,7 +24,6 @@
 #include "../include/dbhandlers.h"
 #include "../include/sla.h"
 #include "../include/logging.h"
-
 #ifdef HAVE_SSL
 #include "../../../include/dh.h"
 #endif
@@ -64,6 +64,7 @@ char *ido2db_group = NULL;
 int ido2db_sd = 0;
 int ido2db_socket_type = IDO_SINK_UNIXSOCKET;
 char *ido2db_socket_name = NULL;
+mode_t ido2db_socket_perm = 0755;
 
 int ido2db_tcp_port = IDO_DEFAULT_TCP_PORT;
 int ido2db_use_inetd = IDO_FALSE;
@@ -88,6 +89,10 @@ unsigned long ido2db_max_debug_file_size = 0L;
 
 int enable_sla = IDO_FALSE;
 int ido2db_debug_readable_timestamp = IDO_FALSE;
+
+static time_t ido2db_proxy_last_report = 0;
+
+char *libdbi_driver_dir = NULL;
 
 int stop_signal_detected = IDO_FALSE;
 
@@ -114,6 +119,10 @@ int main(int argc, char **argv) {
 
 	driver = NULL;
 #endif
+#ifdef USE_ORACLE
+	unsigned int v1,v2;
+#endif
+
 	result = ido2db_process_arguments(argc, argv);
 
 	if (result != IDO_OK || ido2db_show_help == IDO_TRUE || ido2db_show_license == IDO_TRUE || ido2db_show_version == IDO_TRUE) {
@@ -220,7 +229,7 @@ int main(int argc, char **argv) {
 	if (ido2db_check_dbd_driver() == IDO_FALSE) {
 		printf("Support for the specified database server is either not yet supported, or was not found on your system.\n");
 
-		numdrivers = dbi_initialize(NULL);
+		numdrivers = dbi_initialize(libdbi_driver_dir);
 		if (numdrivers == -1)
 			numdrivers = 0;
 
@@ -255,17 +264,23 @@ int main(int argc, char **argv) {
 	/******************************/
 #ifdef USE_ORACLE /* Oracle ocilib specific */
 
-	ido2db_log_debug_info(IDO2DB_DEBUGL_PROCESSINFO, 2, "ido2db with ocilib() driver check\n");
-	if (OCI_GetOCIRuntimeVersion == OCI_UNKNOWN) {
-		printf("Unknown ocilib runtime version detected. Exiting...\n");
 
-#ifdef HAVE_SSL
-		if (use_ssl == IDO_TRUE)
-			SSL_CTX_free(ctx);
-#endif
-
-		exit(1);
+	/* at this stage, is oci driver not loaded, but loading will be later in db_init.
+	 * check will try to init,read variables and cleanup afterwards
+	 */
+	if (OCI_Initialize(NULL,NULL,OCI_ENV_DEFAULT)) {
+	    v1=OCI_GetOCIRuntimeVersion();
+	    v2=OCI_GetOCICompileVersion();
+	    syslog(LOG_INFO, "OCILIB driver check OK(OCI Version:%u,CompileTime:%u)",
+	        v1,v2);
+	    /* we need to cleanup to succeed ido2db_db_init */
+	        OCI_Cleanup();
+	}else{
+	        printf("Cannot initialize OCILIB, exiting!\n");
+	        syslog(LOG_ERR,"Cannot initialize OCILIB, exiting!");
+	        exit (1);
 	}
+
 
 #endif /* Oracle ocilib specific */
 	/******************************/
@@ -284,6 +299,10 @@ int main(int argc, char **argv) {
 	/* open debug log */
 	ido2db_open_debug_log();
 
+        /* unlink leftover socket */
+        if (ido2db_socket_type == IDO_SINK_UNIXSOCKET)
+                unlink(ido2db_socket_name);
+
 	/* if we're running under inetd... */
 	if (ido2db_use_inetd == IDO_TRUE) {
 
@@ -292,7 +311,7 @@ int main(int argc, char **argv) {
 		open("/dev/null", O_WRONLY);
 
 		/* handle the connection */
-		ido2db_handle_client_connection(0);
+		ido2db_handle_client_connection(0, NULL);
 	}
 
 	/* standalone daemon... */
@@ -469,6 +488,8 @@ int ido2db_process_config_var(char *arg) {
 	} else if (!strcmp(var, "socket_name")) {
 		if ((ido2db_socket_name = strdup(val)) == NULL)
 			return IDO_ERROR;
+	} else if (!strcmp(var, "socket_perm")) {
+		ido2db_socket_perm = strtoul(val, NULL, 8);
 	} else if (!strcmp(var, "tcp_port")) {
 		ido2db_tcp_port = atoi(val);
 	} else if (!strcmp(var, "db_servertype")) {
@@ -591,9 +612,14 @@ int ido2db_process_config_var(char *arg) {
 	} else if (!strcmp(var, "oracle_trace_level")) {
 		ido2db_db_settings.oracle_trace_level = atoi(val);
 	} else if (!strcmp(var, "enable_sla")) {
+		syslog(LOG_USER | LOG_INFO, "Warning: enable_sla is deprecated!\n");
 		enable_sla = (atoi(val) > 0) ? IDO_TRUE : IDO_FALSE;
 	} else if (!strcmp(var, "debug_readable_timestamp")) {
 		ido2db_debug_readable_timestamp = (atoi(val) > 0) ? IDO_TRUE : IDO_FALSE;
+        }
+	else if (!strcmp(var, "libdbi_driver_dir")) {
+		if ((libdbi_driver_dir = strdup(val)) == NULL)
+			return IDO_ERROR;
 	}
 	//syslog(LOG_ERR,"ido2db_process_config_var(%s) end\n",var);
 
@@ -692,6 +718,10 @@ int ido2db_free_program_memory(void) {
 	if (ido2db_debug_file) {
 		free(ido2db_debug_file);
 		ido2db_debug_file = NULL;
+	}
+	if (libdbi_driver_dir) {
+		free(libdbi_driver_dir);
+		libdbi_driver_dir = NULL;
 	}
 
 	ido2db_log_debug_info(IDO2DB_DEBUGL_PROCESSINFO, 2, "ido2db_free_program_memory() end\n");
@@ -1012,10 +1042,207 @@ void ido2db_child_sighandler(int sig) {
 /* UTILITY FUNCTIONS                                                        */
 /****************************************************************************/
 
+static int ido2db_proxy_fill_buffer(void **buffer, size_t *size, size_t *iostats, int fd) {
+	size_t offset = *size;
+	char temp[4096];
+	int rc;
 
+	rc = read(fd, temp, sizeof(temp));
+
+	if (rc <= 0)
+		return -1;
+
+	*size += rc;
+	*buffer = realloc(*buffer, *size);
+	memcpy((char *)*buffer + offset, temp, rc);
+
+	if (iostats)
+		*iostats += rc;
+
+	return 0;
+}
+
+static int ido2db_proxy_flush_buffer(void **buffer, size_t *size, size_t *iostats, int fd) {
+	int rc;
+	void *new_buffer;
+
+	rc = write(fd, *buffer, *size);
+
+	if (rc <= 0)
+		return -1;
+
+	new_buffer = malloc(*size - rc);
+	memcpy(new_buffer, (char *)*buffer + rc, *size - rc);
+	free(*buffer);
+	*buffer = new_buffer;
+	*size -= rc;
+
+	if (iostats)
+		*iostats += rc;
+
+	return 0;
+}
+
+static void ido2db_proxy_free(ido2db_proxy *proxy) {
+	int refs;
+
+	pthread_mutex_lock(&(proxy->mutex));
+	proxy->refs--;
+	refs = proxy->refs;
+	pthread_mutex_unlock(&(proxy->mutex));
+
+	if (refs == 0) {
+		pthread_mutex_destroy(&(proxy->mutex));
+		free(proxy);
+	}
+}
+
+static void *ido2db_proxy_thread_proc(void *pargs) {
+	ido2db_proxy_args args = *(ido2db_proxy_args *)pargs;
+	ido2db_proxy *proxy = args.proxy;
+	fd_set readfds, writefds, exceptfds;
+	void *buffer_left = NULL, *buffer_right = NULL;
+	size_t size_left = 0, size_right = 0, iostats = 0;
+	int flags, max_fd;
+	time_t now;
+
+	free(pargs);
+
+	flags = fcntl(args.fd_left, F_GETFL, NULL);
+	fcntl(args.fd_left, F_SETFL, flags | O_NONBLOCK);
+
+	flags = fcntl(args.fd_right, F_GETFL, NULL);
+	fcntl(args.fd_right, F_SETFL, flags | O_NONBLOCK);
+
+	max_fd = args.fd_left;
+
+	if (args.fd_right > max_fd)
+		max_fd = args.fd_right;
+
+	for (;;) {
+		int rc;
+
+		FD_ZERO(&readfds);
+		FD_ZERO(&writefds);
+		FD_ZERO(&exceptfds);
+
+		if (size_left < 128 * 1024 * 1024)
+			FD_SET(args.fd_left, &readfds);
+
+		if (size_right < 128 * 1024 * 1024)
+			FD_SET(args.fd_right, &readfds);
+
+		if (size_right > 0)
+			FD_SET(args.fd_left, &writefds);
+
+		if (size_left > 0)
+			FD_SET(args.fd_right, &writefds);
+
+		FD_SET(args.fd_left, &exceptfds);
+		FD_SET(args.fd_right, &exceptfds);
+
+		rc = select(max_fd + 1, &readfds, &writefds, &exceptfds, NULL);
+
+		if (rc < 0) {
+			perror("select() failed");
+			break;
+		}
+
+		if (FD_ISSET(args.fd_left, &exceptfds) || FD_ISSET(args.fd_right, &exceptfds))
+			break;
+
+		if (FD_ISSET(args.fd_left, &writefds))
+			if (ido2db_proxy_flush_buffer(&buffer_right, &size_right, &iostats, args.fd_left) < 0)
+				break;
+
+		if (FD_ISSET(args.fd_right, &writefds))
+			if (ido2db_proxy_flush_buffer(&buffer_left, &size_left, &iostats, args.fd_right) < 0)
+				break;
+
+		time(&now);
+		if (ido2db_proxy_last_report < now && (size_left > 0 || size_right > 0)) {
+			syslog(LOG_INFO, "IDO2DB proxy stats (p=%p): left=%d, right=%d; iostats=%d\n", proxy, (int)size_left, (int)size_right, (int)(iostats + size_left + size_right) / 2);
+			ido2db_proxy_last_report = now;
+		}
+
+		if (FD_ISSET(args.fd_left, &readfds))
+			if (ido2db_proxy_fill_buffer(&buffer_left, &size_left, &iostats, args.fd_left) < 0)
+				break;
+
+		if (FD_ISSET(args.fd_right, &readfds))
+			if (ido2db_proxy_fill_buffer(&buffer_right, &size_right, &iostats, args.fd_right) < 0)
+				break;
+
+		pthread_mutex_lock(&proxy->mutex);
+		proxy->size_left = size_left;
+		proxy->size_right = size_right;
+		pthread_mutex_unlock(&proxy->mutex);
+	}
+
+	shutdown(args.fd_left, SHUT_RDWR);
+	close(args.fd_left);
+
+	shutdown(args.fd_right, SHUT_RDWR);
+	close(args.fd_right);
+
+	free(buffer_left);
+	free(buffer_right);
+
+	ido2db_proxy_free(proxy);
+
+	return NULL;
+}
+
+static ido2db_proxy *ido2db_proxy_new(int fd_left, int fd_right) {
+	pthread_t tid;
+
+	ido2db_proxy *proxy = (ido2db_proxy *)malloc(sizeof(ido2db_proxy));
+	pthread_mutex_init(&(proxy->mutex), NULL);
+	proxy->size_left = 0;
+	proxy->size_right = 0;
+	proxy->refs = 2;
+
+	ido2db_proxy_args *pa = (ido2db_proxy_args *)malloc(sizeof(ido2db_proxy_args));
+	pa->fd_left = fd_left;
+	pa->fd_right = fd_right;
+	pa->proxy = proxy;
+
+	if (pthread_create(&tid, NULL, ido2db_proxy_thread_proc, pa) < 0) {
+		proxy->refs = 1;
+		ido2db_proxy_free(proxy);
+		free(pa);
+		return NULL;
+	}
+
+	(void) pthread_detach(tid);
+
+	return proxy;
+}
+
+static size_t ido2db_proxy_get_size_left(ido2db_proxy *proxy) {
+	size_t result;
+
+	pthread_mutex_lock(&(proxy->mutex));
+	result = proxy->size_left;
+	pthread_mutex_unlock(&(proxy->mutex));
+
+	return result;
+}
+/*
+static size_t ido2db_proxy_get_size_right(ido2db_proxy *proxy) {
+	size_t result;
+
+	pthread_mutex_lock(&(proxy->mutex));
+	result = proxy->size_right;
+	pthread_mutex_unlock(&(proxy->mutex));
+
+	return result;
+}
+*/
 int ido2db_wait_for_connections(void) {
 	int sd_flag = 1;
 	int new_sd = 0;
+	ido2db_proxy *proxy;
 	pid_t new_pid = -1;
 	struct sockaddr_un server_address_u;
 	struct sockaddr_in server_address_i;
@@ -1077,6 +1304,12 @@ int ido2db_wait_for_connections(void) {
 			return IDO_ERROR;
 		}
 
+		if (chmod(ido2db_socket_name, ido2db_socket_perm) < 0) {
+			close(ido2db_sd);
+			perror("Could not chmod socket");
+			return IDO_ERROR;
+		}
+
 		client_address_length = (socklen_t)sizeof(client_address_u);
 	}
 
@@ -1099,9 +1332,21 @@ int ido2db_wait_for_connections(void) {
 	while (1) {
 
 		while (1) {
+			int fds[2];
 
 			new_sd = accept(ido2db_sd, (ido2db_socket_type == IDO_SINK_TCPSOCKET) ? (struct sockaddr *)&client_address_i : (struct sockaddr *)&client_address_u, (socklen_t *)&client_address_length);
+			proxy = NULL;
 
+			if (socketpair(AF_UNIX, SOCK_STREAM, PF_UNIX, fds) == 0) {
+				proxy = ido2db_proxy_new(new_sd, fds[0]);
+
+				if (proxy) {
+					new_sd = fds[1];
+				} else {
+					close(fds[0]);
+					close(fds[1]);
+				}
+			}
 
 			/* ToDo:  Hendrik 08/12/2009
 			 * If both ends think differently about SSL encryption, data from a idomod will
@@ -1138,10 +1383,13 @@ int ido2db_wait_for_connections(void) {
 
 			case 0:
 				/* child processes data... */
-				ido2db_handle_client_connection(new_sd);
+				ido2db_handle_client_connection(new_sd, proxy);
 
 				/* close socket when we're done */
 				close(new_sd);
+
+				ido2db_proxy_free(proxy);
+
 				return IDO_OK;
 				break;
 
@@ -1152,10 +1400,12 @@ int ido2db_wait_for_connections(void) {
 			}
 		} else {
 			/* child processes data... */
-			ido2db_handle_client_connection(new_sd);
+			ido2db_handle_client_connection(new_sd, proxy);
 
 			/* close socket when we're done */
 			close(new_sd);
+
+			ido2db_proxy_free(proxy);
 		}
 
 #ifdef DEBUG_IDO2DB_EXIT_AFTER_CONNECTION
@@ -1172,12 +1422,13 @@ int ido2db_wait_for_connections(void) {
 }
 
 
-int ido2db_handle_client_connection(int sd) {
+int ido2db_handle_client_connection(int sd, ido2db_proxy *proxy) {
 	int dbuf_chunk = 2048;
 	ido2db_idi idi;
-	char buf[512];
+	char buf[16 * 1024];
 	int result = 0;
 	int error = IDO_FALSE;
+	int in_transaction = 0, io_since_last_commit = 0;
 
 	int pthread_ret = 0;
 	//sigset_t newmask;
@@ -1328,6 +1579,13 @@ int ido2db_handle_client_connection(int sd) {
 			}
 #endif
 
+
+			//cpu hogger for debugging only
+			//ido2db_log_debug_info(IDO2DB_DEBUGL_PROCESSINFO, 2, "received 0 bytes from socket. ido2db will try again.\n");
+			//continue;
+
+			ido2db_log_debug_info(IDO2DB_DEBUGL_PROCESSINFO, 2, "received 0 bytes from socket. ido2db will disconnect.\n");
+
 			/* gracefully back out of current operation... */
 			ido2db_db_goodbye(&idi);
 
@@ -1337,6 +1595,7 @@ int ido2db_handle_client_connection(int sd) {
 #ifdef DEBUG_IDO2DB2
 		printf("BYTESREAD: %d\n", result);
 #endif
+		ido2db_log_debug_info(IDO2DB_DEBUGL_PROCESSINFO, 2, "BYTESREAD: %d\n", result);
 
 		/* append data we just read to dynamic buffer */
 		buf[result] = '\x0';
@@ -1350,11 +1609,36 @@ int ido2db_handle_client_connection(int sd) {
 		/* 2011-02-23 MF: only do that in a worker thread */
 		/* 2011-05-02 MF: redo it the old way */
 
+		io_since_last_commit += result;
+
+		ido2db_db_reconnect(&idi, IDO_TRUE);
+
+		result = IDO_OK;
+
+		if (!in_transaction)
+			result = ido2db_db_tx_begin(&idi);
+
 		ido2db_check_for_client_input(&idi);
 
+		if (result == IDO_OK) {
+			in_transaction = (proxy && ido2db_proxy_get_size_left(proxy) > 16 * 1024);
+
+			if (io_since_last_commit > 1024 * 1024)
+				in_transaction = 0;
+
+			if (!in_transaction) {
+				io_since_last_commit = 0;
+				printf("Committing...\n");
+			}
+
+			if (!in_transaction && ido2db_db_tx_commit(&idi) != IDO_OK)
+				syslog(LOG_ERR, "IDO2DB commit failed. Some data may have been lost.\n");
+		}
 
 		/* should we disconnect the client? */
 		if (idi.disconnect_client == IDO_TRUE) {
+
+			ido2db_log_debug_info(IDO2DB_DEBUGL_PROCESSINFO, 2, "client input data ended, told to disconnect.\n");
 
 			/* gracefully back out of current operation... */
 			ido2db_db_goodbye(&idi);
@@ -1366,6 +1650,7 @@ int ido2db_handle_client_connection(int sd) {
 #ifdef DEBUG_IDO2DB2
 	printf("BYTES: %lu, LINES: %lu\n", idi.bytes_processed, idi.lines_processed);
 #endif
+	ido2db_log_debug_info(IDO2DB_DEBUGL_PROCESSINFO, 2, "BYTES: %lu, LINES: %lu\n", idi.bytes_processed, idi.lines_processed);
 
 	/* terminate threads */
 	ido2db_terminate_threads();
@@ -1420,6 +1705,9 @@ int ido2db_idi_init(ido2db_idi *idi) {
 	idi->current_object_config_type = IDO2DB_CONFIGTYPE_ORIGINAL;
 	idi->data_start_time = 0L;
 	idi->data_end_time = 0L;
+	idi->tables_cleared = IDO_FALSE;
+
+	ido2db_db_txbuf_init(&(idi->txbuf));
 
 	/* initialize mbuf */
 	for (x = 0; x < IDO2DB_MAX_MBUF_ITEMS; x++) {
@@ -1454,7 +1742,7 @@ int ido2db_check_for_client_input(ido2db_idi *idi) {
 
 #ifdef DEBUG_IDO2DB2
 	printf("RAWBUF: %s\n", dbuf.buf);
-	printf("  USED1: %lu, BYTES: %lu, LINES: %lu\n", dbuf->used_size, idi->bytes_processed, idi->lines_processed);
+	printf("  USED1: %lu, BYTES: %lu, LINES: %lu\n", dbuf.used_size, idi->bytes_processed, idi->lines_processed);
 #endif
 
 	/* search for complete lines of input */
@@ -1471,7 +1759,6 @@ int ido2db_check_for_client_input(ido2db_idi *idi) {
 			dbuf.buf[x] = '\x0';
 
 			if ((buf = strdup(dbuf.buf))) {
-
 				ido2db_handle_client_input(idi, buf);
 
 				free(buf);
@@ -1507,7 +1794,7 @@ int ido2db_handle_client_input(ido2db_idi *idi, char *buf) {
 	int data_type = IDO_DATA_NONE;
 	int input_type = IDO2DB_INPUT_DATA_NONE;
 
-	ido2db_log_debug_info(IDO2DB_DEBUGL_PROCESSINFO, 2, "ido2db_handle_client_input(instance_name=%s) start\n", idi->instance_name);
+	ido2db_log_debug_info(IDO2DB_DEBUGL_PROCESSINFO, 2, "ido2db_handle_client_input start\n");
 
 #ifdef DEBUG_IDO2DB2
 	printf("HANDLING: '%s'\n", buf);
@@ -1515,6 +1802,8 @@ int ido2db_handle_client_input(ido2db_idi *idi, char *buf) {
 
 	if (buf == NULL || idi == NULL)
 		return IDO_ERROR;
+
+	ido2db_log_debug_info(IDO2DB_DEBUGL_PROCESSINFO, 2, "ido2db_handle_client_input instance_name=%s\n", (idi->instance_name == NULL) ? "(null)" : idi->instance_name);
 
 	/* we're ignoring client data because of wrong protocol version, etc...  */
 	if (idi->ignore_client_data == IDO_TRUE)
@@ -1561,8 +1850,13 @@ int ido2db_handle_client_input(ido2db_idi *idi, char *buf) {
 
 			idi->current_input_section = IDO2DB_INPUT_SECTION_DATA;
 
-			/* save connection info to DB */
-			ido2db_db_hello(idi);
+			/* save connection info to DB , bail out if dbversion check was not ok*/
+			if(ido2db_db_hello(idi) == IDO_ERROR) {
+				syslog(LOG_USER | LOG_INFO, "Error: Initial DB Handshake failed.  Disconnecting client...");
+				idi->disconnect_client = IDO_TRUE;
+				idi->ignore_client_data = IDO_TRUE;
+				return IDO_ERROR;
+			}
 
 		}
 
@@ -1629,6 +1923,8 @@ int ido2db_handle_client_input(ido2db_idi *idi, char *buf) {
 				break;
 			case IDO_API_ENDCONFIGDUMP:
 				idi->current_input_data = IDO2DB_INPUT_DATA_CONFIGDUMPEND;
+				idi->tables_cleared = IDO_FALSE;
+				syslog(LOG_USER | LOG_INFO, "Config dump completed");
 				break;
 
 				/* archived data */
@@ -1771,6 +2067,13 @@ int ido2db_handle_client_input(ido2db_idi *idi, char *buf) {
 				/* deprecated - merged with host definitions */
 			case IDO_API_SERVICEEXTINFODEFINITION:
 				/* deprecated - merged with service definitions */
+			case IDO_API_ENABLEOBJECT:
+				idi->current_input_data = IDO2DB_INPUT_DATA_ENABLEOBJECT;
+				break;
+			case IDO_API_DISABLEOBJECT:
+				idi->current_input_data = IDO2DB_INPUT_DATA_DISABLEOBJECT;
+				break;
+
 			default:
 				break;
 			}
@@ -2252,6 +2555,12 @@ int ido2db_end_input_data(ido2db_idi *idi) {
 		break;
 	case IDO2DB_INPUT_DATA_SERVICEEXTINFODEFINITION:
 		/* deprecated - merged with service definitions */
+		break;
+	case IDO2DB_INPUT_DATA_ENABLEOBJECT:
+		result = ido2db_handle_object_enable_disable(idi, 1);
+		break;
+	case IDO2DB_INPUT_DATA_DISABLEOBJECT:
+		result = ido2db_handle_object_enable_disable(idi, 0);
 		break;
 
 	default:
@@ -2757,6 +3066,3 @@ int terminate_cleanup_thread(void) {
 	return IDO_OK;
 
 }
-
-
-

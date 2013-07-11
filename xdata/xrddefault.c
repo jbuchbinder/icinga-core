@@ -3,8 +3,8 @@
  * XRDDEFAULT.C - Default external state retention routines for Icinga
  *
  * Copyright (c) 1999-2009 Ethan Galstad (egalstad@nagios.org)
- * Copyright (c) 2009-2011 Nagios Core Development Team and Community Contributors
- * Copyright (c) 2009-2011 Icinga Development Team (http://www.icinga.org)
+ * Copyright (c) 2009-2013 Nagios Core Development Team and Community Contributors
+ * Copyright (c) 2009-2013 Icinga Development Team (http://www.icinga.org)
  *
  * License:
  *
@@ -19,7 +19,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  *****************************************************************************/
 
@@ -51,6 +51,7 @@ extern char           *global_host_event_handler;
 extern char           *global_service_event_handler;
 
 extern int            enable_notifications;
+extern time_t	      disable_notifications_expire_time;
 extern int            execute_service_checks;
 extern int            accept_passive_service_checks;
 extern int            execute_host_checks;
@@ -329,6 +330,7 @@ int xrddefault_save_state_information(void) {
 	fprintf(fp, "modified_host_attributes=%lu\n", (modified_host_process_attributes & ~process_host_attribute_mask));
 	fprintf(fp, "modified_service_attributes=%lu\n", (modified_service_process_attributes & ~process_service_attribute_mask));
 	fprintf(fp, "enable_notifications=%d\n", enable_notifications);
+	fprintf(fp, "disable_notifications_expire_time=%lu\n", disable_notifications_expire_time);
 	fprintf(fp, "active_service_checks_enabled=%d\n", execute_service_checks);
 	fprintf(fp, "passive_service_checks_enabled=%d\n", accept_passive_service_checks);
 	fprintf(fp, "active_host_checks_enabled=%d\n", execute_host_checks);
@@ -391,10 +393,10 @@ int xrddefault_save_state_information(void) {
 		fprintf(fp, "notified_on_unreachable=%d\n", temp_host->notified_on_unreachable);
 		fprintf(fp, "last_notification=%lu\n", temp_host->last_host_notification);
 		fprintf(fp, "current_notification_number=%d\n", temp_host->current_notification_number);
-#ifdef USE_ST_BASED_ESCAL_RANGES
+		/* state based escalation ranges */
 		fprintf(fp, "current_down_notification_number=%d\n", temp_host->current_down_notification_number);
 		fprintf(fp, "current_unreachable_notification_number=%d\n", temp_host->current_unreachable_notification_number);
-#endif
+
 		fprintf(fp, "current_notification_id=%lu\n", temp_host->current_notification_id);
 		fprintf(fp, "notifications_enabled=%d\n", temp_host->notifications_enabled);
 		fprintf(fp, "problem_has_been_acknowledged=%d\n", temp_host->problem_has_been_acknowledged);
@@ -468,11 +470,11 @@ int xrddefault_save_state_information(void) {
 		fprintf(fp, "notified_on_warning=%d\n", temp_service->notified_on_warning);
 		fprintf(fp, "notified_on_critical=%d\n", temp_service->notified_on_critical);
 		fprintf(fp, "current_notification_number=%d\n", temp_service->current_notification_number);
-#ifdef USE_ST_BASED_ESCAL_RANGES
+		/* state based escalation ranges */
 		fprintf(fp, "current_warning_notification_number=%d\n", temp_service->current_warning_notification_number);
 		fprintf(fp, "current_critical_notification_number=%d\n", temp_service->current_critical_notification_number);
 		fprintf(fp, "current_unknown_notification_number=%d\n", temp_service->current_unknown_notification_number);
-#endif
+
 		fprintf(fp, "current_notification_id=%lu\n", temp_service->current_notification_id);
 		fprintf(fp, "last_notification=%lu\n", temp_service->last_notification);
 		fprintf(fp, "notifications_enabled=%d\n", temp_service->notifications_enabled);
@@ -570,12 +572,13 @@ int xrddefault_save_state_information(void) {
 		fprintf(fp, "is_in_effect=%d\n", temp_downtime->is_in_effect);
 		fprintf(fp, "author=%s\n", temp_downtime->author);
 		fprintf(fp, "comment=%s\n", temp_downtime->comment);
+		fprintf(fp, "trigger_time=%lu\n", temp_downtime->trigger_time);
 		fprintf(fp, "}\n");
 	}
 
 	fflush(fp);
-	result = fclose(fp);
 	fsync(fd);
+	result = fclose(fp);
 
 	/* save/close was successful */
 	if (result == 0) {
@@ -681,6 +684,7 @@ int xrddefault_read_retention_file_information(char *retention_file, int overwri
 	time_t last_check = 0L;
 	int add_object;
 	int is_in_effect = FALSE;
+	time_t trigger_time = 0L;
 
 	log_debug_info(DEBUGL_FUNCTIONS, 0, "xrddefault_read_state_information() start\n");
 
@@ -763,6 +767,21 @@ int xrddefault_read_retention_file_information(char *retention_file, int overwri
 					modified_host_process_attributes = MODATTR_NONE;
 					modified_service_process_attributes = MODATTR_NONE;
 				}
+
+				/* handle expiring disabled notifications */
+				if (enable_notifications == FALSE && disable_notifications_expire_time != (time_t)0) {
+					time(&current_time);
+
+					if (disable_notifications_expire_time > current_time) {
+						schedule_new_event(EVENT_EXPIRE_DISABLED_NOTIFICATIONS, TRUE, (disable_notifications_expire_time + 1), FALSE, 0, NULL, FALSE, NULL, NULL, 0);
+					} else {
+						/* re-enable everything */
+						enable_all_notifications();
+						disable_notifications_expire_time = (time_t)0;
+					}
+
+				}
+
 				break;
 
 			case XRDDEFAULT_HOSTSTATUS_DATA:
@@ -1066,9 +1085,9 @@ int xrddefault_read_retention_file_information(char *retention_file, int overwri
 
 					/* add the downtime */
 					if (data_type == XRDDEFAULT_HOSTDOWNTIME_DATA) {
-						add_host_downtime(host_name, entry_time, author, comment_data, start_time, end_time, fixed, triggered_by, duration, downtime_id, is_in_effect);
+						add_host_downtime(host_name, entry_time, author, comment_data, start_time, end_time, fixed, triggered_by, duration, downtime_id, is_in_effect, trigger_time);
 					} else {
-						add_service_downtime(host_name, service_description, entry_time, author, comment_data, start_time, end_time, fixed, triggered_by, duration, downtime_id, is_in_effect);
+						add_service_downtime(host_name, service_description, entry_time, author, comment_data, start_time, end_time, fixed, triggered_by, duration, downtime_id, is_in_effect, trigger_time);
 					}
 
 					/* must register the downtime with Icinga so it can schedule it, add comments, etc. */
@@ -1145,6 +1164,8 @@ int xrddefault_read_retention_file_information(char *retention_file, int overwri
 					if (!strcmp(var, "enable_notifications")) {
 						if (modified_host_process_attributes & MODATTR_NOTIFICATIONS_ENABLED)
 							enable_notifications = (atoi(val) > 0) ? TRUE : FALSE;
+					} else if (!strcmp(var, "disable_notifications_expire_time")) {
+						disable_notifications_expire_time = strtoul(val, NULL, 10);
 					} else if (!strcmp(var, "active_service_checks_enabled")) {
 						if (modified_service_process_attributes & MODATTR_ACTIVE_CHECKS_ENABLED)
 							execute_service_checks = (atoi(val) > 0) ? TRUE : FALSE;
@@ -1308,12 +1329,12 @@ int xrddefault_read_retention_file_information(char *retention_file, int overwri
 							temp_host->last_host_notification = strtoul(val, NULL, 10);
 						else if (!strcmp(var, "current_notification_number"))
 							temp_host->current_notification_number = atoi(val);
-#ifdef USE_ST_BASED_ESCAL_RANGES
+						/* state based escalation ranges */
 						else if (!strcmp(var, "current_down_notification_number"))
 							temp_host->current_down_notification_number = atoi(val);
 						else if (!strcmp(var, "current_unreachable_notification_number"))
 							temp_host->current_unreachable_notification_number = atoi(val);
-#endif
+
 						else if (!strcmp(var, "current_notification_id"))
 							temp_host->current_notification_id = strtoul(val, NULL, 10);
 						else if (!strcmp(var, "is_flapping"))
@@ -1569,14 +1590,14 @@ int xrddefault_read_retention_file_information(char *retention_file, int overwri
 							temp_service->notified_on_critical = (atoi(val) > 0) ? TRUE : FALSE;
 						else if (!strcmp(var, "current_notification_number"))
 							temp_service->current_notification_number = atoi(val);
-#ifdef USE_ST_BASED_ESCAL_RANGES
+						/* state based escalation ranges */
 						else if (!strcmp(var, "current_warning_notification_number"))
 							temp_service->current_warning_notification_number = atoi(val);
 						else if (!strcmp(var, "current_critical_notification_number"))
 							temp_service->current_critical_notification_number = atoi(val);
 						else if (!strcmp(var, "current_unknown_notification_number"))
 							temp_service->current_unknown_notification_number = atoi(val);
-#endif
+
 						else if (!strcmp(var, "current_notification_id"))
 							temp_service->current_notification_id = strtoul(val, NULL, 10);
 						else if (!strcmp(var, "last_notification"))
@@ -1887,6 +1908,8 @@ int xrddefault_read_retention_file_information(char *retention_file, int overwri
 					author = (char *)strdup(val);
 				else if (!strcmp(var, "comment"))
 					comment_data = (char *)strdup(val);
+				else if (!strcmp(var, "trigger_time"))
+					trigger_time = strtoul(val, NULL, 10);
 				break;
 
 			default:

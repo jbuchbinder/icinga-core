@@ -3,7 +3,7 @@
  * XDDDEFAULT.H - Header file for default scheduled downtime data routines
  *
  * Copyright (c) 1999-2009 Ethan Galstad (egalstad@nagios.org)
- * Copyright (c) 2009-2011 Icinga Development Team (http://www.icinga.org)
+ * Copyright (c) 2009-2013 Icinga Development Team (http://www.icinga.org)
  *
  * License:
  *
@@ -18,7 +18,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  *****************************************************************************/
 
@@ -36,8 +36,8 @@ int xdddefault_validate_downtime_data(void);
 int xdddefault_cleanup_downtime_data(char *);
 
 int xdddefault_save_downtime_data(void);
-int xdddefault_add_new_host_downtime(char *,time_t,char *,char *,time_t,time_t,int,unsigned long,unsigned long,unsigned long *,int);
-int xdddefault_add_new_service_downtime(char *,char *,time_t,char *,char *,time_t,time_t,int,unsigned long,unsigned long,unsigned long *,int);
+int xdddefault_add_new_host_downtime(char *,time_t,char *,char *,time_t,time_t,int,unsigned long,unsigned long,unsigned long *,int,time_t);
+int xdddefault_add_new_service_downtime(char *,char *,time_t,char *,char *,time_t,time_t,int,unsigned long,unsigned long,unsigned long *,int,time_t);
 
 int xdddefault_delete_host_downtime(unsigned long);
 int xdddefault_delete_service_downtime(unsigned long);

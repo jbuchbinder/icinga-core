@@ -3,8 +3,8 @@
  * ICINGA.C - Core Program Code For Icinga
  *
  * Copyright (c) 1999-2009 Ethan Galstad (http://www.nagios.org)
- * Copyright (c) 2009-2011 Nagios Core Development Team and Community Contributors
- * Copyright (c) 2009-2011 Icinga Development Team (http://www.icinga.org)
+ * Copyright (c) 2009-2013 Nagios Core Development Team and Community Contributors
+ * Copyright (c) 2009-2013 Icinga Development Team (http://www.icinga.org)
  *
  * Description:
  *
@@ -27,7 +27,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  *****************************************************************************/
 
@@ -81,6 +81,7 @@ command         *ochp_command_ptr = NULL;
 
 char            *illegal_object_chars = NULL;
 char            *illegal_output_chars = NULL;
+char		illegal_output_char_map[] = CHAR_MAP_INIT(0);
 
 int             use_regexp_matches = FALSE;
 int             use_true_regexp_matching = FALSE;
@@ -96,7 +97,6 @@ int             log_event_handlers = DEFAULT_LOG_EVENT_HANDLERS;
 int             log_initial_states = DEFAULT_LOG_INITIAL_STATES;
 int             log_current_states = DEFAULT_LOG_CURRENT_STATES;
 int             log_external_commands = DEFAULT_LOG_EXTERNAL_COMMANDS;
-int             log_external_commands_user = DEFAULT_LOG_EXTERNAL_COMMANDS_USER;
 int             log_passive_checks = DEFAULT_LOG_PASSIVE_CHECKS;
 int             log_long_plugin_output = DEFAULT_LOG_LONG_PLUGIN_OUTPUT;
 
@@ -180,7 +180,7 @@ int             sig_id = 0;
 
 int             restarting = FALSE;
 
-int             verify_config = FALSE;
+int             verify_config = 0;
 int             verify_object_relationships = TRUE;
 int             verify_circular_paths = TRUE;
 int             test_scheduling = FALSE;
@@ -199,6 +199,7 @@ time_t          program_start = 0L;
 time_t          event_start = 0L;
 int             nagios_pid = 0;
 int             enable_notifications = TRUE;
+time_t		disable_notifications_expire_time = 0L;
 int             execute_service_checks = TRUE;
 int             accept_passive_service_checks = TRUE;
 int             execute_host_checks = TRUE;
@@ -255,6 +256,8 @@ int             command_file_created = FALSE;
 int             event_profiling_enabled = FALSE;
 #endif
 
+int		keep_unknown_macros = FALSE;
+
 extern contact	       *contact_list;
 extern contactgroup    *contactgroup_list;
 extern hostgroup       *hostgroup_list;
@@ -282,6 +285,10 @@ char            *debug_file;
 int             debug_level = DEFAULT_DEBUG_LEVEL;
 int             debug_verbosity = DEFAULT_DEBUG_VERBOSITY;
 unsigned long   max_debug_file_size = DEFAULT_MAX_DEBUG_FILE_SIZE;
+
+unsigned long   max_check_result_list_items = DEFAULT_MAX_CHECK_RESULT_LIST_ITEMS;
+
+int		enable_state_based_escalation_ranges = FALSE;
 
 int dummy;	/* reduce compiler warnings */
 
@@ -349,7 +356,7 @@ int main(int argc, char **argv, char **env) {
 			break;
 
 		case 'v': /* verify */
-			verify_config = TRUE;
+			verify_config++;
 			break;
 
 		case 's': /* scheduling check */
@@ -390,7 +397,7 @@ int main(int argc, char **argv, char **env) {
 	}
 
 	/* make sure we have the right combination of arguments */
-	if (precache_objects == TRUE && (test_scheduling == FALSE && verify_config == FALSE)) {
+	if (precache_objects == TRUE && (test_scheduling == FALSE && verify_config == 0)) {
 		error = TRUE;
 		display_help = TRUE;
 	}
@@ -401,8 +408,8 @@ int main(int argc, char **argv, char **env) {
 
 	if (daemon_mode == FALSE) {
 		printf("\n%s %s\n", PROGRAM_NAME , PROGRAM_VERSION);
-		printf("Copyright (c) 2009-2011 Icinga Development Team (http://www.icinga.org)\n");
-		printf("Copyright (c) 2009-2011 Nagios Core Development Team and Community Contributors\n");
+		printf("Copyright (c) 2009-2013 Icinga Development Team (http://www.icinga.org)\n");
+		printf("Copyright (c) 2009-2013 Nagios Core Development Team and Community Contributors\n");
 		printf("Copyright (c) 1999-2009 Ethan Galstad\n");
 		printf("Last Modified: %s\n", PROGRAM_MODIFICATION_DATE);
 		printf("License: GPL\n\n");
@@ -420,7 +427,7 @@ int main(int argc, char **argv, char **env) {
 		printf("GNU General Public License for more details.\n\n");
 		printf("You should have received a copy of the GNU General Public License\n");
 		printf("along with this program; if not, write to the Free Software\n");
-		printf("Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.\n\n");
+		printf("Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.\n\n");
 
 		exit(OK);
 	}
@@ -491,7 +498,7 @@ int main(int argc, char **argv, char **env) {
 
 
 	/* we're just verifying the configuration... */
-	if (verify_config == TRUE) {
+	if (verify_config) {
 
 		/* reset program variables */
 		reset_variables();
@@ -522,12 +529,13 @@ int main(int argc, char **argv, char **env) {
 		if (result != OK) {
 
 			/* if the config filename looks fishy, warn the user */
-			if (!strstr(config_file, "nagios.cfg") || !strstr(config_file, "icinga.cfg")) {
+			if (!strstr(config_file, "nagios.cfg") && !strstr(config_file, "icinga.cfg")) {
 				printf("\n***> The name of the main configuration file looks suspicious...\n");
 				printf("\n");
 				printf("     Make sure you are specifying the name of the MAIN configuration file on\n");
 				printf("     the command line and not the name of another configuration file.  The\n");
 				printf("     main configuration file is typically '/usr/local/icinga/etc/icinga.cfg'\n");
+				printf("     or if using packages, most likely '/etc/icinga/icinga.cfg'\n");
 			}
 
 			printf("\n***> One or more problems was encountered while processing the config files...\n");
@@ -537,7 +545,8 @@ int main(int argc, char **argv, char **env) {
 			printf("     version of %s, you should be aware that some variables/definitions\n", PROGRAM_NAME);
 			printf("     may have been removed or modified in this version.  Make sure to read\n");
 			printf("     the HTML documentation regarding the config files, as well as the\n");
-			printf("     'Whats New' section to find out what has changed.\n\n");
+			printf("     'Whats New' section and the Changelog CHANGES section as well to find\n");
+			printf("     out what has changed.\n\n");
 		}
 
 		/* the config files were okay, so run the pre-flight check */
@@ -670,7 +679,11 @@ int main(int argc, char **argv, char **env) {
 			nagios_pid = (int)getpid();
 
 			/* read in the configuration files (main and resource config files) */
-			result = read_main_config_file(config_file);
+			if (read_main_config_file(config_file) == ERROR) {
+				logit(NSLOG_PROCESS_INFO | NSLOG_RUNTIME_ERROR | NSLOG_CONFIG_ERROR, TRUE, "Failed to read main config file.  Aborting.");
+				cleanup();
+				exit(EXIT_FAILURE);
+			}
 
 			/* we need to read the modules in the first place as object configuration before neb modules are initialized/loaded */
 			result = read_object_config_data(config_file, READ_MODULES, FALSE, FALSE);
@@ -716,7 +729,14 @@ int main(int argc, char **argv, char **env) {
 
 #ifdef USE_EVENT_BROKER
 			/* load modules */
-			neb_load_all_modules();
+			if (neb_load_all_modules() != OK) {
+                logit(NSLOG_CONFIG_ERROR, ERROR, "Error: NEB module loading failed. Aborting.\n");
+
+                if (daemon_dumps_core)
+                    neb_unload_all_modules(NEBMODULE_FORCE_UNLOAD, NEBMODULE_NEB_SHUTDOWN);
+
+                exit(EXIT_FAILURE);
+            }
 
 			/* send program data to broker */
 			broker_program_state(NEBTYPE_PROCESS_PRELAUNCH, NEBFLAG_NONE, NEBATTR_NONE, NULL);

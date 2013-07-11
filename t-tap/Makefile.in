@@ -9,20 +9,17 @@ SRC_BASE=../base
 SRC_CGI=../cgi
 
 CC=@CC@
-CFLAGS=@TESTS_CFLAGS@ @DEFS@ -DNSCORE -I../include -I../tap/src
-TAPOBJ=../tap/src/tap.o
+CFLAGS=@TESTS_CFLAGS@ @DEFS@ -DNSCORE -I../include -I../tools/libtap
+TAPOBJ=../tools/libtap/tap.o
 
-TESTS = test_logging test_events test_timeperiods test_icinga_config
-TESTS += test_xsddefault
-TESTS += test_checks
-TESTS += test_strtoul
-TESTS += test_commands
-TESTS += test_downtime
+#TESTS = test_logging test_events test_timeperiods test_icinga_config test_xsddefault test_checks test_strtoul test_commands test_downtime
+TESTS = test_logging test_events test_timeperiods test_icinga_config test_xsddefault test_strtoul test_commands test_downtime
 
+# these objects must be the same as defined in cgi/Makefile.in as CGILIBS!
 XSD_OBJS = $(SRC_CGI)/statusdata-cgi.o $(SRC_CGI)/xstatusdata-cgi.o
 XSD_OBJS += $(SRC_CGI)/objects-cgi.o $(SRC_CGI)/xobjects-cgi.o
 XSD_OBJS += $(SRC_CGI)/comments-cgi.o $(SRC_CGI)/downtime-cgi.o
-XSD_OBJS += $(SRC_CGI)/cgiutils.o $(SRC_CGI)/skiplist.o ../common/shared.o
+XSD_OBJS += $(SRC_COMMON)/shared.o $(SRC_CGI)/getcgi.o $(SRC_CGI)/cgiutils.o $(SRC_CGI)/cgiauth.o $(SRC_CGI)/readlogs.o $(SRC_CGI)/macros-cgi.o  $(SRC_CGI)/skiplist.o
 
 TP_OBJS = $(SRC_BASE)/utils.o $(SRC_BASE)/config.o $(SRC_BASE)/macros-base.o
 TP_OBJS += $(SRC_BASE)/objects-base.o $(SRC_BASE)/xobjects-base.o
@@ -39,9 +36,10 @@ LIBS=@LIBS@
 
 prefix=@prefix@
 exec_prefix=@exec_prefix@
-LOGDIR=@localstatedir@
+LOGDIR=@LOGDIR@
 CFGDIR=@sysconfdir@
 BINDIR=@bindir@
+LIBDIR=@libdir@
 CGIDIR=@sbindir@
 HTMLDIR=@datarootdir@
 INSTALL=@INSTALL@
@@ -85,7 +83,7 @@ SNPRINTF_O=@SNPRINTF_O@
 BROKER_O=@BROKER_O@
 BROKER_H=@BROKER_H@
 
-TAPOBJ=../tap/src/tap.o $(SNPRINTF_O)
+TAPOBJ += $(SNPRINTF_O)
 
 all: $(TESTS)
 

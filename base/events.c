@@ -3,8 +3,8 @@
  * EVENTS.C - Timed event functions for Icinga
  *
  * Copyright (c) 1999-2010 Ethan Galstad (egalstad@nagios.org)
- * Copyright (c) 2009-2011 Nagios Core Development Team and Community Contributors
- * Copyright (c) 2009-2011 Icinga Development Team (http://www.icinga.org)
+ * Copyright (c) 2009-2013 Nagios Core Development Team and Community Contributors
+ * Copyright (c) 2009-2013 Icinga Development Team (http://www.icinga.org)
  *
  * License:
  *
@@ -19,7 +19,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  *****************************************************************************/
 
@@ -89,6 +89,8 @@ extern int      execute_host_checks;
 extern int      child_processes_fork_twice;
 
 extern int      time_change_threshold;
+
+extern time_t	disable_notifications_expire_time;
 
 /* make sure gcc3 won't hit here */
 #ifndef GCCTOOOLD
@@ -367,7 +369,8 @@ void init_timing_loop(void) {
 
 			mult_factor = current_interleave_block + (interleave_block_index * total_interleave_blocks);
 
-			log_debug_info(DEBUGL_EVENTS, 2, "CIB: %d, IBI: %d, TIB: %d, SIF: %d\n", current_interleave_block, interleave_block_index, total_interleave_blocks, scheduling_info.service_interleave_factor);
+			log_debug_info(DEBUGL_EVENTS, 2, "CIB (current_interleave_block): %d, IBI (interleave_block_index): %d, TIB (total_interleave_blocks): %d, SIF (service_interleave_factor): %d\n",
+					current_interleave_block, interleave_block_index, total_interleave_blocks, scheduling_info.service_interleave_factor);
 			log_debug_info(DEBUGL_EVENTS, 2, "Mult factor: %d\n", mult_factor);
 
 			/* set the preferred next check time for the service */
@@ -674,6 +677,10 @@ void display_event_data(timed_event* event, int priority) {
 		printf("\t\t(program restart)\n");
 		break;
 
+	case EVENT_EXPIRE_DISABLED_NOTIFICATIONS:
+		printf("\t\t((expire disabled notifications)\n");
+		break;
+
 	case EVENT_CHECK_REAPER:
 		printf("\t\t(service check reaper)\n");
 		break;
@@ -928,6 +935,22 @@ int schedule_new_event(int event_type, int high_priority, time_t run_time, int r
 		new_event->event_interval = event_interval;
 		new_event->timing_func = timing_func;
 		new_event->compensate_for_time_change = compensate_for_time_change;
+		/*
+		 * we need to keep the reverse link from the (service|host *)event_data->next_check_event
+		 * to the new_event in order to stay sane on schedule_host|service_check() checks
+		 * later on, already having a new event assigned to host/service, not rescheduling a new event.
+		 * see #2993 for deeper analysis
+		 */
+		if (event_type == EVENT_SERVICE_CHECK) {
+			service *temp_service = (service *)event_data;
+			temp_service->next_check_event = new_event;
+			log_debug_info(DEBUGL_CHECKS, 2, "Service '%s' on Host '%s' next_check_event populated\n", temp_service->description, temp_service->host_name);
+		}
+		if (event_type == EVENT_HOST_CHECK) {
+			host *temp_host = (host *)event_data;
+			temp_host->next_check_event = new_event;
+			log_debug_info(DEBUGL_CHECKS, 2, "Host '%s' next_check_event populated\n", temp_host->name);
+		}
 	} else
 		return ERROR;
 
@@ -935,6 +958,47 @@ int schedule_new_event(int event_type, int high_priority, time_t run_time, int r
 	add_event(new_event, event_list, event_list_tail);
 
 	return OK;
+}
+
+/* delete a scheduled timed event */
+/*
+	ATTENTION: at the moment only used for acknowledgements
+	If needed for other cases, you have to adopt this function to fit all needs!!!
+*/
+int delete_scheduled_event(int event_type, int high_priority, time_t run_time, int recurring, unsigned long event_interval, void *timing_func, int compensate_for_time_change, void *event_data, void *event_args, int event_options) {
+	timed_event **event_list = NULL;
+	timed_event **event_list_tail = NULL;
+	timed_event *temp_event = NULL;
+
+	/* we support only acknowledgements at the moment */
+	if (event_type != EVENT_EXPIRE_ACKNOWLEDGEMENT)
+		return OK;
+
+	log_debug_info(DEBUGL_FUNCTIONS, 0, "delete_scheduled_event()\n");
+
+	if (high_priority == TRUE) {
+		event_list = &event_list_high;
+		event_list_tail = &event_list_high_tail;
+	} else {
+		event_list = &event_list_low;
+		event_list_tail = &event_list_low_tail;
+	}
+
+	/* start from the beginning */
+	for (temp_event = *event_list; temp_event != NULL; temp_event = temp_event->next) {
+
+		if (temp_event->event_type == event_type && temp_event->event_options == event_options && temp_event->event_data == event_data) {
+
+			log_debug_info(DEBUGL_EVENTS, 1, "Removing event type %d @ %s", event_type, ctime(&run_time));
+
+			/* remove the event from the event list */
+			remove_event(temp_event, event_list, event_list_tail);
+
+			return OK;
+		}
+	}
+
+	return ERROR;
 }
 
 
@@ -1031,9 +1095,12 @@ void add_event(timed_event *event, timed_event **event_list, timed_event **event
 
 /* remove an event from the queue */
 void remove_event(timed_event *event, timed_event **event_list, timed_event **event_list_tail) {
-	timed_event *temp_event = NULL;
+	timed_event *prev_event, *next_event;
 
 	log_debug_info(DEBUGL_FUNCTIONS, 0, "remove_event()\n");
+
+	if (!event)
+		return;
 
 #ifdef USE_EVENT_BROKER
 	/* send event data to broker */
@@ -1043,31 +1110,38 @@ void remove_event(timed_event *event, timed_event **event_list, timed_event **ev
 	if (*event_list == NULL)
 		return;
 
-	if (*event_list == event) {
-		event->prev = NULL;
-		*event_list = event->next;
-		if (*event_list == NULL)
-			*event_list_tail = NULL;
+	/*
+	 * the event struct already holds next+prev ptrs
+	 * for the doubly linked list, so fetch them
+	 * and reassign previous with next, and reverse
+	 * check #2183 for a detailed description
+	 */
+	prev_event = event->prev;
+	next_event = event->next;
+
+	if (prev_event) {
+		prev_event->next = next_event;
+	}
+	if (next_event) {
+		next_event->prev = prev_event;
 	}
 
-	else {
-
-		for (temp_event = *event_list; temp_event != NULL; temp_event = temp_event->next) {
-			if (temp_event->next == event) {
-				temp_event->next = temp_event->next->next;
-				if (temp_event->next == NULL)
-					*event_list_tail = temp_event;
-				else
-					temp_event->next->prev = temp_event;
-				event->next = NULL;
-				event->prev = NULL;
-				break;
-			}
-		}
+	/* re-assign head and tail */
+	if (!prev_event) {
+		/* no previous event, so "next" is now first in list */
+		*event_list = next_event;
+	}
+	if (!next_event) {
+		/* no following event, so "prev" is now last in list */
+		*event_list_tail = prev_event;
 	}
 
-
-	return;
+	/*
+	 * If there was only one event in the list,
+	 * it's done just as if there were events before
+	 * and after the deleted event.
+	 * head and tail pointers are now NULL in this case
+	 */
 }
 
 
@@ -1491,6 +1565,34 @@ int handle_timed_event(timed_event *event) {
 
 		/* log the restart */
 		logit(NSLOG_PROCESS_INFO, TRUE, "PROGRAM_RESTART event encountered, restarting...\n");
+		break;
+
+	case EVENT_EXPIRE_DISABLED_NOTIFICATIONS:
+
+		log_debug_info(DEBUGL_EVENTS, 0, "** Expire Disabled Notifications Event\n");
+
+		/* check if this is a future event, and needs to be kept.
+		 * otherwise, we would remove/reset events bound to happen
+		 */
+		if (disable_notifications_expire_time > event->run_time)
+			break;
+		/*
+		 * only do it when we actually have a time set
+		 * ENABLE_NOTIFICATIONS will set that to 0,
+		 * indicating that expiry already happened
+		 */
+		if (disable_notifications_expire_time > 0) {
+
+			/* reset the expire time before enabling notifications */
+			disable_notifications_expire_time = 0L;
+
+			/* re-enable all notifications (triggers programstatus update for neb modules too) */
+			enable_all_notifications();
+
+		        /* log that we will now expire disabled notifications */
+		        logit(NSLOG_INFO_MESSAGE, TRUE, "Disabled Notifications expired. All Notifications re-enabled.\n");
+		}
+
 		break;
 
 	case EVENT_CHECK_REAPER:

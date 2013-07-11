@@ -24,7 +24,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  *****************************************************************************/
 
@@ -70,6 +70,7 @@ command         *ochp_command_ptr = NULL;
 
 char            *illegal_object_chars = NULL;
 char            *illegal_output_chars = NULL;
+char           illegal_output_char_map[] = CHAR_MAP_INIT(0);
 
 int             use_regexp_matches = FALSE;
 int             use_true_regexp_matching = FALSE;
@@ -259,8 +260,6 @@ int             syslog_local_facility = DEFAULT_SYSLOG_LOCAL_FACILITY;
 
 int             log_current_states = DEFAULT_LOG_CURRENT_STATES;
 
-int             log_external_commands_user = DEFAULT_LOG_EXTERNAL_COMMANDS_USER;
-
 int             log_long_plugin_output = DEFAULT_LOG_LONG_PLUGIN_OUTPUT;
 
 int             service_check_timeout_state = STATE_CRITICAL;
@@ -268,6 +267,17 @@ int             service_check_timeout_state = STATE_CRITICAL;
 int             stalking_event_handlers_for_hosts = DEFAULT_STALKING_EVENT_HANDLERS_FOR_HOSTS;
 int             stalking_event_handlers_for_services = DEFAULT_STALKING_EVENT_HANDLERS_FOR_SERVICES;
 
+int dump_retained_host_service_states_to_neb = TRUE;
+int stalking_notifications_for_hosts = DEFAULT_STALKING_NOTIFICATIONS_FOR_HOSTS;
+int stalking_notifications_for_services = DEFAULT_STALKING_NOTIFICATIONS_FOR_SERVICES;
+
+time_t          last_program_stop = 0L;
+
+time_t disable_notifications_expire_time = 0L;
+void enable_all_notifications() {}
+
+int             keep_unknown_macros = FALSE;
+int		enable_state_based_escalation_ranges = FALSE;
 
 /* Dummy variables */
 sched_info scheduling_info;
@@ -285,6 +295,8 @@ int log_debug_info(int level, int verbosity, const char *fmt, ...) {
 	/* vprintf( fmt, ap ); */
 	va_end(ap);
 }
+int close_log_file(void) {}
+int chown_debug_log(uid_t uid, gid_t gid) {}
 
 int neb_free_callback_list(void) {}
 void broker_program_status(int type, int flags, int attr, struct timeval *timestamp) {}
@@ -306,7 +318,7 @@ int update_contact_status(contact *cntct, int aggregated_dump) {}
 time_t get_next_service_notification_time(service *temp_service, time_t time_t1) {}
 void broker_retention_data(int type, int flags, int attr, struct timeval *timestamp) {}
 int host_notification(host *hst, int type, char *not_author, char *not_data, int options) {}
-void broker_downtime_data(int type, int flags, int attr, int downtime_type, char *host_name, char *svc_description, time_t entry_time, char *author_name, char *comment_data, time_t start_time, time_t end_time, int fixed, unsigned long triggered_by, unsigned long duration, unsigned long downtime_id, struct timeval *timestamp) {}
+void broker_downtime_data(int type, int flags, int attr, int downtime_type, char *host_name, char *svc_description, time_t entry_time, char *author_name, char *comment_data, time_t start_time, time_t end_time, int fixed, unsigned long triggered_by, unsigned long duration, unsigned long downtime_id, struct timeval *timestamp, int is_in_effect, time_t trigger_time) {}
 int update_service_status(service *svc, int aggregated_dump) {}
 time_t get_next_host_notification_time(host *temp_host, time_t time_t1) {}
 void check_for_host_flapping(host *hst, int update, int actual_check, int allow_flapstart_notification) {}
@@ -315,8 +327,11 @@ int service_notification(service *svc, int type, char *not_author, char *not_dat
 
 /* Icinga special */
 int     event_profiling_enabled = FALSE;
+unsigned long max_check_result_list_items = DEFAULT_MAX_CHECK_RESULT_LIST_ITEMS;
 void    profiler_update(int event, struct timeval start) {}
 
+void remove_host_acknowledgement(host * hst) {}
+void remove_service_acknowledgement(service * svc) {}
 
 int main(int argc, char **argv) {
 	int result;
@@ -332,7 +347,7 @@ int main(int argc, char **argv) {
 	hostgroup *temp_hostgroup = NULL;
 	hostsmember *temp_member = NULL;
 
-	plan_tests(4);
+	plan(4);
 
 	/* reset program variables */
 	reset_variables();

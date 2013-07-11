@@ -3,7 +3,7 @@
  * STATUSWML.C -  Icinga Status CGI for WAP-enabled devices
  *
  * Copyright (c) 2001-2008 Ethan Galstad (egalstad@nagios.org)
- * Copyright (c) 2009-2011 Icinga Development Team (http://www.icinga.org)
+ * Copyright (c) 2009-2013 Icinga Development Team (http://www.icinga.org)
  *
  * License:
  *
@@ -18,7 +18,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *************************************************************************/
 
 #include "../include/config.h"
@@ -43,7 +43,6 @@ extern servicestatus *servicestatus_list;
 extern int	use_ssl_authentication;
 extern int      enable_notifications;
 extern int      execute_service_checks;
-extern int      nagios_process_state;
 
 extern char     *ping_syntax;
 
@@ -69,16 +68,11 @@ int validate_arguments(void);
 int is_valid_hostip(char *hostip);
 
 int display_type = DISPLAY_INDEX;
-int show_all_hosts = TRUE;
 int show_all_hostgroups = TRUE;
-int show_all_servicegroups = TRUE;
 
 char *host_name = NULL;
-char *host_filter = NULL;
 char *hostgroup_name = NULL;
-char *servicegroup_name = NULL;
 char *service_desc = NULL;
-char *service_filter = NULL;
 int hostgroup_style = DISPLAY_HOSTGROUP_SUMMARY;
 int host_style = DISPLAY_HOST_SUMMARY;
 
@@ -114,7 +108,7 @@ int main(void) {
 	/* reset internal variables */
 	reset_cgi_vars();
 
-	document_header(CGI_ID, TRUE);
+	document_header(CGI_ID, TRUE, "Status WML");
 
 	/* validate arguments in URL */
 	result = validate_arguments();
@@ -148,7 +142,7 @@ int main(void) {
 	}
 
 	/* read all status data */
-	result = read_all_status_data(get_cgi_config_location(), READ_ALL_STATUS_DATA);
+	result = read_all_status_data(main_config_file, READ_ALL_STATUS_DATA);
 	if (result == ERROR && daemon_check == TRUE) {
 		printf("<P>Error: Could not read host and service status information!</P>\n");
 		document_footer(CGI_ID);
@@ -452,11 +446,6 @@ void display_process(void) {
 		printf("</card>\n");
 		return;
 	}
-
-	if (nagios_process_state == STATE_OK)
-		printf("%s process is running<br/>\n", PROGRAM_NAME);
-	else
-		printf("<b>%s process may not be running</b><br/>\n", PROGRAM_NAME);
 
 	if (enable_notifications == TRUE)
 		printf("Notifications are enabled<br/>\n");

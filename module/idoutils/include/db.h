@@ -2,7 +2,7 @@
  *
  * DB.H - IDO Database Include File
  * Copyright (c) 2005-2006 Ethan Galstad
- * Copyright (c) 2009-2011 Icinga Development Team (http://www.icinga.org)
+ * Copyright (c) 2009-2013 Icinga Development Team (http://www.icinga.org)
  *
  ************************************************************************/
 
@@ -141,8 +141,8 @@ int ido2db_db_init(ido2db_idi *);
 int ido2db_db_deinit(ido2db_idi *);
 
 int ido2db_db_connect(ido2db_idi *);
-int ido2db_db_is_connected(ido2db_idi *);
-int ido2db_db_reconnect(ido2db_idi *);
+int ido2db_db_is_connected(ido2db_idi *, int);
+int ido2db_db_reconnect(ido2db_idi *, int);
 int ido2db_db_disconnect(ido2db_idi *);
 
 int ido2db_db_hello(ido2db_idi *);
@@ -162,11 +162,23 @@ int ido2db_db_get_latest_data_time(ido2db_idi *,char *,char *,unsigned long *);
 int ido2db_db_perform_maintenance(ido2db_idi *);
 int ido2db_db_trim_data_table(ido2db_idi *,char *,char *,unsigned long);
 
+void ido2db_db_txbuf_init(ido2db_txbuf *txbuf);
+void ido2db_db_txbuf_add_id_to_activate(ido2db_txbuf *txbuf, unsigned long);
+void ido2db_db_txbuf_flush(ido2db_idi *idi, ido2db_txbuf *txbuf);
+
+int ido2db_db_tx_begin(ido2db_idi *idi);
+int ido2db_db_tx_commit(ido2db_idi *idi);
+
 #ifdef USE_ORACLE /* Oracle ocilib specific */
 #define OCI_VARCHAR_SIZE 4096 /* max allowed string size for varchar2 (+1) */
 #define OCI_STR_SIZE 256 /* default small string buffer size */
 #define OCI_BINDARRAY_MAX_SIZE 5000 /* default array buffer and commit size for bulk ops */
-#define OCI_OUTPUT_BUFFER_SIZE 32000 /* Buffer size for dbms_output calls */
+#define OCI_DBMS_OUTPUT_BUFFER_SIZE 32000 /* Buffer size for dbms_output calls */
+#define OCI_LOB_CHUNK_SIZE 2048 /* Buffer size for LOB operations */
+#define OCI_PLUGIN_OUTPUT_SIZE 2048 /* field len for all output columns */
+#define OCI_COMMAND_ARG_SIZE 1024 /* field len for all command_arg columns */
+#define OCI_COMMAND_LINE_SIZE 2048 /* field len for all command_line columns */
+
 void ido2db_ocilib_err_handler(OCI_Error *);
 unsigned long ido2db_oci_sequence_lastid(ido2db_idi *, char *);
 int ido2db_oci_prepared_statement_bind_null_param(OCI_Statement *, char *);
@@ -174,8 +186,10 @@ int ido2db_oci_bind_clob(OCI_Statement *st, char * bindname, char * text,OCI_Lob
 int ido2db_oci_set_trace_event(OCI_Connection *,unsigned int);
 int ido2db_oci_execute_out(OCI_Statement *,char *);
 int ido2db_oci_set_session_info(OCI_Connection *, char *);
-void ido2db_oci_print_binds(OCI_Statement *,int,char **);
+int ido2db_oci_print_binds(OCI_Statement *,char **);
 void ido2db_oci_statement_free(OCI_Statement *,char *);
+/* Helper */
+int ido2db_oci_StringUTF8Length(const char *str);
 #endif /* Oracle ocilib specific */
 
 #endif

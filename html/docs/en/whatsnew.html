@@ -1,200 +1,269 @@
 <html>
 <head>
-<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
-<title>What's New in Icinga 1.6</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<title>1.2. What's New in Icinga 1.9</title>
+<link rel="stylesheet" href="../stylesheets/icinga-docs.css" type="text/css">
 <meta name="generator" content="DocBook XSL Stylesheets V1.75.1">
 <meta name="keywords" content="Supervision, Icinga, Nagios, Linux">
-<link rel="home" href="index.html" title="Icinga Version 1.6 Documentation">
-<link rel="up" href="ch01.html" title="Chapter�1.�About">
-<link rel="prev" href="about.html" title="About Icinga">
-<link rel="next" href="ch02.html" title="Chapter�2.�Getting Started">
+<link rel="home" href="index.html" title="Icinga Version 1.9 Documentation">
+<link rel="up" href="ch01.html" title="Chapter 1. About">
+<link rel="prev" href="about.html" title="1.1. About Icinga">
+<link rel="next" href="ch02.html" title="Chapter 2. Getting Started">
+<script src="../js/jquery-min.js" type="text/javascript"></script><script src="../js/icinga-docs.js" type="text/javascript"></script>
 </head>
 <body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
 <CENTER><IMG src="../images/logofullsize.png" border="0" alt="Icinga" title="Icinga"></CENTER>
 <div class="navheader">
 <table width="100%" summary="Navigation header">
-<tr><th colspan="3" align="center">What's New in Icinga 1.6</th></tr>
+<tr><th colspan="3" align="center">1.2. What's New in Icinga 1.9</th></tr>
 <tr>
 <td width="20%" align="left">
-<a accesskey="p" href="about.html">Prev</a>�</td>
-<th width="60%" align="center">Chapter�1.�About</th>
-<td width="20%" align="right">�<a accesskey="n" href="ch02.html">Next</a>
+<a accesskey="p" href="about.html">Prev</a> </td>
+<th width="60%" align="center">Chapter 1. About</th>
+<td width="20%" align="right"> <a accesskey="n" href="ch02.html">Next</a>
 </td>
 </tr>
 </table>
 <hr>
 </div>
-<div class="section" title="What's New in Icinga 1.6">
+<div class="section" title="1.2. What's New in Icinga 1.9">
 <div class="titlepage"><div><div><h2 class="title" style="clear: both">
-<a name="whatsnew"></a>What's New in Icinga 1.6</h2></div></div></div>
+<a name="whatsnew"></a>1.2. What's New in Icinga 1.9</h2></div></div></div>
+<div class="toc"><dl>
+<dt><span class="section">1.2.1. <a href="whatsnew.html#changes">CHANGES</a></span></dt>
+<dt><span class="section">1.2.2. <a href="whatsnew.html#core">Core</a></span></dt>
+<dt><span class="section">1.2.3. <a href="whatsnew.html#classicui">Classic UI</a></span></dt>
+<dt><span class="section">1.2.4. <a href="whatsnew.html#idoutils">IDOutils</a></span></dt>
+<dt><span class="section">1.2.5. <a href="whatsnew.html#whatsnew-web">Icinga-Web</a></span></dt>
+<dt><span class="section">1.2.6. <a href="whatsnew.html#reporting">Icinga-Reporting</a></span></dt>
+<dt><span class="section">1.2.7. <a href="whatsnew.html#docs">Docs</a></span></dt>
+<dt><span class="section">1.2.8. <a href="whatsnew.html#moreinfo">More information</a></span></dt>
+</dl></div>
   
 
-  <p><span class="bold"><strong>1.5.0</strong></span></p>
+  <p>As usual this is only a brief overview. Please take a look at the <a class="link" href="whatsnew.html#moreinfo" title="1.2.8. More information">Changelog</a> as well if you are
+  missing something.</p>
 
-  <div class="itemizedlist"><ul class="itemizedlist" type="disc">
+  <a class="indexterm" name="idp94736"></a>
+
+  <div class="section" title="1.2.1. CHANGES">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="changes"></a>1.2.1. CHANGES</h3></div></div></div>
+    
+
+    <div class="itemizedlist"><ul class="itemizedlist" type="disc">
 <li class="listitem">
-<p><span class="bold"><strong>Enhancements</strong></span></p>
-
-  <p><span class="bold"><strong>Icinga-Core:</strong></span></p>
-  <div class="itemizedlist"><ul class="itemizedlist" type="circle"><li class="listitem">
-      <p>do not update host/service status during scheduler initialization on startup (idoutils already know that) #1741</p>
-    </li></ul></div>
-
-  <p><span class="bold"><strong>Classic UI:</strong></span></p>
-  <div class="itemizedlist"><ul class="itemizedlist" type="circle">
-<li class="listitem"><p>Added option to suppress colouring of hosts/services in maintenance #992</p></li>
-<li class="listitem"><p>Added option to show partial hostgroups #1013</p></li>
-<li class="listitem"><p>changing drop down menu in status.cgi to jquery-dd #1644</p></li>
-<li class="listitem"><p>default downtime duration is configurable in cgi.cfg #1642</p></li>
-<li class="listitem"><p>Added ability to combine host and service in one CGI parameter (Aaron Brady) #1633</p></li>
-<li class="listitem"><p>Changed tac.cgi to distinct between active, passive and disabled properly #1120</p></li>
-<li class="listitem"><p>Add log entries to json output of avail.cgi #1659</p></li>
-<li class="listitem"><p>add host urgency sort order in status.cgi (Jochen Bern) #1452</p></li>
-<li class="listitem"><p>add author to comment tooltips in status.cgi #1691</p></li>
-<li class="listitem"><p>reduce the header part of status.cgi #1507 (&amp;nostatusheader used in frameset menu, info table is smaller)</p></li>
-<li class="listitem"><p>authorization for * in cgi.cfg via contactgroups (Stephen Gran) #1752 (authorized_contactgroup_for_all_hosts,
-      authorized_contactgroup_for_all_services, authorized_contactgroup_for_system_information,
-      authorized_contactgroup_for_configuration_information, authorized_contactgroup_for_all_host_commands,
-      authorized_contactgroup_for_all_service_commands, authorized_contactgroup_for_system_commands, authorized_contactgroup_for_read_only)
-    </p></li>
-<li class="listitem"><p>add xml output to avail.cgi for direct source of jasper reports #1712</p></li>
-<li class="listitem"><p>add combined view of all unhandled hosts and services including the multiple command dropdowns for each (initial idea by Thruk) #1328</p></li>
-<li class="listitem"><p>add "link to this page" to all cgis #1783</p></li>
-<li class="listitem"><p>add export icons instead of "export to..." text on cgis supporting it (csv, json, xml, link) #1789</p></li>
-<li class="listitem"><p>add highlight_table_rows to status.cgi, can be disabled via cfg option #1777</p></li>
-</ul></div>
-
-  <p><span class="bold"><strong>IDOUtils:</strong></span></p>
-  <div class="itemizedlist"><ul class="itemizedlist" type="circle">
-<li class="listitem"><p>add update-version-schema for updating the idoutils db schema versions automagically, independant of update-version #1616</p></li>
-<li class="listitem"><p>dump multiline mbufs as bulk inserts #1110 (configfile/runtime variables, host contacts/parents, service contacts,
-      timeranges, host/service/contactgroup members; oracle uses bulk arrays binded on prepared insert statements)</p></li>
-<li class="listitem"><p>remove host and service checks from default data_processing_options as they are not used by icinga-web #1757</p></li>
-<li class="listitem"><p>Oracle: add logging of bind variable value #1314</p></li>
-<li class="listitem"><p>Oracle: change perfdata columns to clob #1749</p></li>
-<li class="listitem"><p>Oracle: change logentry_data type to clob #1750</p></li>
-</ul></div>
-
-  <p><span class="bold"><strong>Install:</strong></span></p>
-  <div class="itemizedlist"><ul class="itemizedlist" type="circle">
-<li class="listitem"><p>add --with-p1-file-dir allowing custom location (default is now $libdir instead of $bindir) #1569 (only when embedded
-      perl is enabled; affects (new_)mini_epn and icinga.cfg</p></li>
-<li class="listitem"><p>add configure option to set log dir and cgi log dir and phpapi log dir #1715 (e.g. 
-      <code class="literal">--with-phpapi-log-dir=/var/log/icinga/api --with-log-dir=/var/log/icinga --with-cgi-log-dir=/var/log/icinga/gui</code>;
-      apache user permissions</p></li>
-<li class="listitem"><p>after daemon stop in init script, retry and then issue a kill -9 on the daemon #1747</p></li>
-</ul></div>
-
-  <p><span class="bold"><strong>Config:</strong></span></p>
-  <div class="itemizedlist"><ul class="itemizedlist" type="circle">
-<li class="listitem"><p>add easy-to-use config examples and scripts for notifications #1697 (advanced notify-by-email; notify-by-jabber,
-      notify-by-twitter examples</p></li>
-<li class="listitem"><p>add check_dummy command definitions as example to commands.cfg #1719</p></li>
-<li class="listitem"><p>tune icinga.cfg for performance, enable_environment_macros=0, enable_embedded_perl=0 by default #1635</p></li>
-</ul></div>
-
-  <p><span class="bold"><strong>Style:</strong></span></p>
-  <div class="itemizedlist"><ul class="itemizedlist" type="circle"><li class="listitem"><p>add new indent tools #1617</p></li></ul></div>
-
-  <p><span class="bold"><strong>Docs:</strong></span></p>
-  <div class="itemizedlist"><ul class="itemizedlist" type="circle"><li class="listitem"><p>Migration from MRTG to PNP4Nagios</p></li></ul></div>
-  </li>
+        <p>IDOUtils: ido2db.cfg enable_sla is now deprecated! #3450</p>
+      </li>
 <li class="listitem">
-<p><span class="bold"><strong>Fixes</strong></span></p>
-
-  <p><span class="bold"><strong>Icinga-Core</strong></span></p>
-  <div class="itemizedlist"><ul class="itemizedlist" type="circle">
-<li class="listitem"><p>remove duplicated unlinks for check result files with multiple results (Ton Voon) #1615</p></li>
-<li class="listitem"><p>fix retain status file over an init script reload #1579</p></li>
-<li class="listitem"><p>fix freshness_threshold problem in host checks by using check_interval in HARD or OK state, else retry_interval (like service checks) (Andreas Ericsson) #1331</p></li>
-<li class="listitem"><p>make command_check_interval=-1 equal to 5s instead of 60s, targetting as often as possible (Andreas Ericsson) #1651</p></li>
-<li class="listitem"><p>fix problem where acknowledgements were getting reset when a hard state change occurred (Ton Voon) #1618</p></li>
-<li class="listitem"><p>avoid using global macros when sending notifications (Andreas Ericsson) #1653</p></li>
-<li class="listitem"><p>avoid sending notifications to the wrong contact (Andreas Ericsson) #1654</p></li>
-<li class="listitem"><p>try to avoid a single check being reaped multiple times (Andreas Ericsson) #1652</p></li>
-<li class="listitem"><p>Fix typo in configure.in preventing compilation on FreeBSD (thanks sag47) #1732</p></li>
+        <p>Icinga-Web: tackle cronk is now deprecated</p>
+      </li>
 </ul></div>
+  </div>
 
-  <p><span class="bold"><strong>Classic UI</strong></span></p>
-  <div class="itemizedlist"><ul class="itemizedlist" type="circle">
-<li class="listitem"><p>fix cross site scripting vulnerability in config.cgi on config expander arguments #1605</p></li>
-<li class="listitem"><p>better handling of writing to cgi.log in cmd.cgi #1161</p></li>
-<li class="listitem"><p>fixing tac.cgi header problems with counting and adding pending and descriptions #1505 #1506 #1508</p></li>
-<li class="listitem"><p>corrected behaviour of pending states in tac header #1508</p></li>
-<li class="listitem"><p>fix counting for services in tac header is wrong #1508</p></li>
-<li class="listitem"><p>remove sidebar.html inclusion in index.html causing troubles on reload #1632</p></li>
-<li class="listitem"><p>fixed: User can execute host/servicegroup commands even if not authorized for (Sven Nierlein) #1679</p></li>
-<li class="listitem"><p>fixed: plugin_output_short didn't get checked properly and caused segfault in status.cgi #1673</p></li>
-<li class="listitem"><p>fixed: submitting non existent host/service on avail.cgi causes segfault #1700</p></li>
-<li class="listitem"><p>fixed: Alert History State filter for HARD/SOFT state not working (Lennart Betz) #1722</p></li>
-<li class="listitem"><p>fixed: jquery 1.5.2 triggers memory leak in IE #1740</p></li>
-<li class="listitem"><p>fixed: ssi files don't get included if icinga path contains uppercase letters #1716</p></li>
+  <div class="section" title="1.2.2. Core">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="core"></a>1.2.2. Core</h3></div></div></div>
+    
+
+    <div class="itemizedlist"><ul class="itemizedlist" type="disc">
+<li class="listitem">
+        <p>increase core performance on config read with hash compare #3722 </p>
+      </li>
+<li class="listitem">
+	      <p>keep logfile open, reduce open/close performance decreases #3390 </p>
+      </li>
+<li class="listitem">
+        <p>enhance performance on illegal macro and host-service relation processing #3389 #3820 </p>
+      </li>
+<li class="listitem">
+	      <p>add skipping of status.dat/objects.cache write by setting to /dev/null #3819 </p>
+      </li>
+<li class="listitem">
+        <p>fix host_check last_check == next_check wrong in scheduling queue #2195 </p>
+      </li>
+<li class="listitem">
+        <p>fix triggered downtimes for child hosts are missing after restart #3390 </p>
+      </li>
+<li class="listitem">
+        <p>fix unable to exclude hostgroups when using nested hostgroups #2619 </p>
+      </li>
 </ul></div>
+  </div>
 
-  <p><span class="bold"><strong>Install</strong></span></p>
-  <div class="itemizedlist"><ul class="itemizedlist" type="circle">
-<li class="listitem"><p>do not update start_time of already started downtimes #1658</p></li>
-<li class="listitem"><p>fix started downtime update for table scheduleddowntime in oracle #1658</p></li>
-<li class="listitem"><p>remove leftover socket file in init-script startup, e.g. from a system crash #1745</p></li>
-<li class="listitem"><p>simplify ido2db_get_object_id oracle function #1655</p></li>
-<li class="listitem"><p>fix oracle long_output column in eventhandlers missed #1748</p></li>
-<li class="listitem"><p>fix oracle ocilib 3.9.2+ fixes causing wrong 4byte-&gt;8Byte casts #1751</p></li>
-<li class="listitem"><p>fix ORA-00600 while executing merge #1362</p></li>
+  <div class="section" title="1.2.3. Classic UI">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="classicui"></a>1.2.3. Classic UI</h3></div></div></div>
+    
+
+    <div class="itemizedlist"><ul class="itemizedlist" type="disc">
+<li class="listitem">
+	      <p>increase performance with hash compare on host/service show/filter #3722 </p>
+      </li>
+<li class="listitem">
+	      <p>add date/time selector to logfile navigation #3168 </p>
+      </li>
+<li class="listitem">
+        <p>classicui can be installed standalone (icinga2 compat) #3869 </p>
+      </li>
+<li class="listitem">
+        <p>add config options for acknowledgement notifications and expiry #3467 #3476 </p>
+      </li>
+<li class="listitem">
+        <p>add 'executed command' to extinfo.cfg linking to command expander #3901 </p>
+      </li>
+<li class="listitem">
+        <p>add process status to json response #3172 </p>
+      </li>
+<li class="listitem">
+        <p>add lighttp config examples #2253 </p>
+      </li>
 </ul></div>
+  </div>
 
-  <p><span class="bold"><strong>Classic UI</strong></span></p>
-  <div class="itemizedlist"><ul class="itemizedlist" type="circle">
-<li class="listitem"><p>fix event handlers cmd file location in contrib #1501</p></li>
-<li class="listitem"><p>icinga.spec should not provide nagios version #1562</p></li>
-<li class="listitem"><p>don't include git meta data in upstream tarballs #1562</p></li>
-<li class="listitem"><p>fix make install-idoutils overwrites sample - adding idoutils.cfg-sample instead #1625</p></li>
-<li class="listitem"><p>fix icinga.cmd and log dir replacement in icinga-api aubmodule #1573 #1715</p></li>
-<li class="listitem"><p>fix DEBUG_LOG_PATH in p1.pl, will now be using configurable log-dir #1715</p></li>
-<li class="listitem"><p>do not overwrite config in make fullinstall #1754</p></li>
-<li class="listitem"><p>fix configure should tell if ocilib or libdbi if idoutils enabled in summary #1780</p></li>
+  <div class="section" title="1.2.4. IDOutils">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="idoutils"></a>1.2.4. IDOutils</h3></div></div></div>
+    
+
+    <div class="itemizedlist"><ul class="itemizedlist" type="disc">
+<li class="listitem">
+        <p>use transactions for large object dumps #3527 </p>
+      </li>
+<li class="listitem">
+        <p>add socket queue proxy (reduce core reload time significanlty) #3533 </p>
+      </li>
+<li class="listitem">
+        <p>oracle: change output columns to clob #3412 </p>
+      </li>
+<li class="listitem">
+	      <p>fix memory leaks in idomod/ido2db #3749 </p>
+      </li>
+<li class="listitem">
+	      <p>add workaround fix for num_rows_affected broken in libdbi/mariadb, returned ids are 0 #3728 </p>
+      </li>
 </ul></div>
+  </div>
 
-  <p><span class="bold"><strong>Config</strong></span></p>
-  <div class="itemizedlist"><ul class="itemizedlist" type="circle"><li class="listitem"><p>deprecate log_external_commands_user #1619</p></li></ul></div>
+  <div class="section" title="1.2.5. Icinga-Web">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="whatsnew-web"></a>1.2.5. Icinga-Web</h3></div></div></div>
+    
 
-  <p><span class="bold"><strong>Docs:</strong></span></p>
-  <div class="itemizedlist"><ul class="itemizedlist" type="circle"><li class="listitem"><p>added include_dir/include_file to index</p></li></ul></div>
-  </li>
+    <div class="itemizedlist"><ul class="itemizedlist" type="disc">
+<li class="listitem">
+        <p>Revamped credential system, better grouping of permissions and performance #3715</p>
+      </li>
+<li class="listitem">
+        <p>New and smaller Cronk menu design, showing the cronks as a list #3396</p>
+      </li>
+<li class="listitem">
+        <p>New filtering window which allows detailed and combined filters #3268</p>
+      </li>
+<li class="listitem">
+        <p>Many small interface improvements #3511 #3430 #3896</p>
+      </li>
+<li class="listitem">
+        <p>New Apache configuration, making the .htaccess files obsolete #2759</p>
+      </li>
+<li class="listitem">
+	      <p>Search in admin user- / group dialog #3909</p>
+      </li>
+<li class="listitem">
+        <p>PENDING are now shown for any new host or service in the database #2602 #3844</p>
+      </li>
 </ul></div>
+  </div>
 
-  <p><a class="link" href="https://wiki.icinga.org/display/Dev/Releases" target="_top">More at Icinga Wiki</a></p>
+  <div class="section" title="1.2.6. Icinga-Reporting">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="reporting"></a>1.2.6. Icinga-Reporting</h3></div></div></div>
+    
 
-  <p>Should you find any issues, please report them to one of the following links:</p>
+    <div class="itemizedlist"><ul class="itemizedlist" type="disc">
+<li class="listitem">
+	      <p>add AvailReportParser into contrib/ (standalone) #3978 </p>
+      </li>
+<li class="listitem">
+        <p>reorganize directory structure #3742 </p>
+      </li>
+<li class="listitem">
+        <p>fixed image expression in pnp4nagios template #3693 </p>
+      </li>
+<li class="listitem">
+        <p>fixed state replacement in morning report #3752 </p>
+      </li>
+<li class="listitem">
+        <p>fixed rounding error with small numbers #3942 </p>
+      </li>
+</ul></div>
+  </div>
 
-  <p><a class="link" href="https://dev.icinga.org/projects/show/icinga-core" target="_top">Report Issue Icinga-Core</a></p>
+  <div class="section" title="1.2.7. Docs">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="docs"></a>1.2.7. Docs</h3></div></div></div>
+    
 
-  <p><a class="link" href="https://dev.icinga.org/projects/show/icinga-web" target="_top">Report Issue Icinga-Web</a></p>
+    <div class="itemizedlist"><ul class="itemizedlist" type="disc">
+<li class="listitem">
+	      <p>add upgrade/troubleshooting notes about invisible icinga web cronks/modules after upgrade #3939 </p>
+      </li>
+<li class="listitem">
+        <p>make install-webconf-auth installs htpasswd.user with icingaadmin credentials #3964 </p>
+      </li>
+<li class="listitem">
+        <p>icinga web 1.9: new menu style (smaller icons) #3944 </p>
+      </li>
+<li class="listitem">
+        <p>icinga web 1.9: new filtering methods #3947 </p>
+      </li>
+<li class="listitem">
+        <p>add userpreferences.xml to icinga web configs #3991 </p>
+      </li>
+<li class="listitem">
+        <p>add web gui comparison to beginners #3907</p>
+      </li>
+<li class="listitem">
+        <p>middle-clicking on TOC links doesn't open pages in new tab #3561 </p>
+      </li>
+</ul></div>
+  </div>
 
-  <p><a class="link" href="https://dev.icinga.org/projects/show/icinga-api" target="_top">Report Issue Icinga-API</a></p>
-  <p><a class="link" href="https://dev.icinga.org/projects/show/icinga-reporting" target="_top">Report Issue Icinga-Reporting</a></p>
+  <div class="section" title="1.2.8. More information">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="moreinfo"></a>1.2.8. More information</h3></div></div></div>
+    
 
-  <p><a class="link" href="https://dev.icinga.org/projects/show/icinga-docs" target="_top">Report Issue Icinga-Docs</a></p>
+    <p><a class="link" href="https://wiki.icinga.org/display/Dev/Changelogs" target="_top">More at Icinga Wiki</a></p>
 
-  <a class="indexterm" name="idp162912"></a>
+    <p>Should you find any issues, please report them to one of the following links:</p>
 
+    <p><a class="link" href="https://dev.icinga.org/projects/show/icinga-core" target="_top">Report Issue Icinga-Core</a></p>
+
+    <p><a class="link" href="https://dev.icinga.org/projects/show/icinga-web" target="_top">Report Issue Icinga-Web</a></p>
+
+    <p><a class="link" href="https://dev.icinga.org/projects/show/icinga-reporting" target="_top">Report Issue Icinga-Reporting</a></p>
+
+    <p><a class="link" href="https://dev.icinga.org/projects/show/icinga-docs" target="_top">Report Issue Icinga-Docs</a></p>
+  </div>
 </div>
 <div class="navfooter">
 <hr>
 <table width="100%" summary="Navigation footer">
 <tr>
 <td width="40%" align="left">
-<a accesskey="p" href="about.html">Prev</a>�</td>
+<a accesskey="p" href="about.html">Prev</a> </td>
 <td width="20%" align="center"><a accesskey="u" href="ch01.html">Up</a></td>
-<td width="40%" align="right">�<a accesskey="n" href="ch02.html">Next</a>
+<td width="40%" align="right"> <a accesskey="n" href="ch02.html">Next</a>
 </td>
 </tr>
 <tr>
-<td width="40%" align="left" valign="top">About Icinga�</td>
+<td width="40%" align="left" valign="top">1.1. About Icinga </td>
 <td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td>
-<td width="40%" align="right" valign="top">�Chapter�2.�Getting Started</td>
+<td width="40%" align="right" valign="top"> Chapter 2. Getting Started</td>
 </tr>
 </table>
 </div>
-<P class="copyright">� 2009-2011 Icinga Development Team, http://www.icinga.org</P>
+<P class="copyright">© 2009-2013 Icinga Development Team, http://www.icinga.org</P>
 </body>
 </html>

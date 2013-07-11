@@ -3,8 +3,8 @@
  * BROKER.C - Event broker routines for Icinga
  *
  * Copyright (c) 2002-2008 Ethan Galstad (egalstad@nagios.org)
- * Copyright (c) 2009-2011 Nagios Core Development Team and Community Contributors
- * Copyright (c) 2009-2011 Icinga Development Team (http://www.icinga.org)
+ * Copyright (c) 2009-2013 Nagios Core Development Team and Community Contributors
+ * Copyright (c) 2009-2013 Icinga Development Team (http://www.icinga.org)
  *
  * License:
  *
@@ -19,7 +19,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  *****************************************************************************/
 
@@ -40,6 +40,7 @@ extern int daemon_mode;
 extern time_t last_command_check;
 extern time_t last_log_rotation;
 extern int enable_notifications;
+extern time_t disable_notifications_expire_time;
 extern int execute_service_checks;
 extern int accept_passive_service_checks;
 extern int execute_host_checks;
@@ -394,7 +395,7 @@ void broker_comment_data(int type, int flags, int attr, int comment_type, int en
 
 
 /* send downtime data to broker */
-void broker_downtime_data(int type, int flags, int attr, int downtime_type, char *host_name, char *svc_description, time_t entry_time, char *author_name, char *comment_data, time_t start_time, time_t end_time, int fixed, unsigned long triggered_by, unsigned long duration, unsigned long downtime_id, struct timeval *timestamp) {
+void broker_downtime_data(int type, int flags, int attr, int downtime_type, char *host_name, char *svc_description, time_t entry_time, char *author_name, char *comment_data, time_t start_time, time_t end_time, int fixed, unsigned long triggered_by, unsigned long duration, unsigned long downtime_id, struct timeval *timestamp, int is_in_effect, time_t trigger_time) {
 	nebstruct_downtime_data ds;
 
 	if (!(event_broker_options & BROKER_DOWNTIME_DATA))
@@ -419,6 +420,9 @@ void broker_downtime_data(int type, int flags, int attr, int downtime_type, char
 	ds.duration = duration;
 	ds.triggered_by = triggered_by;
 	ds.downtime_id = downtime_id;
+
+	ds.is_in_effect = is_in_effect;
+	ds.trigger_time = trigger_time;
 
 	/* make callbacks */
 	neb_make_callbacks(NEBCALLBACK_DOWNTIME_DATA, (void *)&ds);
@@ -489,6 +493,7 @@ void broker_program_status(int type, int flags, int attr, struct timeval *timest
 	ds.last_command_check = last_command_check;
 	ds.last_log_rotation = last_log_rotation;
 	ds.notifications_enabled = enable_notifications;
+	ds.disable_notifications_expire_time = disable_notifications_expire_time;
 	ds.active_service_checks_enabled = execute_service_checks;
 	ds.passive_service_checks_enabled = accept_passive_service_checks;
 	ds.active_host_checks_enabled = execute_host_checks;
@@ -975,11 +980,13 @@ void broker_statechange_data(int type, int flags, int attr, int statechange_type
 		ds.host_name = temp_service->host_name;
 		ds.service_description = temp_service->description;
 		ds.output = temp_service->plugin_output;
+		ds.long_output = temp_service->long_plugin_output;
 	} else {
 		temp_host = (host *)data;
 		ds.host_name = temp_host->name;
 		ds.service_description = NULL;
 		ds.output = temp_host->plugin_output;
+		ds.long_output = temp_host->long_plugin_output;
 	}
 	ds.object_ptr = data;
 	ds.state = state;

@@ -3,7 +3,8 @@
  * CGIUTILS.C - Common utilities for Icinga CGIs
  *
  * Copyright (c) 1999-2009 Ethan Galstad (egalstad@nagios.org)
- * Copyright (c) 2009-2011 Icinga Development Team (http://www.icinga.org)
+ * Copyright (c) 2012 Nagios Core Development Team and Community Contributors
+ * Copyright (c) 2009-2013 Icinga Development Team (http://www.icinga.org)
  *
  * License:
  *
@@ -18,7 +19,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  ***********************************************************************/
 
 #include "../include/config.h"
@@ -27,6 +28,7 @@
 #include "../include/objects.h"
 #include "../include/macros.h"
 #include "../include/statusdata.h"
+#include "../include/comments.h"
 
 #include "../include/cgiutils.h"
 
@@ -38,11 +40,12 @@ char            physical_images_path[MAX_FILENAME_LENGTH];
 char            physical_ssi_path[MAX_FILENAME_LENGTH];
 char            url_html_path[MAX_FILENAME_LENGTH];
 char            url_docs_path[MAX_FILENAME_LENGTH];
-char            url_context_help_path[MAX_FILENAME_LENGTH];
 char            url_images_path[MAX_FILENAME_LENGTH];
 char            url_logo_images_path[MAX_FILENAME_LENGTH];
 char            url_stylesheets_path[MAX_FILENAME_LENGTH];
 char            url_js_path[MAX_FILENAME_LENGTH];
+char            url_jquiryui_path[MAX_FILENAME_LENGTH];
+char            url_jquiryui_addon_path[MAX_FILENAME_LENGTH];
 char            url_media_path[MAX_FILENAME_LENGTH];
 
 char            *service_critical_sound = NULL;
@@ -52,29 +55,51 @@ char            *host_down_sound = NULL;
 char            *host_unreachable_sound = NULL;
 char            *normal_sound = NULL;
 char            *statusmap_background_image = NULL;
-char            *statuswrl_include = NULL;
 
 char            *illegal_output_chars = NULL;
+char		illegal_output_char_map[] = CHAR_MAP_INIT(0);
 
 char            *http_charset = NULL;
 
 char            *notes_url_target = NULL;
 char            *action_url_target = NULL;
 
-char            *ping_syntax = NULL;
-
 char		*csv_delimiter = CSV_DELIMITER;
 char		*csv_data_enclosure = CSV_DATA_ENCLOSURE;
 
-char		highlight_table_rows = TRUE;
+int		highlight_table_rows = TRUE;
 
 char            nagios_check_command[MAX_INPUT_BUFFER] = "";
 char            nagios_process_info[MAX_INPUT_BUFFER] = "";
-int             nagios_process_state = STATE_OK;
 
 int             enable_splunk_integration = FALSE;
 char            *splunk_url = NULL;
 int             lock_author_names = TRUE;
+
+char		*authorization_config_file = NULL;
+char		*authorized_for_all_host_commands = NULL;
+char		*authorized_for_all_hosts = NULL;
+char		*authorized_for_all_service_commands = NULL;
+char		*authorized_for_all_services = NULL;
+char		*authorized_for_configuration_information = NULL;
+char		*authorized_for_full_command_resolution = NULL;
+char		*authorized_for_read_only = NULL;
+char		*authorized_for_comments_read_only = NULL;
+char		*authorized_for_downtimes_read_only = NULL;
+char		*authorized_for_system_commands = NULL;
+char		*authorized_for_system_information = NULL;
+char		*authorized_contactgroup_for_all_host_commands = NULL;
+char		*authorized_contactgroup_for_all_hosts = NULL;
+char		*authorized_contactgroup_for_all_service_commands = NULL;
+char		*authorized_contactgroup_for_all_services = NULL;
+char		*authorized_contactgroup_for_configuration_information = NULL;
+char		*authorized_contactgroup_for_full_command_resolution = NULL;
+char		*authorized_contactgroup_for_read_only = NULL;
+char		*authorized_contactgroup_for_comments_read_only = NULL;
+char		*authorized_contactgroup_for_downtimes_read_only = NULL;
+char		*authorized_contactgroup_for_system_commands = NULL;
+char		*authorized_contactgroup_for_system_information = NULL;
+char		*default_user_name = NULL;
 
 extern time_t   program_start;
 extern int      nagios_pid;
@@ -82,10 +107,17 @@ extern int      daemon_mode;
 extern int      enable_notifications;
 extern int      execute_service_checks;
 extern int      accept_passive_service_checks;
+extern int      execute_host_checks;
+extern int      accept_passive_host_checks;
+extern int      obsess_over_hosts;
+extern int      enable_flap_detection;
 extern int      enable_event_handlers;
 extern int      obsess_over_services;
 extern int      enable_failure_prediction;
 extern int      process_performance_data;
+extern int      check_service_freshness;
+extern int      check_host_freshness;
+extern time_t   disable_notifications_expire_time;
 extern time_t   last_command_check;
 extern time_t   last_log_rotation;
 extern time_t	status_file_creation_time;
@@ -96,16 +128,11 @@ extern char 	*macro_user[MAX_USER_MACROS];
 
 /** readlogs.c **/
 int		log_rotation_method = LOG_ROTATION_NONE;
-extern time_t	this_scheduled_log_rotation;
-extern time_t	last_scheduled_log_rotation;
-extern time_t	next_scheduled_log_rotation;
 char		log_file[MAX_INPUT_BUFFER];
 char		log_archive_path[MAX_INPUT_BUFFER];
 
 int		status_update_interval = 60;
 int             check_external_commands = 0;
-
-int             log_external_commands_user = FALSE;
 
 int             date_format = DATE_FORMAT_US;
 
@@ -113,7 +140,6 @@ int             use_authentication = TRUE;
 
 int             interval_length = 60;
 
-int             show_context_help = FALSE;
 int		show_all_services_host_is_authorized_for = TRUE;
 
 int             use_pending_states = TRUE;
@@ -123,15 +149,18 @@ int             service_status_has_been_read = FALSE;
 int             program_status_has_been_read = FALSE;
 
 int             refresh_rate = DEFAULT_REFRESH_RATE;
+int             refresh_type = JAVASCRIPT_REFRESH;
 
 int             escape_html_tags = FALSE;
 
 int             persistent_ack_comments = FALSE;
+int		send_ack_notifications = TRUE;
 
 int             use_ssl_authentication = FALSE;
 
+int             lowercase_user_name = FALSE;
+
 int             default_statusmap_layout_method = 0;
-int             default_statuswrl_layout_method = 0;
 
 int		color_transparency_index_r = 255;
 int		color_transparency_index_g = 255;
@@ -154,6 +183,10 @@ int		week_starts_on_monday = FALSE;
 int		show_partial_hostgroups = FALSE;
 int		default_downtime_duration = 7200;
 int		default_expiring_acknowledgement_duration = 86400;
+int		set_expire_ack_by_default = FALSE;
+int		default_expiring_disabled_notifications_duration = 86400;
+
+int		result_limit = 50;
 
 extern hostgroup       *hostgroup_list;
 extern contactgroup    *contactgroup_list;
@@ -166,8 +199,8 @@ extern hoststatus      *hoststatus_list;
 extern servicestatus   *servicestatus_list;
 
 
-char encoded_url_string[2][MAX_INPUT_BUFFER]; // 2 to be able use url_encode twice
-char *encoded_html_string = NULL;
+char encoded_url_string[4][MAX_INPUT_BUFFER]; // 2 to be able use url_encode 4 times
+char encoded_html_string[2][(MAX_COMMAND_BUFFER * 6)]; // 2 to be able use html_encode twice
 
 #ifdef HAVE_TZNAME
 #ifdef CYGWIN
@@ -180,27 +213,11 @@ extern char     *tzname[2];
 int content_type = HTML_CONTENT;
 int embedded = FALSE;
 int display_header = TRUE;
-int display_status_header = TRUE;
+int display_status_totals = FALSE;
 int refresh = TRUE;
 int daemon_check = TRUE;
 int tac_header = FALSE;
 
-extern char alert_message;
-extern char *host_name;
-extern char *host_filter;
-extern char *hostgroup_name;
-extern char *service_desc;
-extern char *servicegroup_name;
-extern char *service_filter;
-extern int host_alert;
-extern int show_all_hosts;
-extern int show_all_hostgroups;
-extern int show_all_servicegroups;
-extern int display_type;
-extern int overview_columns;
-extern int max_grid_width;
-extern int group_style_type;
-extern int navbar_search;
 extern int CGI_ID;
 
 /* used for logging function */
@@ -239,7 +256,6 @@ void reset_cgi_vars(void) {
 
 	strcpy(url_html_path, "");
 	strcpy(url_docs_path, "");
-	strcpy(url_context_help_path, "");
 	strcpy(url_stylesheets_path, "");
 	strcpy(url_js_path, "");
 	strcpy(url_media_path, "");
@@ -247,13 +263,12 @@ void reset_cgi_vars(void) {
 
 	strcpy(log_file, "");
 	strcpy(log_archive_path, DEFAULT_LOG_ARCHIVE_PATH);
-	if (log_archive_path[strlen(log_archive_path)-1] != '/' && strlen(log_archive_path) < sizeof(log_archive_path) - 2)
+	if (log_archive_path[strlen(log_archive_path) - 1] != '/' && strlen(log_archive_path) < sizeof(log_archive_path) - 2)
 		strcat(log_archive_path, "/");
 	strcpy(command_file, get_cmd_file_location());
 
 	strcpy(nagios_check_command, "");
 	strcpy(nagios_process_info, "");
-	nagios_process_state = STATE_OK;
 
 	log_rotation_method = LOG_ROTATION_NONE;
 	cgi_log_rotation_method = LOG_ROTATION_NONE;
@@ -263,6 +278,7 @@ void reset_cgi_vars(void) {
 	interval_length = 60;
 
 	refresh_rate = DEFAULT_REFRESH_RATE;
+	refresh_type = JAVASCRIPT_REFRESH;
 
 	default_statusmap_layout_method = 0;
 	default_statusmap_layout_method = 0;
@@ -281,9 +297,6 @@ void reset_cgi_vars(void) {
 	color_transparency_index_r = 255;
 	color_transparency_index_g = 255;
 	color_transparency_index_b = 255;
-	statuswrl_include = NULL;
-
-	ping_syntax = NULL;
 
 	return;
 }
@@ -305,8 +318,6 @@ void free_memory(void) {
 	free(host_unreachable_sound);
 	free(normal_sound);
 	free(statusmap_background_image);
-	free(statuswrl_include);
-	free(ping_syntax);
 
 	return;
 }
@@ -344,7 +355,7 @@ char * get_cmd_file_location(void) {
 			/* stay compatible */
 			cmdloc = getenv("NAGIOS_COMMAND_FILE");
 			if (!cmdloc) {
-				cmdloc = DEFAULT_COMMAND_FILE;
+				cmdloc = command_file;
 			}
 		}
 	}
@@ -357,6 +368,8 @@ int read_cgi_config_file(char *filename) {
 	mmapfile *thefile;
 	char *var = NULL;
 	char *val = NULL;
+	char *p = NULL;
+	int standalone_installation = 0;
 
 
 	if ((thefile = mmap_fopen(filename)) == NULL)
@@ -381,12 +394,12 @@ int read_cgi_config_file(char *filename) {
 
 		if (!strcmp(var, "main_config_file")) {
 			strncpy(main_config_file, val, sizeof(main_config_file));
-			main_config_file[sizeof(main_config_file)-1] = '\x0';
+			main_config_file[sizeof(main_config_file) - 1] = '\x0';
 			strip(main_config_file);
 		}
 
-		else if (!strcmp(var, "show_context_help"))
-			show_context_help = (atoi(val) > 0) ? TRUE : FALSE;
+		else if (!strcmp(var, "standalone_installation"))
+			standalone_installation = (atoi(val) > 0) ? TRUE : FALSE;
 
 		else if (!strcmp(var, "show_all_services_host_is_authorized_for"))
 			show_all_services_host_is_authorized_for = (atoi(val) > 0) ? TRUE : FALSE;
@@ -402,82 +415,85 @@ int read_cgi_config_file(char *filename) {
 
 		else if (!strcmp(var, "nagios_check_command")) {
 			strncpy(nagios_check_command, val, sizeof(nagios_check_command));
-			nagios_check_command[sizeof(nagios_check_command)-1] = '\x0';
+			nagios_check_command[sizeof(nagios_check_command) - 1] = '\x0';
 			strip(nagios_check_command);
 		}
 
 		else if (!strcmp(var, "refresh_rate"))
 			refresh_rate = atoi(val);
 
+		else if (!strcmp(var, "refresh_type"))
+			refresh_type = (atoi(val) > 0) ? JAVASCRIPT_REFRESH : HTTPHEADER_REFRESH;
+
 		else if (!strcmp(var, "physical_html_path")) {
 			strncpy(physical_html_path, val, sizeof(physical_html_path));
-			physical_html_path[sizeof(physical_html_path)-1] = '\x0';
+			physical_html_path[sizeof(physical_html_path) - 1] = '\x0';
 			strip(physical_html_path);
-			if (physical_html_path[strlen(physical_html_path)-1] != '/' && (strlen(physical_html_path) < sizeof(physical_html_path) - 1))
+			if (physical_html_path[strlen(physical_html_path) - 1] != '/' && (strlen(physical_html_path) < sizeof(physical_html_path) - 1))
 				strcat(physical_html_path, "/");
 
 			snprintf(physical_images_path, sizeof(physical_images_path), "%simages/", physical_html_path);
-			physical_images_path[sizeof(physical_images_path)-1] = '\x0';
+			physical_images_path[sizeof(physical_images_path) - 1] = '\x0';
 
 			snprintf(physical_ssi_path, sizeof(physical_images_path), "%sssi/", physical_html_path);
-			physical_ssi_path[sizeof(physical_ssi_path)-1] = '\x0';
+			physical_ssi_path[sizeof(physical_ssi_path) - 1] = '\x0';
 		}
 
 		else if (!strcmp(var, "url_html_path")) {
 
 			strncpy(url_html_path, val, sizeof(url_html_path));
-			url_html_path[sizeof(url_html_path)-1] = '\x0';
+			url_html_path[sizeof(url_html_path) - 1] = '\x0';
 
 			strip(url_html_path);
-			if (url_html_path[strlen(url_html_path)-1] != '/' && (strlen(url_html_path) < sizeof(url_html_path) - 1))
+			if (url_html_path[strlen(url_html_path) - 1] != '/' && (strlen(url_html_path) < sizeof(url_html_path) - 1))
 				strcat(url_html_path, "/");
 
 			snprintf(url_docs_path, sizeof(url_docs_path), "%sdocs/", url_html_path);
-			url_docs_path[sizeof(url_docs_path)-1] = '\x0';
-
-			snprintf(url_context_help_path, sizeof(url_context_help_path), "%scontexthelp/", url_html_path);
-			url_context_help_path[sizeof(url_context_help_path)-1] = '\x0';
+			url_docs_path[sizeof(url_docs_path) - 1] = '\x0';
 
 			snprintf(url_images_path, sizeof(url_images_path), "%simages/", url_html_path);
-			url_images_path[sizeof(url_images_path)-1] = '\x0';
+			url_images_path[sizeof(url_images_path) - 1] = '\x0';
 
 			snprintf(url_logo_images_path, sizeof(url_logo_images_path), "%slogos/", url_images_path);
-			url_logo_images_path[sizeof(url_logo_images_path)-1] = '\x0';
-
-			/*
-			snprintf(url_stylesheets_path,sizeof(url_stylesheets_path),"%sstylesheets/",url_html_path);
-			url_stylesheets_path[sizeof(url_stylesheets_path)-1]='\x0';
-			*/
+			url_logo_images_path[sizeof(url_logo_images_path) - 1] = '\x0';
 
 			snprintf(url_js_path, sizeof(url_js_path), "%sjs/", url_html_path);
-			url_js_path[sizeof(url_js_path)-1] = '\x0';
+			url_js_path[sizeof(url_js_path) - 1] = '\x0';
+
+			snprintf(url_jquiryui_path, sizeof(url_jquiryui_path), "%sjquery-ui/", url_html_path);
+			url_jquiryui_path[sizeof(url_jquiryui_path) - 1] = '\x0';
+
+			snprintf(url_jquiryui_addon_path, sizeof(url_jquiryui_addon_path), "%sjquery-ui-addon/", url_html_path);
+			url_jquiryui_addon_path[sizeof(url_jquiryui_addon_path) - 1] = '\x0';
 
 			snprintf(url_media_path, sizeof(url_media_path), "%smedia/", url_html_path);
-			url_media_path[sizeof(url_media_path)-1] = '\x0';
+			url_media_path[sizeof(url_media_path) - 1] = '\x0';
 		}
 
 		else if (!strcmp(var, "url_stylesheets_path")) {
 
 			strncpy(url_stylesheets_path, val, sizeof(url_stylesheets_path));
-			url_stylesheets_path[sizeof(url_stylesheets_path)-1] = '\x0';
+			url_stylesheets_path[sizeof(url_stylesheets_path) - 1] = '\x0';
 
 			strip(url_stylesheets_path);
-			if (url_stylesheets_path[strlen(url_stylesheets_path)-1] != '/' && (strlen(url_stylesheets_path) < sizeof(url_stylesheets_path) - 1))
+			if (url_stylesheets_path[strlen(url_stylesheets_path) - 1] != '/' && (strlen(url_stylesheets_path) < sizeof(url_stylesheets_path) - 1))
 				strcat(url_stylesheets_path, "/");
 
 		} else if (!strcmp(var, "cgi_log_archive_path")) {
 
 			strncpy(cgi_log_archive_path, val, sizeof(cgi_log_archive_path));
-			cgi_log_archive_path[sizeof(cgi_log_archive_path)-1] = '\x0';
+			cgi_log_archive_path[sizeof(cgi_log_archive_path) - 1] = '\x0';
 
 			strip(cgi_log_archive_path);
-			if (cgi_log_archive_path[strlen(cgi_log_archive_path)-1] != '/' && (strlen(cgi_log_archive_path) < sizeof(cgi_log_archive_path) - 1))
+			if (cgi_log_archive_path[strlen(cgi_log_archive_path) - 1] != '/' && (strlen(cgi_log_archive_path) < sizeof(cgi_log_archive_path) - 1))
 				strcat(cgi_log_archive_path, "/");
 
 		} else if (!strcmp(var, "cgi_log_file")) {
 
 			strncpy(cgi_log_file, val, sizeof(cgi_log_file));
-			cgi_log_file[sizeof(cgi_log_file)-1] = '\x0';
+			cgi_log_file[sizeof(cgi_log_file) - 1] = '\x0';
+			strip(cgi_log_file);
+
 		} else if (!strcmp(var, "cgi_log_rotation_method")) {
 			if (!strcmp(val, "h"))
 				cgi_log_rotation_method = LOG_ROTATION_HOURLY;
@@ -529,15 +545,6 @@ int read_cgi_config_file(char *filename) {
 		else if (!strcmp(var, "default_statusmap_layout"))
 			default_statusmap_layout_method = atoi(val);
 
-		else if (!strcmp(var, "default_statuswrl_layout"))
-			default_statuswrl_layout_method = atoi(val);
-
-		else if (!strcmp(var, "statuswrl_include"))
-			statuswrl_include = strdup(val);
-
-		else if (!strcmp(var, "ping_syntax"))
-			ping_syntax = strdup(val);
-
 		else if (!strcmp(var, "action_url_target"))
 			action_url_target = strdup(val);
 
@@ -562,8 +569,17 @@ int read_cgi_config_file(char *filename) {
 		else if (!strcmp(var, "persistent_ack_comments"))
 			persistent_ack_comments = (atoi(val) > 0) ? TRUE : FALSE;
 
+		else if (!strcmp(var, "send_ack_notifications"))
+			send_ack_notifications = (atoi(val) > 0) ? TRUE : FALSE;
+
 		else if (!strcmp(var, "default_expiring_acknowledgement_duration"))
 			default_expiring_acknowledgement_duration = atoi(val);
+
+		else if (!strcmp(var, "set_expire_ack_by_default"))
+			set_expire_ack_by_default = (atoi(val) > 0) ? TRUE : FALSE;
+
+		else if (!strcmp(var, "default_expiring_disabled_notifications_duration"))
+			default_expiring_disabled_notifications_duration = atoi(val);
 
 		else if (!strcmp(var, "lock_author_names"))
 			lock_author_names = (atoi(val) > 0) ? TRUE : FALSE;
@@ -571,8 +587,14 @@ int read_cgi_config_file(char *filename) {
 		else if (!strcmp(var, "default_downtime_duration"))
 			default_downtime_duration = atoi(val);
 
+		else if (!strcmp(var, "result_limit"))
+			result_limit = atoi(val);
+
 		else if (!strcmp(var, "use_ssl_authentication"))
 			use_ssl_authentication = (atoi(val) > 0) ? TRUE : FALSE;
+
+		else if (!strcmp(var, "lowercase_user_name"))
+			lowercase_user_name = (atoi(val) > 0) ? TRUE : FALSE;
 
 		else if (!strcmp(var, "status_show_long_plugin_output"))
 			status_show_long_plugin_output = (atoi(val) > 0) ? TRUE : FALSE;
@@ -585,8 +607,7 @@ int read_cgi_config_file(char *filename) {
 				extinfo_show_child_hosts = SHOW_CHILD_HOSTS_IMMEDIATE;
 			else if (atoi(val) == SHOW_CHILD_HOSTS_ALL)
 				extinfo_show_child_hosts = SHOW_CHILD_HOSTS_ALL;
-		}
-		else if (!strcmp(var, "suppress_maintenance_downtime"))
+		} else if (!strcmp(var, "suppress_maintenance_downtime"))
 			suppress_maintenance_downtime = (atoi(val) > 0) ? TRUE : FALSE;
 
 		else if (!strcmp(var, "show_tac_header"))
@@ -619,7 +640,109 @@ int read_cgi_config_file(char *filename) {
 		else if (!strcmp(var, "highlight_table_rows"))
 			highlight_table_rows = (atoi(val) > 0) ? TRUE : FALSE;
 
+		else if (!strcmp(var, "display_status_totals"))
+			display_status_totals = (atoi(val) > 0) ? TRUE : FALSE;
+
+		else if (!strcmp(var, "authorization_config_file")) {
+			authorization_config_file = strdup(val);
+			strip(authorization_config_file);
+
+		} else if (!strcmp(var, "authorized_for_all_host_commands")) {
+			authorized_for_all_host_commands = strdup(val);
+			strip(authorized_for_all_host_commands);
+
+		} else if (!strcmp(var, "authorized_for_all_hosts")) {
+			authorized_for_all_hosts = strdup(val);
+			strip(authorized_for_all_hosts);
+
+		} else if (!strcmp(var, "authorized_for_all_service_commands")) {
+			authorized_for_all_service_commands = strdup(val);
+			strip(authorized_for_all_service_commands);
+
+		} else if (!strcmp(var, "authorized_for_all_services")) {
+			authorized_for_all_services = strdup(val);
+			strip(authorized_for_all_services);
+
+		} else if (!strcmp(var, "authorized_for_configuration_information")) {
+			authorized_for_configuration_information = strdup(val);
+			strip(authorized_for_configuration_information);
+
+		} else if (!strcmp(var, "authorized_for_full_command_resolution")) {
+			authorized_for_full_command_resolution = strdup(val);
+			strip(authorized_for_full_command_resolution);
+
+		} else if (!strcmp(var, "authorized_for_read_only")) {
+			authorized_for_read_only = strdup(val);
+			strip(authorized_for_read_only);
+
+		} else if (!strcmp(var, "authorized_for_comments_read_only")) {
+			authorized_for_comments_read_only = strdup(val);
+			strip(authorized_for_comments_read_only);
+
+		} else if (!strcmp(var, "authorized_for_downtimes_read_only")) {
+			authorized_for_downtimes_read_only = strdup(val);
+			strip(authorized_for_downtimes_read_only);
+
+		} else if (!strcmp(var, "authorized_for_system_commands")) {
+			authorized_for_system_commands = strdup(val);
+			strip(authorized_for_system_commands);
+
+		} else if (!strcmp(var, "authorized_for_system_information")) {
+			authorized_for_system_information = strdup(val);
+			strip(authorized_for_system_information);
+
+		} else if (!strcmp(var, "authorized_contactgroup_for_all_host_commands")) {
+			authorized_contactgroup_for_all_host_commands = strdup(val);
+			strip(authorized_contactgroup_for_all_host_commands);
+
+		} else if (!strcmp(var, "authorized_contactgroup_for_all_hosts")) {
+			authorized_contactgroup_for_all_hosts = strdup(val);
+			strip(authorized_contactgroup_for_all_hosts);
+
+		} else if (!strcmp(var, "authorized_contactgroup_for_all_service_commands")) {
+			authorized_contactgroup_for_all_service_commands = strdup(val);
+			strip(authorized_contactgroup_for_all_service_commands);
+
+		} else if (!strcmp(var, "authorized_contactgroup_for_all_services")) {
+			authorized_contactgroup_for_all_services = strdup(val);
+			strip(authorized_contactgroup_for_all_services);
+
+		} else if (!strcmp(var, "authorized_contactgroup_for_configuration_information")) {
+			authorized_contactgroup_for_configuration_information = strdup(val);
+			strip(authorized_contactgroup_for_configuration_information);
+
+		} else if (!strcmp(var, "authorized_contactgroup_for_full_command_resolution")) {
+			authorized_contactgroup_for_full_command_resolution = strdup(val);
+			strip(authorized_contactgroup_for_full_command_resolution);
+
+		} else if (!strcmp(var, "authorized_contactgroup_for_read_only")) {
+			authorized_contactgroup_for_read_only = strdup(val);
+			strip(authorized_contactgroup_for_read_only);
+
+		} else if (!strcmp(var, "authorized_contactgroup_for_comments_read_only")) {
+			authorized_contactgroup_for_comments_read_only = strdup(val);
+			strip(authorized_contactgroup_for_comments_read_only);
+
+		} else if (!strcmp(var, "authorized_contactgroup_for_downtimes_read_only")) {
+			authorized_contactgroup_for_downtimes_read_only = strdup(val);
+			strip(authorized_contactgroup_for_downtimes_read_only);
+
+		} else if (!strcmp(var, "authorized_contactgroup_for_system_commands")) {
+			authorized_contactgroup_for_system_commands = strdup(val);
+			strip(authorized_contactgroup_for_system_commands);
+
+		} else if (!strcmp(var, "authorized_contactgroup_for_system_information")) {
+			authorized_contactgroup_for_system_information = strdup(val);
+			strip(authorized_contactgroup_for_system_information);
+
+		} else if (!strcmp(var, "default_user_name")) {
+			default_user_name = strdup(val);
+			strip(default_user_name);
+		}
 	}
+
+	for (p = illegal_output_chars; p && *p; p++)
+		illegal_output_char_map[(int)*p] = 1;
 
 	/* free memory and close the file */
 	free(input);
@@ -628,13 +751,36 @@ int read_cgi_config_file(char *filename) {
 	/* check if stylesheet path was set */
 	if (!strcmp(url_stylesheets_path, "")) {
 		snprintf(url_stylesheets_path, sizeof(url_stylesheets_path), "%sstylesheets/", url_html_path);
-		url_stylesheets_path[sizeof(url_stylesheets_path)-1] = '\x0';
+		url_stylesheets_path[sizeof(url_stylesheets_path) - 1] = '\x0';
 	}
 
-	if (!strcmp(main_config_file, ""))
-		return ERROR;
-	else
-		return OK;
+	if (!strcmp(main_config_file, "")) {
+
+		if (standalone_installation == TRUE) {
+			/*
+			 * if standalone_installation is switched on, we assume that
+			 * all vars are defined in cgi.cfg
+			 */
+			strncpy(main_config_file, filename, sizeof(main_config_file));
+			main_config_file[sizeof(main_config_file) - 1] = '\x0';
+
+			/*
+			 * If not, we assume default location for main_config_file
+			 */
+		} else {
+			strncpy(main_config_file, DEFAULT_CONFIG_FILE, sizeof(main_config_file));
+			main_config_file[sizeof(main_config_file) - 1] = '\x0';
+		}
+	}
+
+	/* if we are standalone install, we force to use cgi.cfg instead of icinga.cfg! */
+	if (standalone_installation == TRUE) {
+		strncpy(main_config_file, filename, sizeof(main_config_file));
+		main_config_file[sizeof(main_config_file) - 1] = '\x0';
+	}
+
+
+	return OK;
 }
 
 /* read the main configuration file */
@@ -647,6 +793,12 @@ int read_main_config_file(char *filename) {
 	if ((thefile = mmap_fopen(filename)) == NULL)
 		return ERROR;
 
+	/*
+		Icinga 2 compat layer:
+		when adding config lines to this function,
+		DON'T forget to add them to cgi.cfg.in as well
+	*/
+
 	while (1) {
 
 		/* free memory */
@@ -658,13 +810,13 @@ int read_main_config_file(char *filename) {
 
 		strip(input);
 
-                if (strstr(input, "resource_file=") == input) {
-                        temp_buffer = strtok(input, "=");
-                        temp_buffer = strtok(NULL, "\x0");
-                        strncpy(resource_file, (temp_buffer == NULL) ? "" : temp_buffer, sizeof(resource_file));
-                        resource_file[sizeof(resource_file)-1] = '\x0';
-                        strip(resource_file);
-                }
+		if (strstr(input, "resource_file=") == input) {
+			temp_buffer = strtok(input, "=");
+			temp_buffer = strtok(NULL, "\x0");
+			strncpy(resource_file, (temp_buffer == NULL) ? "" : temp_buffer, sizeof(resource_file));
+			resource_file[sizeof(resource_file) - 1] = '\x0';
+			strip(resource_file);
+		}
 
 		else if (strstr(input, "interval_length=") == input) {
 			temp_buffer = strtok(input, "=");
@@ -682,7 +834,7 @@ int read_main_config_file(char *filename) {
 			temp_buffer = strtok(input, "=");
 			temp_buffer = strtok(NULL, "\x0");
 			strncpy(log_file, (temp_buffer == NULL) ? "" : temp_buffer, sizeof(log_file));
-			log_file[sizeof(log_file)-1] = '\x0';
+			log_file[sizeof(log_file) - 1] = '\x0';
 			strip(log_file);
 		}
 
@@ -690,9 +842,9 @@ int read_main_config_file(char *filename) {
 			temp_buffer = strtok(input, "=");
 			temp_buffer = strtok(NULL, "\n");
 			strncpy(log_archive_path, (temp_buffer == NULL) ? "" : temp_buffer, sizeof(log_archive_path));
-			log_archive_path[sizeof(log_archive_path)-1] = '\x0';
+			log_archive_path[sizeof(log_archive_path) - 1] = '\x0';
 			strip(physical_html_path);
-			if (log_archive_path[strlen(log_archive_path)-1] != '/' && (strlen(log_archive_path) < sizeof(log_archive_path) - 1))
+			if (log_archive_path[strlen(log_archive_path) - 1] != '/' && (strlen(log_archive_path) < sizeof(log_archive_path) - 1))
 				strcat(log_archive_path, "/");
 		}
 
@@ -715,7 +867,7 @@ int read_main_config_file(char *filename) {
 			temp_buffer = strtok(input, "=");
 			temp_buffer = strtok(NULL, "\x0");
 			strncpy(command_file, (temp_buffer == NULL) ? "" : temp_buffer, sizeof(command_file));
-			command_file[sizeof(command_file)-1] = '\x0';
+			command_file[sizeof(command_file) - 1] = '\x0';
 			strip(command_file);
 		}
 
@@ -723,12 +875,6 @@ int read_main_config_file(char *filename) {
 			temp_buffer = strtok(input, "=");
 			temp_buffer = strtok(NULL, "\x0");
 			check_external_commands = (temp_buffer == NULL) ? 0 : atoi(temp_buffer);
-		}
-
-		else if (strstr(input, "log_external_commands_user=") == input) {
-			temp_buffer = strtok(input, "=");
-			temp_buffer = strtok(NULL, "\x0");
-			log_external_commands_user = (temp_buffer == NULL) ? 0 : atoi(temp_buffer);
 		}
 
 		else if (strstr(input, "date_format=") == input) {
@@ -797,81 +943,86 @@ int read_all_status_data(char *config_file, int options) {
 
 /* processes macros in resource file */
 int read_icinga_resource_file(char *resource_file) {
-        char *input = NULL;
-        char *variable = NULL;
-        char *value = NULL;
-        char *temp_ptr = NULL;
-        mmapfile *thefile = NULL;
-        int current_line = 1;
-        int error = FALSE;
-        int user_index = 0;
+	char *input = NULL;
+	char *variable = NULL;
+	char *value = NULL;
+	char *temp_ptr = NULL;
+	mmapfile *thefile = NULL;
+	int current_line = 1;
+	int error = FALSE;
+	int user_index = 0;
 
-        if ((thefile = mmap_fopen(resource_file)) == NULL) {
-                return ERROR;
-        }
+	if ((thefile = mmap_fopen(resource_file)) == NULL) {
+		return ERROR;
+	}
 
-        /* process all lines in the resource file */
-        while (1) {
+	/* process all lines in the resource file */
+	while (1) {
 
-                /* free memory */
-                my_free(input);
+		/* free memory */
+		my_free(input);
 
-                /* read the next line */
-                if ((input = mmap_fgets_multiline(thefile)) == NULL)
-                        break;
+		/* read the next line */
+		if ((input = mmap_fgets_multiline(thefile)) == NULL)
+			break;
 
-                current_line = thefile->current_line;
+		current_line = thefile->current_line;
 
-                /* skip blank lines and comments */
-                if (input[0] == '#' || input[0] == '\x0' || input[0] == '\n' || input[0] == '\r')
-                        continue;
+		/* skip blank lines and comments */
+		if (input[0] == '#' || input[0] == '\x0' || input[0] == '\n' || input[0] == '\r')
+			continue;
 
-                strip(input);
+		strip(input);
 
-                /* get the variable name */
-                if ((temp_ptr = my_strtok(input, "=")) == NULL) {
-                        error = TRUE;
-                        break;
-                }
-                if ((variable = (char *)strdup(temp_ptr)) == NULL) {
-                        error = TRUE;
-                        break;
-                }
+		/* get the variable name */
+		if ((temp_ptr = my_strtok(input, "=")) == NULL) {
+			error = TRUE;
+			break;
+		}
+		if ((variable = (char *)strdup(temp_ptr)) == NULL) {
+			error = TRUE;
+			break;
+		}
 
-                /* get the value */
-                if ((temp_ptr = my_strtok(NULL, "\n")) == NULL) {
-                        error = TRUE;
-                        break;
-                }
-                if ((value = (char *)strdup(temp_ptr)) == NULL) {
-                        error = TRUE;
-                        break;
-                }
+		/* get the value */
+		if ((temp_ptr = my_strtok(NULL, "\n")) == NULL) {
+			error = TRUE;
+			break;
+		}
+		if ((value = (char *)strdup(temp_ptr)) == NULL) {
+			error = TRUE;
+			break;
+		}
 
-                /* what should we do with the variable/value pair? */
+		/* what should we do with the variable/value pair? */
 
-                /* check for macro declarations */
-                if (variable[0] == '$' && variable[strlen(variable)-1] == '$') {
+		/* check for macro declarations */
+		if (variable[0] == '$' && variable[strlen(variable) - 1] == '$') {
 
-                        /* $USERx$ macro declarations */
-                        if (strstr(variable, "$USER") == variable  && strlen(variable) > 5) {
-                                user_index = atoi(variable + 5) - 1;
-                                if (user_index >= 0 && user_index < MAX_USER_MACROS) {
-                                        my_free(macro_user[user_index]);
-                                        macro_user[user_index] = (char *)strdup(value);
-                                }
-                        }
-                }
-        }
+			/* $USERx$ macro declarations */
+			if (strstr(variable, "$USER") == variable  && strlen(variable) > 5) {
+				user_index = atoi(variable + 5) - 1;
+				if (user_index >= 0 && user_index < MAX_USER_MACROS) {
+					my_free(macro_user[user_index]);
+					macro_user[user_index] = (char *)strdup(value);
+				}
+			}
+		}
+		my_free(variable);
+		my_free(value);
+	}
 
-        /* free leftover memory and close the file */
-        my_free(input);
-        mmap_fclose(thefile);
+	my_free(variable);
+	my_free(value);
 
-        if (error == TRUE)
-                return ERROR;
+	/* free leftover memory and close the file */
+	my_free(input);
+	mmap_fclose(thefile);
 
-        return OK;
+	if (error == TRUE)
+		return ERROR;
+
+	return OK;
 }
 
 
@@ -879,98 +1030,94 @@ int read_icinga_resource_file(char *resource_file) {
  *************** COMMON HEADER AND FOOTER *****************
  **********************************************************/
 
-void document_header(int cgi_id, int use_stylesheet) {
+void document_header(int cgi_id, int use_stylesheet, char *cgi_title) {
 	char date_time[MAX_DATETIME_LENGTH];
+	char run_time_string[24];
 	char *cgi_name = NULL;
 	char *cgi_css = NULL;
-	char *cgi_title = NULL;
 	char *cgi_body_class = NULL;
+	char *timezone = "";
 	time_t expire_time;
 	time_t current_time;
+	int result = 0;
+	int days = 0;
+	int hours = 0;
+	int minutes = 0;
+	int seconds = 0;
+	struct tm *tm_ptr = NULL;
 
 	switch (cgi_id) {
 	case STATUS_CGI_ID:
 		cgi_name        = STATUS_CGI;
 		cgi_css         = STATUS_CSS;
-		cgi_title       = "Current Network Status";
 		cgi_body_class  = "status";
 		break;
 	case AVAIL_CGI_ID:
 		cgi_name        = AVAIL_CGI;
 		cgi_css         = AVAIL_CSS;
-		cgi_title       = "Availability";
 		cgi_body_class  = "avail";
 		refresh         = FALSE;
 		break;
 	case CMD_CGI_ID:
 		cgi_name        = CMD_CGI;
 		cgi_css         = CMD_CSS;
-		cgi_title       = "External Command Interface";
 		cgi_body_class  = "cmd";
 		refresh         = FALSE;
 		break;
 	case CONFIG_CGI_ID:
 		cgi_name        = CONFIG_CGI;
 		cgi_css         = CONFIG_CSS;
-		cgi_title       = "Configuration";
 		cgi_body_class  = "config";
+		refresh         = FALSE;
 		break;
 	case EXTINFO_CGI_ID:
 		cgi_name        = EXTINFO_CGI;
 		cgi_css         = EXTINFO_CSS;
-		cgi_title       = "Extended Information";
 		cgi_body_class  = "extinfo";
 		break;
 	case HISTOGRAM_CGI_ID:
 		cgi_name        = HISTOGRAM_CGI;
 		cgi_css         = HISTOGRAM_CSS;
-		cgi_title       = "Histogram";
 		cgi_body_class  = "histogram";
 		refresh         = FALSE;
 		break;
 	case HISTORY_CGI_ID:
 		cgi_name        = HISTORY_CGI;
 		cgi_css         = HISTORY_CSS;
-		cgi_title       = "History";
 		cgi_body_class  = "history";
 		refresh         = FALSE;
 		break;
 	case NOTIFICATIONS_CGI_ID:
 		cgi_name        = NOTIFICATIONS_CGI;
 		cgi_css         = NOTIFICATIONS_CSS;
-		cgi_title       = "Alert Notifications";
 		cgi_body_class  = "notifications";
+		refresh         = FALSE;
 		break;
 	case OUTAGES_CGI_ID:
 		cgi_name        = OUTAGES_CGI;
 		cgi_css         = OUTAGES_CSS;
-		cgi_title       = "Network Outages";
 		cgi_body_class  = "outages";
 		break;
 	case SHOWLOG_CGI_ID:
 		cgi_name        = SHOWLOG_CGI;
 		cgi_css         = SHOWLOG_CSS;
-		cgi_title       = "Log File";
 		cgi_body_class  = "showlog";
 		refresh         = FALSE;
 		break;
 	case STATUSMAP_CGI_ID:
 		cgi_name        = STATUSMAP_CGI;
 		cgi_css         = STATUSMAP_CSS;
-		cgi_title       = "Network Map";
 		cgi_body_class  = "statusmap";
 		break;
 	case SUMMARY_CGI_ID:
 		cgi_name        = SUMMARY_CGI;
 		cgi_css         = SUMMARY_CSS;
-		cgi_title       = "Event Summary";
 		cgi_body_class  = "summary";
 		refresh         = FALSE;
 		break;
 	case TAC_CGI_ID:
 		cgi_name        = TAC_CGI;
 		cgi_css         = TAC_CSS;
-		cgi_title       = "Tactical Monitoring Overview";
 		cgi_body_class  = "tac";
 		if (tac_header == TRUE && show_tac_header == FALSE)
 			refresh = FALSE;
@@ -978,71 +1125,34 @@ void document_header(int cgi_id, int use_stylesheet) {
 	case TRENDS_CGI_ID:
 		cgi_name        = TRENDS_CGI;
 		cgi_css         = TRENDS_CSS;
-		cgi_title       = "Trends";
 		cgi_body_class  = "trends";
 		refresh         = FALSE;
 		break;
-	case ERROR_CGI_ID:
-		cgi_name        = "";
-		cgi_css         = CMD_CSS;
-		cgi_title       = "ERROR";
-		cgi_body_class  = "error";
-		break;
 	}
 
+	if (!strcmp(cgi_title, "Error"))
+		cgi_body_class = "error";
 
 	// don't refresh non html output
 	if (content_type == JSON_CONTENT || content_type == CSV_CONTENT)
 		refresh = FALSE;
 
-	if (content_type == WML_CONTENT) {
-		/* used by cmd.cgi */
-		printf("Content-type: text/vnd.wap.wml; charset=\"%s\"\r\n\r\n", http_charset);
+	time(&current_time);
 
-		printf("<?xml version=\"1.0\"?>\n");
-		printf("<!DOCTYPE wml PUBLIC \"-//WAPFORUM//DTD WML 1.1//EN\" \"http://www.wapforum.org/DTD/wml_1.1.xml\">\n");
+	// send top http header
+	printf("Cache-Control: no-store\r\n");
+	printf("Pragma: no-cache\r\n");
 
-		printf("<wml>\n");
+	if (refresh_type == HTTPHEADER_REFRESH && refresh == TRUE)
+		printf("Refresh: %d\r\n", refresh_rate);
 
-		printf("<card id='card1' title='Command Results'>\n");
+	get_time_string(&current_time, date_time, (int)sizeof(date_time), HTTP_DATE_TIME);
+	printf("Last-Modified: %s\r\n", date_time);
 
-		return;
-	}
+	expire_time = (time_t)0L;
+	get_time_string(&expire_time, date_time, (int)sizeof(date_time), HTTP_DATE_TIME);
+	printf("Expires: %s\r\n", date_time);
 
-	if (cgi_id != ERROR_CGI_ID) {
-		printf("Cache-Control: no-store\r\n");
-		printf("Pragma: no-cache\r\n");
-
-		if (refresh == TRUE)
-			printf("Refresh: %d\r\n", refresh_rate);
-
-		get_time_string(&current_time, date_time, (int)sizeof(date_time), HTTP_DATE_TIME);
-		printf("Last-Modified: %s\r\n", date_time);
-
-		expire_time = (time_t)0L;
-		get_time_string(&expire_time, date_time, (int)sizeof(date_time), HTTP_DATE_TIME);
-		printf("Expires: %s\r\n", date_time);
-	}
-
-	if (cgi_id == STATUSWRL_CGI_ID) {
-		printf("Content-Type: x-world/x-vrml\r\n\r\n");
-		return;
-	}
-	if (cgi_id == STATUSWML_CGI_ID) {
-
-		printf("Content-type: text/vnd.wap.wml; charset=\"%s\"\r\n\r\n", http_charset);
-
-		printf("<?xml version=\"1.0\"?>\n");
-		printf("<!DOCTYPE wml PUBLIC \"-//WAPFORUM//DTD WML 1.1//EN\" \"http://www.wapforum.org/DTD/wml_1.1.xml\">\n");
-
-		printf("<wml>\n");
-
-		printf("<head>\n");
-		printf("<meta forua=\"true\" http-equiv=\"Cache-Control\" content=\"max-age=0\"/>\n");
-		printf("</head>\n");
-
-		return;
-	}
 	if (content_type == IMAGE_CONTENT) {
 		printf("Content-Type: image/png\r\n\r\n");
 		return;
@@ -1054,8 +1164,68 @@ void document_header(int cgi_id, int use_stylesheet) {
 	}
 
 	if (content_type == JSON_CONTENT) {
+
+		/* read program status */
+		result = read_all_status_data(main_config_file, READ_PROGRAM_STATUS);
+
+		/* total running time */
+		if ( program_start != 0L) {
+			get_time_breakdown(current_time - program_start, &days, &hours, &minutes, &seconds);
+			sprintf(run_time_string, "%dd %dh %dm %ds", days, hours, minutes, seconds);
+		} else {
+			run_time_string[0] = '0';
+			run_time_string[1] = '\0';
+		}
+
+		tm_ptr = localtime(&current_time);
+
+#ifdef HAVE_TM_ZONE
+		timezone = (char *)tm_ptr->tm_zone;
+#else
+		timezone = (tm_ptr->tm_isdst) ? tzname[1] : tzname[0];
+#endif
+
 		printf("Content-type: text/json; charset=\"%s\"\r\n\r\n", http_charset);
 		printf("{ \"cgi_json_version\": \"%s\",\n", JSON_OUTPUT_VERSION);
+		printf("\"icinga_status\": {\n");
+
+		printf("\"status_data_age\": %lu,\n", current_time - status_file_creation_time);
+		printf("\"status_update_interval\": %d,\n", status_update_interval);
+		printf("\"reading_status_data_ok\": %s,\n", (result == ERROR && daemon_check == TRUE) ? "false" : "true");
+		printf("\"program_version\": \"%s\",\n", PROGRAM_VERSION);
+		printf("\"icinga_pid\": %d,\n", nagios_pid);
+#ifdef USE_OLDCRUD
+		printf(",\"running_as_a_daemon\": %s\n", (daemon_mode == TRUE) ? "true" : "false");
+#endif
+		printf("\"timezone\": \"%s\",\n", timezone);
+		if (date_format == DATE_FORMAT_EURO)
+			printf("\"date_format\": \"euro\",\n");
+		else if (date_format == DATE_FORMAT_ISO8601 || date_format == DATE_FORMAT_STRICT_ISO8601)
+			printf("\"date_format\": \"%siso8601\",\n", (date_format == DATE_FORMAT_STRICT_ISO8601) ? "strict-" : "");
+		else
+			printf("\"date_format\": \"us\",\n");
+		printf("\"program_start\": %lu,\n", program_start);
+		printf("\"total_running_time\": \"%s\",\n", run_time_string);
+		printf("\"last_external_command_check\": %lu,\n", last_command_check);
+		printf("\"last_log_file_rotation\": %lu,\n", last_log_rotation);
+		printf("\"notifications_enabled\": %s,\n", (enable_notifications == TRUE) ? "true" : "false");
+		printf("\"disable_notifications_expire_time\": %lu,\n", disable_notifications_expire_time);
+		printf("\"service_checks_being_executed\": %s,\n", (execute_service_checks == TRUE) ? "true" : "false");
+		printf("\"passive_service_checks_being_accepted\": %s,\n", (accept_passive_service_checks == TRUE) ? "true" : "false");
+		printf("\"host_checks_being_executed\": %s,\n", (execute_host_checks == TRUE) ? "true" : "false");
+		printf("\"passive_host_checks_being_accepted\": %s,\n", (accept_passive_host_checks == TRUE) ? "true" : "false");
+		printf("\"obsessing_over_services\": %s,\n", (obsess_over_services == TRUE) ? "true" : "false");
+		printf("\"obsessing_over_hosts\": %s,\n", (obsess_over_hosts == TRUE) ? "true" : "false");
+		printf("\"check_service_freshness\": %s,\n", (check_service_freshness == TRUE) ? "true" : "false");
+		printf("\"check_host_freshness\": %s,\n", (check_host_freshness == TRUE) ? "true" : "false");
+		printf("\"event_handlers_enabled\": %s,\n", (enable_event_handlers == TRUE) ? "true" : "false");
+		printf("\"flap_detection_enabled\": %s,\n", (enable_flap_detection == TRUE) ? "true" : "false");
+		printf("\"performance_data_being_processed\": %s\n", (process_performance_data == TRUE) ? "true" : "false");
+#ifdef PREDICT_FAILURES
+		printf(",\"failure_prediction_enabled\": %s\n", (enable_failure_prediction == TRUE) ? "true" : "false");
+#endif
+
+		printf("}, \n");
 		printf("\"%s\": {\n", cgi_body_class);
 		return;
 	}
@@ -1066,86 +1236,144 @@ void document_header(int cgi_id, int use_stylesheet) {
 		return;
 	}
 
-
-	if (cgi_id != ERROR_CGI_ID) {
-		// send HTML CONTENT
-		printf("Content-type: text/html; charset=\"%s\"\r\n\r\n", http_charset);
-	}
-
-	/* is this tac.cgi?tac_header */
-	if (cgi_id == TAC_CGI_ID && tac_header == TRUE) {
-
-		printf("<html>\n");
-		printf("<head>\n");
-		printf("<title>Icinga</title>\n");
-		printf("<meta name='robots' content='noindex, nofollow' />\n");
-
-		/* is show_tac_header=1 in cgi.cfg? */
-		if (show_tac_header == TRUE)
-			printf("<LINK REL='stylesheet' TYPE='text/css' HREF='%s%s'>\n", url_stylesheets_path, TAC_HEADER_CSS);
-		else //no? show the classic header as the default
-			printf("<LINK REL='stylesheet' TYPE='text/css' HREF='%sinterface/common.css'>\n", url_stylesheets_path);
-
-		printf("<link rel=\"shortcut icon\" href=\"%sfavicon.ico\" type=\"image/ico\">\n", url_images_path);
-		printf("</head>\n");
-		printf("<body>\n");
-
-		return; //safely return
-	}
+	printf("Content-type: text/html; charset=\"%s\"\r\n\r\n", http_charset);
 
 	if (embedded == TRUE)
 		return;
+
+	if (cgi_id != STATUSMAP_CGI_ID)
+		printf("<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01 Transitional//EN\" \"http://www.w3.org/TR/html4/loose.dtd\">\n");
 
 	printf("<html>\n");
 	printf("<head>\n");
 	printf("<link rel=\"shortcut icon\" href=\"%sfavicon.ico\" type=\"image/ico\">\n", url_images_path);
 	printf("<META HTTP-EQUIV='Pragma' CONTENT='no-cache'>\n");
-	printf("<meta http-equiv=\"content-type\" content=\"text/html; charset=%s\">", http_charset);
-	printf("<title>\n");
+	printf("<meta http-equiv=\"content-type\" content=\"text/html; charset=%s\">\n", http_charset);
+	printf("<title>%s</title>\n", cgi_title);
 
-	if (cgi_id == STATUS_CGI_ID) {
-		if (tab_friendly_titles) {
-			if ((display_type == DISPLAY_HOSTS) && (!show_all_hosts) && host_name && (*host_name != '\0'))
-				printf("[%s]\n", html_encode(host_name, FALSE));
-			else if ((display_type == DISPLAY_HOSTGROUPS) && (!show_all_hostgroups) && hostgroup_name && (*hostgroup_name != '\0'))
-				printf("{%s}\n", html_encode(hostgroup_name, FALSE));
-			else if ((display_type == DISPLAY_SERVICEGROUPS) && (!show_all_servicegroups) && servicegroup_name && (*servicegroup_name != '\0'))
-				printf("(%s)\n", html_encode(servicegroup_name, FALSE));
-			else
-				printf("%s\n", cgi_title);
-		} else printf("%s\n", cgi_title);
-	} else if (cgi_id == EXTINFO_CGI_ID) {
-		if (tab_friendly_titles) {
-			if ((display_type == DISPLAY_HOST_INFO) && host_name && (*host_name != '\0'))
-				printf("[%s]\n", html_encode(host_name, FALSE));
-			else if ((display_type == DISPLAY_SERVICE_INFO) && service_desc && (*service_desc != '\0')) {
-				printf("%s\n", service_desc);
-				if (host_name && (*host_name != '\0'))
-					printf("@ %s\n", html_encode(host_name, FALSE));
-			} else if ((display_type == DISPLAY_HOSTGROUP_INFO) && hostgroup_name && (*hostgroup_name != '\0'))
-				printf("{%s}\n", html_encode(hostgroup_name, FALSE));
-			else if ((display_type == DISPLAY_SERVICEGROUP_INFO) && servicegroup_name && (*servicegroup_name != '\0'))
-				printf("(%s)\n", html_encode(servicegroup_name, FALSE));
-			else
-				printf("%s\n", cgi_title);
-		} else printf("%s\n", cgi_title);
-	} else {
-		printf("%s\n", cgi_title);
+	// static style sheet for error messages.
+	if (!strcmp(cgi_title, "Error")) {
+		printf("<style type=\"text/css\">\n");
+		printf(".errorBox {\n");
+		printf("\tborder:1px red solid;\n");
+		printf("\tbackground-color: #FFE5E5;\n");
+		printf("\twidth: 600px;\n");
+		printf("}\n\n");
+		printf(".errorMessage {\n");
+		printf("\tfont-family: arial, verdana, serif;\n");
+		printf("\tcolor: #000;\n");
+		printf("\tfont-size: 10pt;\n");
+		printf("\ttext-align:left;\n");
+		printf("\tmargin:1em;\n");
+		printf("}\n");
+		printf("</style>\n");
 	}
-	printf("</title>\n");
 
-	if (use_stylesheet) {
+	if (cgi_id == TAC_CGI_ID && tac_header == TRUE) {
+		printf("<LINK REL='stylesheet' TYPE='text/css' HREF='%s%s'>\n", url_stylesheets_path, (show_tac_header == TRUE) ? TAC_HEADER_CSS : COMMON_CSS);
+	} else if (use_stylesheet) {
 		printf("<LINK REL='stylesheet' TYPE='text/css' HREF='%s%s'>\n", url_stylesheets_path, COMMON_CSS);
 		printf("<LINK REL='stylesheet' TYPE='text/css' HREF='%s%s'>\n", url_stylesheets_path, cgi_css);
 	}
 
-	if (cgi_id == STATUS_CGI_ID || cgi_id == EXTINFO_CGI_ID) {
-		/* JavaScript for dropdown menu WITH images */
-		printf("<script type='text/javascript' src='%s%s'></script>\n", url_js_path, JQUERY_MAIN_JS);
-		printf("<script type='text/javascript' src='%s%s'></script>\n", url_js_path, JQUERY_DD_JS);
+	// javascript refresh
+	if (refresh_type == JAVASCRIPT_REFRESH) {
+		printf("<script type=\"text/javascript\">\n");
+		printf("var refresh_rate=%d;\n", refresh_rate);
+		printf("var do_refresh=%s;\n", (refresh == TRUE) ? "true" : "false");
+		printf("var counter_seconds=refresh_rate;\n");
+		printf("</script>\n");
+		printf("<script type='text/javascript' src='%s%s'></script>\n", url_js_path, PAGE_REFRESH_JS);
+	}
+
+	/* jQuery JavaScript library */
+	printf("<script type='text/javascript' src='%s%s'></script>\n", url_js_path, JQUERY_MAIN_JS);
+
+	/* datetimepicker libs and css */
+	if (cgi_id == CMD_CGI_ID || cgi_id == NOTIFICATIONS_CGI_ID || cgi_id == SHOWLOG_CGI_ID || cgi_id == HISTORY_CGI_ID) {
+		printf("<script type='text/javascript' src='%s%s'></script>\n", url_jquiryui_path, JQ_UI_CORE_JS);
+		printf("<script type='text/javascript' src='%s%s'></script>\n", url_jquiryui_path, JQ_UI_WIDGET_JS);
+		printf("<script type='text/javascript' src='%s%s'></script>\n", url_jquiryui_path, JQ_UI_MOUSE_JS);
+		printf("<script type='text/javascript' src='%s%s'></script>\n", url_jquiryui_path, JQ_UI_SLIDER_JS);
+		printf("<script type='text/javascript' src='%s%s'></script>\n", url_jquiryui_path, JQ_UI_DATEPICKER_JS);
+		printf("<script type='text/javascript' src='%s%s'></script>\n", url_jquiryui_addon_path, JQ_UI_TIMEPICKER_JS);
+
+		printf("<link rel='stylesheet' type='text/css' href='%s%s'>\n", url_jquiryui_path, JQ_UI_ALL_CSS);
+		printf("<link rel='stylesheet' type='text/css' href='%s%s'>\n", url_jquiryui_addon_path, JQ_UI_TIMEPICKER_CSS);
+
+		printf("<script type=\"text/javascript\">\n");
+		printf("$(document).ready(function() {\n");
+		printf("\t$( \".timepicker\" ).datetimepicker({\n");
+		printf("\t\tfirstDay: %d,\n", week_starts_on_monday);
+
+		if (date_format == DATE_FORMAT_EURO)
+			printf("\t\tdateFormat: 'dd-mm-yy',\n");
+		else if (date_format == DATE_FORMAT_ISO8601 || date_format == DATE_FORMAT_STRICT_ISO8601)
+			printf("\t\tdateFormat: 'yy-mm-dd%s',\n", (date_format == DATE_FORMAT_STRICT_ISO8601) ? "T" : "");
+		else
+			printf("\t\tdateFormat: 'mm-dd-yy',\n");
+
+		printf("\t\ttimeFormat: 'hh:mm:ss',\n");
+		printf("\t\tshowWeek: true,\n");
+		printf("\t\tchangeMonth: true,\n");
+		printf("\t\tchangeYear: true\n");
+		printf("\t});\n");
+
+		printf("\t$(\"#history-datepicker\").datepicker({\n");
+		printf("\t\tfirstDay: %d,\n", week_starts_on_monday);
+		printf("\t\tdateFormat: '@',\n");
+		printf("\t\tmaxDate: '+0d',\n");
+		printf("\t\tshowWeek: true,\n");
+		printf("\t\tchangeMonth: true,\n");
+		printf("\t\tchangeYear: true,\n");
+		printf("\t\tbeforeShow: function (input, instance) {\n");
+		printf("\t\t\tinstance.dpDiv.css({\n");
+		printf("\t\t\t\tmarginTop: '15px',\n");
+		printf("\t\t\t\tmarginLeft: '-67px'\n");
+		printf("\t\t\t});\n");
+		printf("\t\t},\n");
+		printf("\t\tonSelect: function (date) {\n");
+		printf("\t\t\tif (date == '' || date < 0) { return false;}\n");
+		printf("\t\t\tts_start = date.substring(0,date.length-3);\n");
+		printf("\t\t\tts_end = parseInt(ts_start,10) + parseInt(86399,10);\n");
+		printf("\t\t\turl = window.location.href;\n");
+		printf("\t\t\toptions = '';\n");
+		printf("\t\t\tnewoptionsArray = new Array();\n");
+		printf("\t\t\tif (url.indexOf('?') === -1) {\n");
+		printf("\t\t\t\tbase_url = url;\n");
+		printf("\t\t\t} else {\n");
+		printf("\t\t\t\tbase_url = url.substring(0,url.indexOf('?'));\n");
+		printf("\t\t\t\toptions = url.substring(url.indexOf('?')+1);\n");
+		printf("\t\t\t\toptionsArray = options.split('&');\n");
+		printf("\t\t\t\tfor (var i=0; i<optionsArray.length; i++) {\n");
+		printf("\t\t\t\t\tswitch (optionsArray[i].substring(0,optionsArray[i].indexOf('='))) {\n");
+		printf("\t\t\t\t\t\tcase 'ts_start':\n");
+		printf("\t\t\t\t\t\tcase 'ts_end':\n");
+		printf("\t\t\t\t\t\tcase 'start':\n");
+		printf("\t\t\t\t\t\tcase 'start_time':\n");
+		printf("\t\t\t\t\t\tcase 'end_time':\n");
+		printf("\t\t\t\t\t\tcase '':\n");
+		printf("\t\t\t\t\t\t\tbreak;\n");
+		printf("\t\t\t\t\t\tdefault:\n");
+		printf("\t\t\t\t\t\t\tnewoptionsArray.push(optionsArray[i]);\n");
+		printf("\t\t\t\t\t}\n");
+		printf("\t\t\t\t}\n");
+		printf("\t\t\t}\n");
+		printf("\t\t\tnewoptionsArray.push('ts_start=' + ts_start, 'ts_end=' + ts_end);\n");
+		printf("\t\t\twindow.location.href = base_url + '?' + newoptionsArray.join('&');\n");
+		printf("\t\t}\n");
+		printf("\t});\n");
+
+		printf("});\n");
+		printf("</script>\n");
+	}
+
+	/* Add jQuery MSDropDown to sites with pagination and status.cgi */
+	if (cgi_id == STATUS_CGI_ID || cgi_id == EXTINFO_CGI_ID || cgi_id == CONFIG_CGI_ID || cgi_id == HISTORY_CGI_ID || cgi_id == NOTIFICATIONS_CGI_ID || cgi_id == SHOWLOG_CGI_ID) {
 
 		/* This CSS IS needed for proper dropdown menu's (bypass the use_stylesheets above, who does without anyway?) */
-		printf("<link rel='stylesheet' type='text/css' href='%s%s'/>\n", url_stylesheets_path, JQUERY_DD_CSS);
+		printf("<script type='text/javascript' src='%s%s'></script>\n", url_js_path, JQUERY_DD_JS);
+		printf("<link rel='stylesheet' type='text/css' href='%s%s'>\n", url_stylesheets_path, JQUERY_DD_CSS);
 
 		/* functions to handle the checkboxes and dropdown menus */
 		printf("<script type='text/javascript' src='%s%s'></script>\n", url_js_path, CHECKBOX_FUNCTIONS_JS);
@@ -1160,19 +1388,20 @@ void document_header(int cgi_id, int use_stylesheet) {
 
 	if (cgi_id == STATUSMAP_CGI_ID)
 		printf("<body CLASS='%s' name='mappage' id='mappage'>\n", cgi_body_class);
-	else if (cgi_id == TAC_CGI_ID)
+	else if (cgi_id == TAC_CGI_ID && tac_header == FALSE)
 		printf("<body CLASS='%s' marginwidth=2 marginheight=2 topmargin=0 leftmargin=0 rightmargin=0>\n", cgi_body_class);
 	else
 		printf("<body CLASS='%s'>\n", cgi_body_class);
 
 	/* include user SSI header */
-	include_ssi_files(cgi_name, SSI_HEADER);
+	if (tac_header == FALSE)
+		include_ssi_files(cgi_name, SSI_HEADER);
 
 	/* this line was also in histogram.c, is this necessary??? */
 	if (cgi_id == HISTOGRAM_CGI_ID || cgi_id == STATUSMAP_CGI_ID || cgi_id == TRENDS_CGI_ID)
 		printf("<div id=\"popup\" style=\"position:absolute; z-index:1; visibility: hidden\"></div>\n");
 
-	if (cgi_id == STATUS_CGI_ID || cgi_id == CMD_CGI_ID) {
+	if (cgi_id == STATUS_CGI_ID || cgi_id == CMD_CGI_ID || cgi_id == OUTAGES_CGI_ID) {
 		printf("\n<script type='text/javascript' src='%s%s'>\n<!-- SkinnyTip (c) Elliott Brueggeman -->\n</script>\n", url_js_path, SKINNYTIP_JS);
 		printf("<div id='tiplayer' style='position:absolute; visibility:hidden; z-index:1000;'></div>\n");
 	}
@@ -1232,13 +1461,6 @@ void document_footer(int cgi_id) {
 	if (content_type == XML_CONTENT)
 		return;
 
-	if (content_type == WML_CONTENT) {
-		/* used by cmd.cgi */
-		printf("</card>\n");
-		printf("</wml>\n");
-		return;
-	}
-
 	if (content_type == JSON_CONTENT) {
 		printf("}\n}\n");
 		return;
@@ -1248,16 +1470,12 @@ void document_footer(int cgi_id) {
 	   top is embedded, so if this is top we don't want to return
 	   otherwise if embedded or HTML_CONTENT we do want to return
 	*/
-	if ((embedded || content_type != HTML_CONTENT) && tac_header == FALSE)
+	if (embedded || content_type != HTML_CONTENT)
 		return;
-
-	if (cgi_id == STATUSWML_CGI_ID) {
-		printf("</wml>\n");
-		return;
-	}
 
 	/* include user SSI footer */
-	include_ssi_files(cgi_name, SSI_FOOTER);
+	if (tac_header == FALSE)
+		include_ssi_files(cgi_name, SSI_FOOTER);
 
 	printf("</body>\n");
 	printf("</html>\n");
@@ -1274,7 +1492,7 @@ void write_popup_code(int cgi_id) {
 	int x_offset = 3;
 	int y_offset = 3;
 
-	printf("<SCRIPT LANGUAGE='JavaScript'>\n");
+	printf("<SCRIPT LANGUAGE='JavaScript' type='text/javascript'>\n");
 	printf("<!--\n");
 	printf("// JavaScript popup based on code originally found at http://www.helpmaster.com/htmlhelp/javascript/popjbpopup.htm\n");
 	printf("function showPopup(text, eventObj){\n");
@@ -1366,14 +1584,14 @@ char *unescape_newlines(char *rawbuf) {
 		if (rawbuf[x] == '\\') {
 
 			/* unescape newlines */
-			if (rawbuf[x+1] == 'n') {
+			if (rawbuf[x + 1] == 'n') {
 				rawbuf[y++] = '\n';
 				x++;
 			}
 
 			/* unescape backslashes and other stuff */
-			if (rawbuf[x+1] != '\x0') {
-				rawbuf[y++] = rawbuf[x+1];
+			if (rawbuf[x + 1] != '\x0') {
+				rawbuf[y++] = rawbuf[x + 1];
 				x++;
 			}
 
@@ -1550,7 +1768,7 @@ void get_time_string(time_t *raw_time, char *buffer, int buffer_length, int type
 	else
 		snprintf(buffer, buffer_length, "%02d:%02d:%02d", hour, minute, second);
 
-	buffer[buffer_length-1] = '\x0';
+	buffer[buffer_length - 1] = '\x0';
 
 	return;
 }
@@ -1569,7 +1787,7 @@ void get_interval_time_string(double time_units, char *buffer, int buffer_length
 	total_seconds %= 60;
 	seconds = (int)total_seconds;
 	snprintf(buffer, buffer_length, "%dh %dm %ds", hours, minutes, seconds);
-	buffer[buffer_length-1] = '\x0';
+	buffer[buffer_length - 1] = '\x0';
 
 	return;
 }
@@ -1579,8 +1797,8 @@ char * url_encode(char *input) {
 	int len, output_len;
 	int x, y;
 	char temp_expansion[4];
-	static int i = 0;
-	char* str = encoded_url_string[i];
+	static int num_encoded_url = 0;
+	char* str = encoded_url_string[num_encoded_url];
 
 	/* initialize return string */
 	strcpy(str, "");
@@ -1589,7 +1807,7 @@ char * url_encode(char *input) {
 		return str;
 
 	len = (int)strlen(input);
-	output_len = (int)sizeof(encoded_url_string[0]);
+	output_len = (int)sizeof(encoded_url_string[num_encoded_url]);
 
 	str[0] = '\x0';
 
@@ -1630,7 +1848,12 @@ char * url_encode(char *input) {
 		}
 	}
 
-	str[sizeof(encoded_url_string[0]) - 1] = '\x0';
+	str[ sizeof(encoded_url_string[num_encoded_url]) - 1] = '\x0';
+
+	if (num_encoded_url >= 3)
+		num_encoded_url = 0;
+	else
+		num_encoded_url++;
 
 	return str;
 }
@@ -1640,36 +1863,38 @@ char * html_encode(char *input, int escape_newlines) {
 	int len, output_len;
 	int x, y;
 	char temp_expansion[10];
+	static int num_encoded_html = 0;
+	char* str = encoded_html_string[num_encoded_html];
+
+	/* initialize return string */
+	strcpy(str, "");
 
 	if (input == NULL)
-		return "";
+		return str;
 
-	/* we need up to six times the space to do the conversion */
 	len = (int)strlen(input);
-	output_len = len * 6;
-	if ((encoded_html_string = (char *)malloc(output_len + 1)) == NULL)
-		return "";
+	output_len = (int)sizeof(encoded_html_string[num_encoded_html]);
 
-	strcpy(encoded_html_string, "");
+	str[0] = '\x0';
 
-	for (x = 0, y = 0; x <= len; x++) {
+	for (x = 0, y = 0; x <= len && y < output_len - 1; x++) {
 
 		/* end of string */
 		if ((char)input[x] == (char)'\x0') {
-			encoded_html_string[y] = '\x0';
+			str[y] = '\x0';
 			break;
 		}
 
 		/* alpha-numeric characters and spaces don't get encoded */
 		else if (((char)input[x] == (char)' ') || ((char)input[x] >= '0' && (char)input[x] <= '9') || ((char)input[x] >= 'A' && (char)input[x] <= 'Z') || ((char)input[x] >= (char)'a' && (char)input[x] <= (char)'z'))
-			encoded_html_string[y++] = input[x];
+			str[y++] = input[x];
 
 		/* newlines turn to <BR> tags */
 		else if (escape_newlines == TRUE && (char)input[x] == (char)'\n') {
-			strcpy(&encoded_html_string[y], "<BR>");
+			strcpy(&str[y], "<BR>");
 			y += 4;
-		} else if (escape_newlines == TRUE && (char)input[x] == (char)'\\' && (char)input[x+1] == (char)'n') {
-			strcpy(&encoded_html_string[y], "<BR>");
+		} else if (escape_newlines == TRUE && (char)input[x] == (char)'\\' && (char)input[x + 1] == (char)'n') {
+			strcpy(&str[y], "<BR>");
 			y += 4;
 			x++;
 		}
@@ -1679,11 +1904,11 @@ char * html_encode(char *input, int escape_newlines) {
 		else if ((char)input[x] == (char)'<') {
 
 			if (escape_html_tags == FALSE)
-				encoded_html_string[y++] = input[x];
+				str[y++] = input[x];
 			else {
-				encoded_html_string[y] = '\x0';
-				if ((int)strlen(encoded_html_string) < (output_len - 4)) {
-					strcat(encoded_html_string, "&lt;");
+				str[y] = '\x0';
+				if ((int)strlen(str) < (output_len - 4)) {
+					strcat(str, "&lt;");
 					y += 4;
 				}
 			}
@@ -1692,11 +1917,11 @@ char * html_encode(char *input, int escape_newlines) {
 		else if ((char)input[x] == (char)'>') {
 
 			if (escape_html_tags == FALSE)
-				encoded_html_string[y++] = input[x];
+				str[y++] = input[x];
 			else {
-				encoded_html_string[y] = '\x0';
-				if ((int)strlen(encoded_html_string) < (output_len - 4)) {
-					strcat(encoded_html_string, "&gt;");
+				str[y] = '\x0';
+				if ((int)strlen(str) < (output_len - 4)) {
+					strcat(str, "&gt;");
 					y += 4;
 				}
 			}
@@ -1704,26 +1929,28 @@ char * html_encode(char *input, int escape_newlines) {
 
 		/* high bit chars don't get encoded, so we won't be breaking utf8 characters */
 		else if ((unsigned char)input[x] >= 0x7f)
-			encoded_html_string[y++] = input[x];
+			str[y++] = input[x];
 
 		/* for simplicity, all other chars represented by their numeric value */
 		else {
 			if (escape_html_tags == FALSE)
-				encoded_html_string[y++] = input[x];
+				str[y++] = input[x];
 			else {
-				encoded_html_string[y] = '\x0';
+				str[y] = '\x0';
 				sprintf(temp_expansion, "&#%d;", (unsigned char)input[x]);
-				if ((int)strlen(encoded_html_string) < (output_len - strlen(temp_expansion))) {
-					strcat(encoded_html_string, temp_expansion);
+				if ((int)strlen(str) < (output_len - strlen(temp_expansion))) {
+					strcat(str, temp_expansion);
 					y += strlen(temp_expansion);
 				}
 			}
 		}
 	}
 
-	encoded_html_string[y++] = '\x0';
+	str[y++] = '\x0';
 
-	return encoded_html_string;
+	num_encoded_html = (num_encoded_html == 0) ? 1 : 0;
+
+	return str;
 }
 
 /* strip > and < from string */
@@ -1752,49 +1979,56 @@ char * escape_string(char *input) {
 	int len, output_len;
 	int x, y;
 	char temp_expansion[10];
+	static int num_encoded_html = 0;
+	char* str = encoded_html_string[num_encoded_html];
 
-	/* we need up to six times the space to do the conversion */
+	/* initialize return string */
+	strcpy(str, "");
+
+	if (input == NULL)
+		return str;
+
 	len = (int)strlen(input);
-	output_len = len * 6;
-	if ((encoded_html_string = (char *)malloc(output_len + 1)) == NULL)
-		return "";
+	output_len = (int)sizeof(encoded_html_string[num_encoded_html]);
 
-	strcpy(encoded_html_string, "");
+	str[0] = '\x0';
 
-	for (x = 0, y = 0; x <= len; x++) {
+	for (x = 0, y = 0; x <= len && y < output_len - 1; x++) {
 
 		/* end of string */
 		if ((char)input[x] == (char)'\x0') {
-			encoded_html_string[y] = '\x0';
+			str[y] = '\x0';
 			break;
 		}
 
 		/* alpha-numeric characters don't get encoded */
 		else if (((char)input[x] >= '0' && (char)input[x] <= '9') || ((char)input[x] >= 'A' && (char)input[x] <= 'Z') || ((char)input[x] >= (char)'a' && (char)input[x] <= (char)'z'))
-			encoded_html_string[y++] = input[x];
+			str[y++] = input[x];
 
 		/* spaces, hyphens, periods, underscores and colons don't get encoded */
 		else if (((char)input[x] == (char)' ') || ((char)input[x] == (char)'-') || ((char)input[x] == (char)'.') || ((char)input[x] == (char)'_') || ((char)input[x] == (char)':'))
-			encoded_html_string[y++] = input[x];
+			str[y++] = input[x];
 
 		/* high bit characters don't get encoded */
 		else if ((unsigned char)input[x] >= 0x7f)
-			encoded_html_string[y++] = input[x];
+			str[y++] = input[x];
 
 		/* for simplicity, all other chars represented by their numeric value */
 		else {
-			encoded_html_string[y] = '\x0';
+			str[y] = '\x0';
 			sprintf(temp_expansion, "&#%d;", (unsigned char)input[x]);
-			if ((int)strlen(encoded_html_string) < (output_len - strlen(temp_expansion))) {
-				strcat(encoded_html_string, temp_expansion);
+			if ((int)strlen(str) < (output_len - strlen(temp_expansion))) {
+				strcat(str, temp_expansion);
 				y += strlen(temp_expansion);
 			}
 		}
 	}
 
-	encoded_html_string[y++] = '\x0';
+	str[y++] = '\x0';
 
-	return encoded_html_string;
+	num_encoded_html = (num_encoded_html == 0) ? 1 : 0;
+
+	return str;
 }
 
 
@@ -1802,39 +2036,42 @@ char * escape_string(char *input) {
  *************** COMMON HTML FUNCTIONS ********************
  **********************************************************/
 
-void display_info_table(char *title, int refresh, authdata *current_authdata, int daemon_check) {
+void display_info_table(char *title, authdata *current_authdata, int daemon_check) {
 	char date_time[MAX_DATETIME_LENGTH];
+	char disable_notif_expire_time[MAX_DATETIME_LENGTH];
 	char *dir_to_check = NULL;
 	time_t current_time;
 	int result;
 	int x, last = 0, dummy;
 
 	/* read program status */
-	result = read_all_status_data(get_cgi_config_location(), READ_PROGRAM_STATUS);
+	result = read_all_status_data(main_config_file, READ_PROGRAM_STATUS);
 
 	printf("<TABLE CLASS='infoBox' BORDER=1 CELLSPACING=0 CELLPADDING=0>\n");
-	printf("<TR><TD CLASS='infoBox'>\n");
+	printf("<TR><TD CLASS='infoBox' nowrap>\n");
 	printf("<DIV CLASS='infoBoxTitle'>%s</DIV>\n", title);
 
 	time(&current_time);
 	get_time_string(&current_time, date_time, (int)sizeof(date_time), LONG_DATE_TIME);
 
-	printf("Last Updated: %s - \n", date_time);
+	/* disabled notifications expire time */
+	get_time_string(&disable_notifications_expire_time, disable_notif_expire_time, (int)sizeof(disable_notif_expire_time), SHORT_DATE_TIME);
 
+	printf("Last Updated: %s ", date_time);
 
-	/* don't show in historical (long) listings */
-	if (CGI_ID != SHOWLOG_CGI_ID && CGI_ID != TRENDS_CGI_ID && CGI_ID != HISTOGRAM_CGI_ID && CGI_ID != HISTORY_CGI_ID && CGI_ID != AVAIL_CGI_ID) {
-		/* decide if refresh is paused or not */
-		if (refresh == TRUE) {
-			/* if refresh, add paused query to url and set location.href */
-			printf("Updated every %d seconds <small>[<a href=\"javascript:window.location.href += ((window.location.toString().indexOf('?') != -1) ? '&' : '?') + 'paused'\">pause</a>]</small><br>\n", refresh_rate);
-		} else {
-			/* if no refresh, remove the paused query from url and set location.href */
-			printf("Update is paused <small>[<a href=\"javascript:window.location.href = window.location.href.replace(/[\?&]paused/,'')\">continue</a>]</small><br>\n");
-		}
+	/* display only if refresh is supported */
+	if (CGI_ID == EXTINFO_CGI_ID || CGI_ID == OUTAGES_CGI_ID || CGI_ID == STATUS_CGI_ID || CGI_ID == STATUSMAP_CGI_ID || CGI_ID == TAC_CGI_ID) {
+		if (CGI_ID == STATUS_CGI_ID && display_status_totals == TRUE)
+			printf("<BR>");
+		else
+			printf("- ");
+		if (refresh_type == JAVASCRIPT_REFRESH)
+			printf("<span id='refresh_text'>Refresh done......</span>&nbsp;<small><a href='#' onClick='icinga_toggle_refresh(); return false;'><span id='refresh_button'></span></a> <a href='#' onClick='icinga_do_refresh(); return false;'><img src='%s%s' border=0 style='margin-bottom:-2px;'></a></small>\n", url_images_path, RELOAD_ICON);
+		else
+			printf("Update every %d seconds\n", refresh_rate);
 	}
 
-	printf("<A HREF='http://www.icinga.org' TARGET='_new' CLASS='homepageURL'>%s %s</A> -\n", PROGRAM_NAME, PROGRAM_VERSION);
+	printf("<br><A HREF='http://www.icinga.org' TARGET='_new' CLASS='homepageURL'>%s %s</A> -\n", PROGRAM_NAME, PROGRAM_VERSION);
 
 	if (current_authdata != NULL)
 		printf("Logged in as <i>%s</i>\n", (!strcmp(current_authdata->username, "")) ? "?" : current_authdata->username);
@@ -1871,22 +2108,23 @@ void display_info_table(char *title, int refresh, authdata *current_authdata, in
 		free(dir_to_check);
 	}
 
-	if (nagios_process_state != STATE_OK)
-		printf("<DIV CLASS='infoBoxBadProcStatus'>Warning: Monitoring process may not be running!<BR>Click <A HREF='%s?type=%d'>here</A> for more info.</DIV>", EXTINFO_CGI, DISPLAY_PROCESS_INFO);
-
 	if (result == ERROR && daemon_check == TRUE)
 		printf("<DIV CLASS='infoBoxBadProcStatus'>Warning: Could not read program status information!</DIV>");
 
 	else {
-		if (enable_notifications == FALSE)
-			printf("<DIV CLASS='infoBoxBadProcStatus'>- Notifications are disabled</DIV>");
+		if (enable_notifications == FALSE) {
+			printf("<DIV CLASS='infoBoxBadProcStatus'>- Notifications are disabled");
+			if (disable_notifications_expire_time != 0)
+				printf(" until %s", disable_notif_expire_time);
+			printf("</DIV>");
+		}
 
 		if (execute_service_checks == FALSE)
 			printf("<DIV CLASS='infoBoxBadProcStatus'>- Service checks are disabled</DIV>");
 	}
 
-	if (CGI_ID == CONFIG_CGI_ID && authorized_for_full_command_resolution(current_authdata)) {
-		if (access(resource_file, R_OK) != 0) 
+	if (CGI_ID == CONFIG_CGI_ID && is_authorized_for_full_command_resolution(current_authdata)) {
+		if (access(resource_file, R_OK) != 0)
 			printf("<DIV CLASS='infoBoxBadProcStatus'>Warning: Could not read resource file, raw command line could be incomplete!</DIV>");
 	}
 
@@ -1900,69 +2138,118 @@ void display_info_table(char *title, int refresh, authdata *current_authdata, in
 	return;
 }
 
-void display_nav_table(char *url, int archive) {
-	char date_time[MAX_DATETIME_LENGTH];
-	char archive_file[MAX_INPUT_BUFFER];
-	char *archive_basename;
+void display_nav_table(time_t ts_start, time_t ts_end) {
+	char *temp_buffer;
+	char url[MAX_INPUT_BUFFER] = "";
+	char stripped_query_string[MAX_INPUT_BUFFER] = "";
+	char date_time[MAX_INPUT_BUFFER];
+	struct tm *t;
+	time_t ts_midnight = 0L;
+	time_t current_time = 0L;
 
-	if (log_rotation_method != LOG_ROTATION_NONE) {
-		printf("<table border=0 cellspacing=0 cellpadding=0 CLASS='navBox'>\n");
-		printf("<tr>\n");
-		printf("<td align=center valign=center CLASS='navBoxItem'>\n");
-		if (archive == 0) {
-			printf("Latest Archive<br>");
-			printf("<a href='%sarchive=1'><img src='%s%s' border=0 alt='Latest Archive' title='Latest Archive'></a>", url, url_images_path, LEFT_ARROW_ICON);
-		} else {
-			printf("Earlier Archive<br>");
-			printf("<a href='%sarchive=%d'><img src='%s%s' border=0 alt='Earlier Archive' title='Earlier Archive'></a>", url, archive + 1, url_images_path, LEFT_ARROW_ICON);
-		}
-		printf("</td>\n");
-
-		printf("<td width=15></td>\n");
-
-		printf("<td align=center CLASS='navBoxDate'>\n");
-		printf("<DIV CLASS='navBoxTitle'>Log File Navigation</DIV>\n");
-		get_time_string(&last_scheduled_log_rotation, date_time, (int)sizeof(date_time), LONG_DATE_TIME);
-		printf("%s", date_time);
-		printf("<br>to<br>");
-		if (archive == 0)
-			printf("Present..");
-		else {
-			get_time_string(&this_scheduled_log_rotation, date_time, (int)sizeof(date_time), LONG_DATE_TIME);
-			printf("%s", date_time);
-		}
-		printf("</td>\n");
-
-		printf("<td width=15></td>\n");
-		if (archive != 0) {
-
-			printf("<td align=center valign=center CLASS='navBoxItem'>\n");
-			if (archive == 1) {
-				printf("Current Log<br>");
-				printf("<a href='%s'><img src='%s%s' border=0 alt='Current Log' title='Current Log'></a>", url, url_images_path, RIGHT_ARROW_ICON);
-			} else {
-				printf("More Recent Archive<br>");
-				printf("<a href='%sarchive=%d'><img src='%s%s' border=0 alt='More Recent Archive' title='More Recent Archive'></a>", url, archive - 1, url_images_path, RIGHT_ARROW_ICON);
-			}
-			printf("</td>\n");
-		} else
-			printf("<td><img src='%s%s' border=0 width=75 height=1></td>\n", url_images_path, EMPTY_ICON);
-
-		printf("</tr>\n");
-
-		printf("</table>\n");
+	/* define base url */
+	switch (CGI_ID) {
+	case HISTORY_CGI_ID:
+		strcat(url, HISTORY_CGI);
+		break;
+	case NOTIFICATIONS_CGI_ID:
+		strcat(url, NOTIFICATIONS_CGI);
+		break;
+	case SHOWLOG_CGI_ID:
+		strcat(url, SHOWLOG_CGI);
+		break;
+	default:
+		strcat(url, "NO_URL_DEFINED");
+		break;
 	}
 
-	/* get archive to use */
-	get_log_archive_to_use(archive, archive_file, sizeof(archive_file) - 1);
+	/* get url options but filter out "ts_end", "ts_start" and "start" */
+	if (getenv("QUERY_STRING") != NULL && strcmp(getenv("QUERY_STRING"), "")) {
+		if(strlen(getenv("QUERY_STRING")) > MAX_INPUT_BUFFER) {
+			printf("display_nav_table(): Could not allocate memory for stripped_query_string\n");
+			exit(1);
+		}
+		strcpy(stripped_query_string, getenv("QUERY_STRING"));
+		strip_html_brackets(stripped_query_string);
 
-	/* cut the pathname for security, and the remaining slash for clarity */
-	archive_basename = (char *)&archive_file;
-	if (strrchr((char *)&archive_basename, '/') != NULL)
-		archive_basename = strrchr((char *)&archive_file, '/') + 1;
+		for (temp_buffer = my_strtok(stripped_query_string, "&"); temp_buffer != NULL; temp_buffer = my_strtok(NULL, "&")) {
+			if (strncmp(temp_buffer, "ts_start=", 9) != 0 && strncmp(temp_buffer, "ts_end=", 6) != 0 && strncmp(temp_buffer, "start=", 6) != 0) {
+				if (strstr(url, "?"))
+					strcat(url, "&");
+				else
+					strcat(url, "?");
+				strcat(url, temp_buffer);
+			}
+		}
+	}
 
-	/* now it's safe to print the filename */
-	printf("<BR><DIV CLASS='navBoxFile'>File: %s</DIV>\n", archive_basename);
+	/* get the current time */
+	time(&current_time);
+	t = localtime(&current_time);
+
+	t->tm_sec = 0;
+	t->tm_min = 0;
+	t->tm_hour = 0;
+	t->tm_isdst = -1;
+
+	/* get timestamp for midnight today to find out if we have to show past log entries or present. (Also to give the right description to the info table)*/
+	ts_midnight = mktime(t);
+
+	/* show table */
+	printf("<table border=0 cellspacing=0 cellpadding=0 CLASS='navBox'>\n");
+	printf("<tr>\n");
+	printf("<td align=center valign=center CLASS='navBoxItem'>\n");
+	if (ts_end > ts_midnight) {
+		printf("Latest Archive<br>");
+		printf("<a href='%s%sts_start=%lu&ts_end=%lu'><img src='%s%s' border=0 alt='Latest Archive' title='Latest Archive'></a>", url, (strstr(url, "?")) ? "&" : "?", ts_midnight - 86400, ts_midnight - 1, url_images_path, LEFT_ARROW_ICON);
+	} else {
+		printf("Earlier Archive<br>");
+		printf("<a href='%s%sts_start=%lu&ts_end=%lu'><img src='%s%s' border=0 alt='Earlier Archive' title='Earlier Archive'></a>", url, (strstr(url, "?")) ? "&" : "?", ts_start - 86400, ts_start - 1, url_images_path, LEFT_ARROW_ICON);
+	}
+	printf("</td>\n");
+
+	printf("<td width=15></td>\n");
+
+	printf("<td align=center CLASS='navBoxDate'>\n");
+	printf("<DIV CLASS='navBoxTitle'>Log Navigation</DIV>\n");
+	get_time_string(&ts_start, date_time, (int)sizeof(date_time), LONG_DATE_TIME);
+	printf("%s", date_time);
+	printf("<br>to<br>");
+	if (ts_end > ts_midnight)
+		printf("Present..");
+	else {
+		get_time_string(&ts_end, date_time, (int)sizeof(date_time), LONG_DATE_TIME);
+		printf("%s", date_time);
+	}
+	printf("</td>\n");
+
+	printf("<td width=15></td>\n");
+
+	if (ts_end <= ts_midnight) {
+
+		printf("<td align=center valign=center CLASS='navBoxItem'>\n");
+		if (ts_end == ts_midnight) {
+			printf("Current Log<br>");
+			printf("<a href='%s%sts_start=%lu&ts_end=%lu'><img src='%s%s' border=0 alt='Current Log' title='Current Log'></a>", url, (strstr(url, "?")) ? "&" : "?", ts_midnight + 1, ts_midnight + 86400, url_images_path, RIGHT_ARROW_ICON);
+		} else {
+			printf("More Recent Archive<br>");
+			printf("<a href='%s%sts_start=%lu&ts_end=%lu'><img src='%s%s' border=0 alt='More Recent Archive' title='More Recent Archive'></a>", url, (strstr(url, "?")) ? "&" : "?", ts_end + 1, ts_end + 86400, url_images_path, RIGHT_ARROW_ICON);
+		}
+		printf("</td>\n");
+	} else
+		printf("<td><img src='%s%s' border=0 width=75 height=1></td>\n", url_images_path, EMPTY_ICON);
+
+	printf("</tr>\n");
+
+	printf("<tr><td colspan=2></td><td align=center valign=center><input id='history-datepicker' type='hidden'><a href='#' onclick=\"$.datepicker._showDatepicker($('#history-datepicker')[0]); return false;\">Select a day ...</a></td><td colspan=2></td></tr>\n");
+
+	printf("</table>\n");
+
+	printf("<script type=\"text/javascript\">\n");
+	printf("$(function() {\n");
+	printf("\t$(\"#history-datepicker\").datepicker( \"setDate\", \"%lu000\" );\n",ts_start);
+	printf("});\n");
+	printf("</script>\n");
 
 	return;
 }
@@ -1985,14 +2272,14 @@ void print_extra_hostgroup_url(char *group_name, char *url) {
 	}
 
 	strncpy(input_buffer, url, sizeof(input_buffer) - 1);
-	input_buffer[sizeof(input_buffer)-1] = '\x0';
+	input_buffer[sizeof(input_buffer) - 1] = '\x0';
 
 	for (temp_buffer = my_strtok(input_buffer, "$"); temp_buffer != NULL; temp_buffer = my_strtok(NULL, "$")) {
 
 		if (in_macro == FALSE) {
 			if (strlen(output_buffer) + strlen(temp_buffer) < sizeof(output_buffer) - 1) {
 				strncat(output_buffer, temp_buffer, sizeof(output_buffer) - strlen(output_buffer) - 1);
-				output_buffer[sizeof(output_buffer)-1] = '\x0';
+				output_buffer[sizeof(output_buffer) - 1] = '\x0';
 			}
 			in_macro = TRUE;
 		} else {
@@ -2030,14 +2317,14 @@ void print_extra_servicegroup_url(char *group_name, char *url) {
 	}
 
 	strncpy(input_buffer, url, sizeof(input_buffer) - 1);
-	input_buffer[sizeof(input_buffer)-1] = '\x0';
+	input_buffer[sizeof(input_buffer) - 1] = '\x0';
 
 	for (temp_buffer = my_strtok(input_buffer, "$"); temp_buffer != NULL; temp_buffer = my_strtok(NULL, "$")) {
 
 		if (in_macro == FALSE) {
 			if (strlen(output_buffer) + strlen(temp_buffer) < sizeof(output_buffer) - 1) {
 				strncat(output_buffer, temp_buffer, sizeof(output_buffer) - strlen(output_buffer) - 1);
-				output_buffer[sizeof(output_buffer)-1] = '\x0';
+				output_buffer[sizeof(output_buffer) - 1] = '\x0';
 			}
 			in_macro = TRUE;
 		} else {
@@ -2066,23 +2353,23 @@ void include_ssi_files(char *cgi_name, int type) {
 
 	/* common header or footer */
 	snprintf(common_ssi_file, sizeof(common_ssi_file) - 1, "%scommon-%s.ssi", physical_ssi_path, (type == SSI_HEADER) ? "header" : "footer");
-	common_ssi_file[sizeof(common_ssi_file)-1] = '\x0';
+	common_ssi_file[sizeof(common_ssi_file) - 1] = '\x0';
 
 	/* CGI-specific header or footer */
 	strncpy(raw_cgi_name, cgi_name, sizeof(raw_cgi_name) - 1);
-	raw_cgi_name[sizeof(raw_cgi_name)-1] = '\x0';
+	raw_cgi_name[sizeof(raw_cgi_name) - 1] = '\x0';
 	stripped_cgi_name = strtok(raw_cgi_name, ".");
 	snprintf(cgi_ssi_file, sizeof(cgi_ssi_file) - 1, "%s%s-%s.ssi", physical_ssi_path, (stripped_cgi_name == NULL) ? "" : stripped_cgi_name, (type == SSI_HEADER) ? "header" : "footer");
-	cgi_ssi_file[sizeof(cgi_ssi_file)-1] = '\x0';
+	cgi_ssi_file[sizeof(cgi_ssi_file) - 1] = '\x0';
 
 	if (type == SSI_HEADER) {
-		printf("\n<!-- Produced by %s (http://www.%s.org).\nCopyright (c) 1999-2009 Ethan Galstad (egalstad@nagios.org)\nCopyright (c) 2009-2011 Icinga Development Team -->\n", PROGRAM_NAME, PROGRAM_NAME_LC);
+		printf("\n<!-- Produced by %s (http://www.%s.org).\nCopyright (c) 1999-2009 Ethan Galstad (egalstad@nagios.org)\nCopyright (c) 2009-2013 Icinga Development Team -->\n", PROGRAM_NAME, PROGRAM_NAME_LC);
 		include_ssi_file(common_ssi_file);
 		include_ssi_file(cgi_ssi_file);
 	} else {
 		include_ssi_file(cgi_ssi_file);
 		include_ssi_file(common_ssi_file);
-		printf("\n<!-- Produced by %s (http://www.%s.org).\nCopyright (c) 1999-2009 Ethan Galstad (egalstad@nagios.org)\nCopyright (c) 2009-2011 Icinga Development Team -->\n", PROGRAM_NAME, PROGRAM_NAME_LC);
+		printf("\n<!-- Produced by %s (http://www.%s.org).\nCopyright (c) 1999-2009 Ethan Galstad (egalstad@nagios.org)\nCopyright (c) 2009-2013 Icinga Development Team -->\n", PROGRAM_NAME, PROGRAM_NAME_LC);
 	}
 
 	return;
@@ -2124,10 +2411,10 @@ void include_ssi_file(char *filename) {
 		case EFAULT: /* Bad address. */
 		case ENOMEM: /* Out of memory (i.e. kernel memory). */
 		case ENAMETOOLONG: /* File name too long. */
-			printf("<br /> A stat call returned %d while looking for the file %s.<br />", errno, filename);
+			printf("<br> A stat call returned %d while looking for the file %s.<br>", errno, filename);
 			return;
 		case EACCES: /* Permission denied. -- The file should be accessible by nagios. */
-			printf("<br /> A stat call returned a permissions error(%d) while looking for the file %s.<br />", errno, filename);
+			printf("<br> A stat call returned a permissions error(%d) while looking for the file %s.<br>", errno, filename);
 			return;
 		case ENOENT: /* A component of the path file_name does not exist, or the path is an empty string. Just return if the file doesn't exist. */
 			return;
@@ -2150,7 +2437,26 @@ void include_ssi_file(char *filename) {
 }
 
 /* displays an error if CGI config file could not be read */
-void cgi_config_file_error(char *config_file) {
+void cgi_config_file_error(char *config_file, int tac_header) {
+
+	if (content_type == CSV_CONTENT) {
+		printf("Error: Could not open CGI config file '%s' for reading!\n", config_file);
+		return;
+	}
+
+	if (content_type == JSON_CONTENT) {
+		printf("\"title\": \"Could not open CGI config file '%s' for reading!\"\n,", config_file);
+		printf("\"text\": \"");
+		printf("Make sure you've installed a CGI config file in its proper location. A sample CGI configuration file (named cgi.cfg) can be found in the 'sample-config' subdirectory of the %s source code distribution. ", PROGRAM_NAME);
+		printf("Also make sure the user your web server is running as has permission to read the CGI config file.");
+		printf("\"\n");
+		return;
+	}
+
+	if (tac_header == TRUE) {
+		printf("<P><STRONG><FONT COLOR='RED'>Error: Could not open CGI config file '%s' for reading!</FONT></STRONG></P>\n", config_file);
+		return;
+	}
 
 	printf("<H1>Whoops!</H1>\n");
 
@@ -2160,14 +2466,10 @@ void cgi_config_file_error(char *config_file) {
 	printf("Here are some things you should check in order to resolve this error:\n");
 	printf("</P>\n");
 
-	printf("<P>\n");
 	printf("<OL>\n");
-
-	printf("<LI>Make sure you've installed a CGI config file in its proper location.  A sample CGI configuration file (named <b>cgi.cfg</b>) can be found in the <b>sample-config/</b> subdirectory of the %s source code distribution.\n", PROGRAM_NAME);
+	printf("<LI>Make sure you've installed a CGI config file in its proper location. A sample CGI configuration file (named <b>cgi.cfg</b>) can be found in the <b>sample-config/</b> subdirectory of the %s source code distribution.\n", PROGRAM_NAME);
 	printf("<LI>Make sure the user your web server is running as has permission to read the CGI config file.\n");
-
 	printf("</OL>\n");
-	printf("</P>\n");
 
 	printf("<P>\n");
 	printf("Make sure you read the documentation on installing and configuring %s thoroughly before continuing.  If everything else fails, try sending a message to one of the mailing lists.  More information can be found at <a href='http://www.icinga.org'>http://www.icinga.org</a>.\n", PROGRAM_NAME);
@@ -2177,7 +2479,26 @@ void cgi_config_file_error(char *config_file) {
 }
 
 /* displays an error if main config file could not be read */
-void main_config_file_error(char *config_file) {
+void main_config_file_error(char *config_file, int tac_header) {
+
+	if (content_type == CSV_CONTENT) {
+		printf("Error: Could not open main config file '%s' for reading!\n", config_file);
+		return;
+	}
+
+	if (content_type == JSON_CONTENT) {
+		printf("\"title\": \"Could not open main config file '%s' for reading!\"\n,", config_file);
+		printf("\"text\": \"");
+		printf("Make sure you've installed a main config file in its proper location. A sample main configuration file (named icinga.cfg) can be found in the 'sample-config' subdirectory of the %s source code distribution. ", PROGRAM_NAME);
+		printf("Also make sure the user your web server is running as has permission to read the main config file.");
+		printf("\"\n");
+		return;
+	}
+
+	if (tac_header == TRUE) {
+		printf("<P><STRONG><FONT COLOR='RED'>Error: Could not open main config file '%s' for reading!</FONT></STRONG></P>\n", config_file);
+		return;
+	}
 
 	printf("<H1>Whoops!</H1>\n");
 
@@ -2187,14 +2508,10 @@ void main_config_file_error(char *config_file) {
 	printf("Here are some things you should check in order to resolve this error:\n");
 	printf("</P>\n");
 
-	printf("<P>\n");
 	printf("<OL>\n");
-
 	printf("<LI>Make sure you've installed a main config file in its proper location. A sample main configuration file (named <b>icinga.cfg</b>) can be found in the <b>sample-config/</b> subdirectory of the %s source code distribution.\n", PROGRAM_NAME);
-	printf("<LI>Make sure the user your web server is running as has permission to read the main config file.\n");
-
+	printf("<LI>Make sure the user your web server has permission to read the main config file.\n");
 	printf("</OL>\n");
-	printf("</P>\n");
 
 	printf("<P>\n");
 	printf("Make sure you read the documentation on installing and configuring %s thoroughly before continuing.  If everything else fails, try sending a message to one of the mailing lists.  More information can be found at <a href='http://www.icinga.org'>http://www.icinga.org</a>.\n", PROGRAM_NAME);
@@ -2203,37 +2520,28 @@ void main_config_file_error(char *config_file) {
 	return;
 }
 
-/* displays an error if resource file could not be read */
-void icinga_resource_file_error(char *config_file) {
-
-        printf("<H1>Whoops!</H1>\n");
-
-        printf("<P><STRONG><FONT COLOR='RED'>Error: Could not open resource file '%s' for reading!</FONT></STRONG></P>\n", config_file);
-
-        printf("<P>\n");
-        printf("It seems that you enabled the cgis to read your local resource file (verify that in your cgi.cfg)\n");
-        printf("Here are some things you should check in order to resolve this error:\n");
-        printf("</P>\n");
-
-        printf("<P>\n");
-        printf("<OL>\n");
-
-        printf("<LI>Make sure you've installed the resource file in its proper location, defined in main config. A sample resource file (named <b>resource.cfg</b>) can be found in the <b>sample-config/</b> subdirectory of the %s source code distribution.\n", PROGRAM_NAME);
-        printf("<LI>Make sure the user your web server is running as has permission to read the resource file.\n");
-        printf("<LI>If you don't want to read your resource file (used e.g. for command expander in config.cgi) then disable it in cgi.cfg.\n");
-
-        printf("</OL>\n");
-        printf("</P>\n");
-
-        printf("<P>\n");
-        printf("Make sure you read the documentation on installing and configuring %s thoroughly before continuing.  If everything else fails, try sending a message to one of the mailing lists.  More information can be found at <a href='http://www.icinga.org'>http://www.icinga.org</a>.\n", PROGRAM_NAME);
-        printf("</P>\n");
-
-        return;
-}
 
 /* displays an error if object data could not be read */
-void object_data_error(void) {
+void object_data_error(int tac_header) {
+
+	if (content_type == CSV_CONTENT) {
+		printf("Error: Could not read object configuration data!\n");
+		return;
+	}
+
+	if (content_type == JSON_CONTENT) {
+		printf("\"title\": \"Could not read object configuration data!\"\n,");
+		printf("\"text\": \"");
+		printf("Verify configuration options using the '-v' command-line option to check for errors. ");
+		printf("Check the %s log file for messages relating to startup or status data errors.", PROGRAM_NAME);
+		printf("\"\n");
+		return;
+	}
+
+	if (tac_header == TRUE) {
+		printf("<P><STRONG><FONT COLOR='RED'>Error: Could not read object configuration data!</FONT></STRONG></P>\n");
+		return;
+	}
 
 	printf("<H1>Whoops!</H1>\n");
 
@@ -2243,14 +2551,11 @@ void object_data_error(void) {
 	printf("Here are some things you should check in order to resolve this error:\n");
 	printf("</P>\n");
 
-	printf("<P>\n");
 	printf("<OL>\n");
-
+	printf("<LI>Make sure you set option <b>\"object_cache_file\"</b> in <b>\"%s\"</b> properly.\n", main_config_file);
 	printf("<LI>Verify configuration options using the <b>-v</b> command-line option to check for errors.\n");
 	printf("<LI>Check the %s log file for messages relating to startup or status data errors.\n", PROGRAM_NAME);
-
 	printf("</OL>\n");
-	printf("</P>\n");
 
 	printf("<P>\n");
 	printf("Make sure you read the documentation on installing, configuring and running %s thoroughly before continuing.  If everything else fails, try sending a message to one of the mailing lists.  More information can be found at <a href='http://www.icinga.org'>http://www.icinga.org</a>.\n", PROGRAM_NAME);
@@ -2260,7 +2565,26 @@ void object_data_error(void) {
 }
 
 /* displays an error if status data could not be read */
-void status_data_error(void) {
+void status_data_error(int tac_header) {
+
+	if (content_type == CSV_CONTENT) {
+		printf("Error: Could not read host and service status information!\n");
+		return;
+	}
+
+	if (content_type == JSON_CONTENT) {
+		printf("\"title\": \"Could not read host and service status information!\"\n,");
+		printf("\"text\": \"");
+		printf("It seems that %s is not running or has not yet finished the startup procedure and then creating the status data file. If %s is indeed not running, this is a normal error message. ", PROGRAM_NAME, PROGRAM_NAME);
+		printf("Please note that event broker modules and/or rdbms backends may slow down the overall (re)start and the cgis cannot retrieve any status information.");
+		printf("\"\n");
+		return;
+	}
+
+	if (tac_header == TRUE) {
+		printf("<P><STRONG><FONT COLOR='RED'>Error: Could not read host and service status information!</FONT></STRONG></P>\n");
+		return;
+	}
 
 	printf("<H1>Whoops!</H1>\n");
 
@@ -2275,15 +2599,12 @@ void status_data_error(void) {
 	printf("Things to check in order to resolve this error include:\n");
 	printf("</P>\n");
 
-	printf("<P>\n");
 	printf("<OL>\n");
-
+	printf("<LI>Make sure you set option <b>\"status_file\"</b> in <b>\"%s\"</b> properly.\n", main_config_file);
 	printf("<LI>Check the %s log file for messages relating to startup or status data errors.\n", PROGRAM_NAME);
 	printf("<LI>Always verify configuration options using the <b>-v</b> command-line option before starting or restarting %s!\n", PROGRAM_NAME);
 	printf("<LI>If using any event broker module for %s, look into their respective logs and/or on their behavior!\n", PROGRAM_NAME);
-
 	printf("</OL>\n");
-	printf("</P>\n");
 
 	printf("<P>\n");
 	printf("Make sure you read the documentation on installing, configuring and running %s thoroughly before continuing.  If everything else fails, try sending a message to one of the mailing lists.  More information can be found at <a href='http://www.icinga.org'>http://www.icinga.org</a>.\n", PROGRAM_NAME);
@@ -2293,61 +2614,46 @@ void status_data_error(void) {
 }
 
 /** print an error depending on error_type */
-void print_error(char *config_file, int error_type) {
-
-	/* if cgi.cfg is missing, we don't know which fancy style to use, take our own */
-	if (error_type != ERROR_CGI_CFG_FILE) {
-		document_header(ERROR_CGI_ID, TRUE);
-	}
+void print_error(char *config_file, int error_type, int tac_header) {
 
 	/* Giving credits to stop.png image source */
-	printf("\n<!-- Image \"stop.png\" has been taken from \"http://fedoraproject.org/wiki/Template:Admon/caution\" -->\n\n");
+	if (content_type == HTML_CONTENT) {
 
-	printf("<BR><DIV align='center'><DIV CLASS='errorBox'>\n");
-	if (error_type == ERROR_CGI_CFG_FILE) {
-		printf("<DIV style='font-family:  Helvetica, serif; background-color: #fff; color: #000; font-size: 8pt; text-align:left; font-weight: bold; margin:1em; border:1px red solid; background-color: #FFE5E5;' CLASS='errorMessage'><table cellspacing=0 cellpadding=0 border=0><tr><td width=55 valign=top></td>");
-	} else {
-		printf("<DIV CLASS='errorMessage'><table cellspacing=0 cellpadding=0 border=0><tr><td width=55 valign=top><img src=\"%s%s\" border=0></td>", url_images_path, CMD_STOP_ICON);
+		if (tac_header == TRUE) {
+			printf("<DIV align='center'><DIV CLASS='errorBox' style='margin-top:0.7em;'>\n");
+			printf("<DIV CLASS='errorMessage' style=\"margin:0.1em\"><table width=100%% cellspacing=0 cellpadding=0 border=0><tr>");
+			printf("<td class='errorDescription' align=\"center\">");
+		} else {
+			printf("\n<!-- Image \"stop.png\" has been taken from \"http://fedoraproject.org/wiki/Template:Admon/caution\" -->\n\n");
+
+			printf("<BR><DIV align='center'><DIV CLASS='errorBox'>\n");
+			printf("<DIV CLASS='errorMessage'><table cellspacing=0 cellpadding=0 border=0><tr><td width=55 valign=top>");
+			if (error_type != ERROR_CGI_CFG_FILE)
+				printf("<img src=\"%s%s\" border=0>", url_images_path, CMD_STOP_ICON);
+
+			printf("</td><td class='errorDescription'>");
+		}
 	}
-	printf("<td class='errorDescription'>");
 
 	switch (error_type) {
 	case ERROR_CGI_STATUS_DATA:
-		status_data_error();
+		status_data_error(tac_header);
 		break;
 	case ERROR_CGI_OBJECT_DATA:
-		object_data_error();
+		object_data_error(tac_header);
 		break;
 	case ERROR_CGI_CFG_FILE:
-		cgi_config_file_error(config_file);
+		cgi_config_file_error(config_file, tac_header);
 		break;
 	case ERROR_CGI_MAIN_CFG:
-		main_config_file_error(config_file);
-		break;
-	case ERROR_CGI_RESOURCE_CFG:
-		icinga_resource_file_error(config_file);
+		main_config_file_error(config_file, tac_header);
 		break;
 	}
 
-	printf("</td></tr></table></DIV>\n");
-	printf("</DIV>\n");
-
-	return;
-}
-
-/* displays context-sensitive help window */
-void display_context_help(char *chid) {
-	char *icon = CONTEXT_HELP_ICON1;
-
-	if (show_context_help == FALSE)
-		return;
-
-	/* change icon if necessary */
-	if (!strcmp(chid, CONTEXTHELP_TAC))
-		icon = CONTEXT_HELP_ICON2;
-
-	printf("<a href='%s%s.html' target='cshw' onClick='javascript:window.open(\"%s%s.html\",\"cshw\",\"width=550,height=600,toolbar=0,location=0,status=0,resizable=1,scrollbars=1\");return true'><img src='%s%s' border=0 alt='Display context-sensitive help for this screen' title='Display context-sensitive help for this screen'></a>\n", url_context_help_path, chid, url_context_help_path, chid, url_images_path, icon);
-
+	if (content_type == HTML_CONTENT) {
+		printf("</td></tr></table></DIV>\n");
+		printf("</DIV>\n");
+	}
 	return;
 }
 
@@ -2424,16 +2730,7 @@ void strip_splunk_query_terms(char *buffer) {
 
 void print_generic_error_message(char *title, char *text, int returnlevels) {
 
-	if (content_type == WML_CONTENT) {
-		printf("<p>");
-
-		if (title != NULL && title[0] != '\x0')
-			printf("%s", title);
-		if (text != NULL && text[0] != '\x0')
-			printf("<br>%s", text);
-
-		printf("</p>\n");
-	} else if (content_type == CSV_CONTENT) {
+	if (content_type == CSV_CONTENT) {
 		if (title != NULL && title[0] != '\x0')
 			printf("ERROR: %s\n", title);
 		if (text != NULL && text[0] != '\x0')
@@ -2464,16 +2761,16 @@ void print_generic_error_message(char *title, char *text, int returnlevels) {
 		if (returnlevels != 0)
 			printf("<BR><input type='submit' value='Get me out of here' onClick='window.history.go(-%d);' class='submitButton'>\n", returnlevels);
 
-		printf("</DIV>\n");
+		printf("</DIV><BR>\n");
 	}
 
 	return;
 }
 
 /** @brief prints export link with little icons
- *  @param [in] can be \c CSV_CONTENT , \c JSON_CONTENT \c XML_CONTENT or \c HTML_CONTENT
- *  @param [in] name of cgi as defined in include/cgiutils.h
- *  @param [in] additional string to add to url (set to NULL if nothing should be added)
+ *  @param [in] content_type can be \c CSV_CONTENT , \c JSON_CONTENT , \c XML_CONTENT or \c HTML_CONTENT
+ *  @param [in] cgi name of cgi as defined in include/cgiutils.h
+ *  @param [in] add_to_url is additional string to add to url (set to NULL if nothing should be added)
  *  @note takes care that each link is XSS save #1275
  *
  *  This function prints a little icon, depending on @ref content_type, which points to
@@ -2490,6 +2787,10 @@ void print_export_link(int content_type, char *cgi, char *add_to_url) {
 
 	/* just do stuff if some options are requested */
 	if (getenv("QUERY_STRING") != NULL && strcmp(getenv("QUERY_STRING"), "")) {
+		if(strlen(getenv("QUERY_STRING")) > MAX_INPUT_BUFFER) {
+			printf("print_export_link(): Could not allocate memory for stripped_query_string\n");
+			exit(1);
+		}
 		strcpy(stripped_query_string, getenv("QUERY_STRING"));
 		strip_html_brackets(stripped_query_string);
 		strcat(link, "?");
@@ -2507,13 +2808,13 @@ void print_export_link(int content_type, char *cgi, char *add_to_url) {
 
 	/* print formatted link */
 	if (content_type == CSV_CONTENT)
-		printf("<a href='%s%scsvoutput' target='_blank'><img src='%s%s' border=0 alt='%s' title='%s'></a>\n", link, (strlen(stripped_query_string) != 0) ? "&" : "?", url_images_path, EXPORT_CSV_ICON, EXPORT_CSV_ICON_ALT, EXPORT_CSV_ICON_ALT);
+		printf("<a href='%s%scsvoutput' target='_blank'><img src='%s%s' style='vertical-align: middle;' border=0 alt='%s' title='%s'></a>\n", link, (strlen(stripped_query_string) != 0) ? "&" : "?", url_images_path, EXPORT_CSV_ICON, EXPORT_CSV_ICON_ALT, EXPORT_CSV_ICON_ALT);
 	else if (content_type == JSON_CONTENT)
-		printf("<a href='%s%sjsonoutput' target='_blank'><img src='%s%s' border=0 alt='%s' title='%s'></a>\n", link, (strlen(stripped_query_string) != 0) ? "&" : "?", url_images_path, EXPORT_JSON_ICON, EXPORT_JSON_ICON_ALT, EXPORT_JSON_ICON_ALT);
+		printf("<a href='%s%sjsonoutput' target='_blank'><img src='%s%s' style='vertical-align: middle;' border=0 alt='%s' title='%s'></a>\n", link, (strlen(stripped_query_string) != 0) ? "&" : "?", url_images_path, EXPORT_JSON_ICON, EXPORT_JSON_ICON_ALT, EXPORT_JSON_ICON_ALT);
 	else if (content_type == XML_CONTENT)
-		printf("<a href='%s%sxmloutput' target='_blank'><img src='%s%s' border=0 alt='%s' title='%s'></a>\n", link, (strlen(stripped_query_string) != 0) ? "&" : "?", url_images_path, EXPORT_XML_ICON, EXPORT_XML_ICON_ALT, EXPORT_XML_ICON_ALT);
+		printf("<a href='%s%sxmloutput' target='_blank'><img src='%s%s' style='vertical-align: middle;' border=0 alt='%s' title='%s'></a>\n", link, (strlen(stripped_query_string) != 0) ? "&" : "?", url_images_path, EXPORT_XML_ICON, EXPORT_XML_ICON_ALT, EXPORT_XML_ICON_ALT);
 	else
-		printf("<a href='%s' target='_blank'><img src='%s%s' border=0 alt='%s' title='%s'></a>\n", link, url_images_path, EXPORT_LINK_ICON, EXPORT_LINK_ICON_ALT, EXPORT_LINK_ICON_ALT);
+		printf("<a href='%s' target='_blank'><img src='%s%s' style='vertical-align: middle;' border=0 alt='%s' title='%s'></a>\n", link, url_images_path, EXPORT_LINK_ICON, EXPORT_LINK_ICON_ALT, EXPORT_LINK_ICON_ALT);
 
 	return;
 }
@@ -2633,7 +2934,7 @@ int rotate_cgi_log_file() {
 
 	/* record the log rotation after it has been done... */
 	snprintf(temp_buffer, sizeof(temp_buffer) - 1, "LOG ROTATION: %s\n", method_string);
-	temp_buffer[sizeof(temp_buffer)-1] = '\x0';
+	temp_buffer[sizeof(temp_buffer) - 1] = '\x0';
 	write_to_cgi_log(temp_buffer);
 
 	/* give a warning about use */
@@ -2983,9 +3284,20 @@ char *json_encode(char *input) {
 
 	for (i = 0, j = 0; i < len; i++) {
 
-		if ((char)input[i] == (char)'"') {
+		/* escape quotes and backslashes */
+		if ((char)input[i] == (char)'"' || (char)input[i] == (char)'\\') {
 			encoded_string[j++] = '\\';
 			encoded_string[j++] = input[i];
+
+		/* escape newlines */
+		} else if ((char)input[i] == (char)'\n') {
+			encoded_string[j++] = '\\';
+			encoded_string[j++] = 'n';
+
+		/* ignore control caracters */
+		} else if ((input[i] > 1 && input[i] < 32) || input[i] == 127) {
+			continue;
+
 		} else
 			encoded_string[j++] = input[i];
 	}
@@ -2993,4 +3305,478 @@ char *json_encode(char *input) {
 	encoded_string[j] = '\x0';
 
 	return encoded_string;
+}
+
+/******************************************************************/
+/*********  print a tooltip to show comments  *********************/
+/******************************************************************/
+void print_comment_icon(char *host_name, char *svc_description) {
+	comment *temp_comment = NULL;
+	char *comment_entry_type = "";
+	char comment_data[MAX_INPUT_BUFFER] = "";
+	char entry_time[MAX_DATETIME_LENGTH];
+	int len, output_len;
+	int x, y;
+	char *escaped_output_string = NULL;
+	int saved_escape_html_tags_var = FALSE;
+
+	if (svc_description == NULL)
+		printf("<TD ALIGN=center valign=center><A HREF='%s?type=%d&host=%s'", EXTINFO_CGI, DISPLAY_HOST_INFO, url_encode(host_name));
+	else {
+		printf("<TD ALIGN=center valign=center><A HREF='%s?type=%d&host=%s", EXTINFO_CGI, DISPLAY_SERVICE_INFO, url_encode(host_name));
+		printf("&service=%s#comments'", url_encode(svc_description));
+	}
+	/* possible to implement a config option to show and hide comments tooltip in status.cgi */
+	/* but who wouldn't like to have these fancy tooltips ;-) */
+	if (TRUE) {
+		printf(" onMouseOver=\"return tooltip('<table border=0 width=100%% height=100%% cellpadding=3>");
+		printf("<tr style=font-weight:bold;><td width=10%% nowrap>Type&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td><td width=12%%>Time</td><td>Author / Comment</td></tr>");
+		for (temp_comment = get_first_comment_by_host(host_name); temp_comment != NULL; temp_comment = get_next_comment_by_host(host_name, temp_comment)) {
+			if ((svc_description == NULL && temp_comment->comment_type == HOST_COMMENT) || \
+			        (svc_description != NULL && temp_comment->comment_type == SERVICE_COMMENT && !strcmp(temp_comment->service_description, svc_description))) {
+				switch (temp_comment->entry_type) {
+				case USER_COMMENT:
+					comment_entry_type = "User";
+					break;
+				case DOWNTIME_COMMENT:
+					comment_entry_type = "Downtime";
+					break;
+				case FLAPPING_COMMENT:
+					comment_entry_type = "Flapping";
+					break;
+				case ACKNOWLEDGEMENT_COMMENT:
+					comment_entry_type = "Ack";
+					break;
+				}
+				snprintf(comment_data, sizeof(comment_data) - 1, "%s", temp_comment->comment_data);
+				comment_data[sizeof(comment_data) - 1] = '\x0';
+
+				/* we need up to twice the space to do the conversion of single, double quotes and back slash's */
+				len = (int)strlen(comment_data);
+				output_len = len * 2;
+				if ((escaped_output_string = (char *)malloc(output_len + 1)) != NULL) {
+
+					strcpy(escaped_output_string, "");
+
+					for (x = 0, y = 0; x <= len; x++) {
+						/* end of string */
+						if ((char)comment_data[x] == (char)'\x0') {
+							escaped_output_string[y] = '\x0';
+							break;
+						} else if ((char)comment_data[x] == (char)'\n' || (char)comment_data[x] == (char)'\r') {
+							escaped_output_string[y] = ' ';
+						} else if ((char)comment_data[x] == (char)'\'') {
+							escaped_output_string[y] = '\x0';
+							if ((int)strlen(escaped_output_string) < (output_len - 2)) {
+								strcat(escaped_output_string, "\\'");
+								y += 2;
+							}
+						} else if ((char)comment_data[x] == (char)'"') {
+							escaped_output_string[y] = '\x0';
+							if ((int)strlen(escaped_output_string) < (output_len - 2)) {
+								strcat(escaped_output_string, "\\\"");
+								y += 2;
+							}
+						} else if ((char)comment_data[x] == (char)'\\') {
+							escaped_output_string[y] = '\x0';
+							if ((int)strlen(escaped_output_string) < (output_len - 2)) {
+								strcat(escaped_output_string, "\\\\");
+								y += 2;
+							}
+						} else
+							escaped_output_string[y++] = comment_data[x];
+
+					}
+					escaped_output_string[++y] = '\x0';
+				} else
+					strcpy(escaped_output_string, comment_data);
+
+				/* get entry time */
+				get_time_string(&temp_comment->entry_time, entry_time, (int)sizeof(entry_time), SHORT_DATE_TIME);
+
+				/* in the tooltips we have to escape all characters */
+				saved_escape_html_tags_var = escape_html_tags;
+				escape_html_tags = TRUE;
+
+				printf("<tr><td nowrap>%s</td><td nowrap>%s</td><td><span style=font-weight:bold;>%s</span><br>%s</td></tr>", comment_entry_type, entry_time, html_encode(temp_comment->author, TRUE), html_encode(escaped_output_string, TRUE));
+
+				escape_html_tags = saved_escape_html_tags_var;
+
+				free(escaped_output_string);
+			}
+		}
+		/* under http://www.ebrueggeman.com/skinnytip/documentation.php#reference you can find the config options of skinnytip */
+		printf("</table>', '&nbsp;&nbsp;&nbsp;Comments', 'border:1, width:600, bordercolor:#333399, title_padding:2px, titletextcolor:#FFFFFF, backcolor:#CCCCFF');\" onMouseOut=\"return hideTip()\"");
+	}
+	printf("><IMG SRC='%s%s' BORDER=0 WIDTH=%d HEIGHT=%d></A></TD>", url_images_path, COMMENT_ICON, STATUS_ICON_WIDTH, STATUS_ICON_HEIGHT);
+
+	return;
+}
+
+/** @brief prints modified attributes as string, by line seperator
+ *  @param [in] content_type can be \c CSV_CONTENT , \c JSON_CONTENT , \c XML_CONTENT or \c HTML_CONTENT
+ *  @param [in] cgi name of cgi as defined in include/cgiutils.h
+ *  @param [in] modified_attributes is the number to compare with
+ *  @note takes care that modified_attributes is represented as string
+ *
+ *  This function prints modified_attributes as string
+ *
+#define MODATTR_NONE                            0
+#define MODATTR_NOTIFICATIONS_ENABLED           1
+#define MODATTR_ACTIVE_CHECKS_ENABLED           2
+#define MODATTR_PASSIVE_CHECKS_ENABLED          4
+#define MODATTR_EVENT_HANDLER_ENABLED           8
+#define MODATTR_FLAP_DETECTION_ENABLED          16
+#define MODATTR_FAILURE_PREDICTION_ENABLED      32
+#define MODATTR_PERFORMANCE_DATA_ENABLED        64
+#define MODATTR_OBSESSIVE_HANDLER_ENABLED       128
+#define MODATTR_EVENT_HANDLER_COMMAND           256
+#define MODATTR_CHECK_COMMAND                   512
+#define MODATTR_NORMAL_CHECK_INTERVAL           1024
+#define MODATTR_RETRY_CHECK_INTERVAL            2048
+#define MODATTR_MAX_CHECK_ATTEMPTS              4096
+#define MODATTR_FRESHNESS_CHECKS_ENABLED        8192
+#define MODATTR_CHECK_TIMEPERIOD                16384
+#define MODATTR_CUSTOM_VARIABLE                 32768
+#define MODATTR_NOTIFICATION_TIMEPERIOD         65536
+ *
+**/
+void print_modified_attributes(int content_type, char *cgi, unsigned long modified_attributes) {
+	char attr[MAX_INPUT_BUFFER] = "";
+
+	if (cgi == NULL)
+		return;
+
+	if (modified_attributes == MODATTR_NONE) {
+		/* nothing modified, return early */
+		printf("None");
+		return;
+	}
+
+	/* loop until no more attributes matched */
+	while (modified_attributes != MODATTR_NONE) {
+		if (modified_attributes & MODATTR_NOTIFICATIONS_ENABLED) {
+			strcat(attr, "notifications_enabled");
+			modified_attributes -= MODATTR_NOTIFICATIONS_ENABLED;
+			if (modified_attributes != MODATTR_NONE)
+				strcat(attr, ", ");
+		}
+		if (modified_attributes & MODATTR_ACTIVE_CHECKS_ENABLED) {
+			strcat(attr, "active_checks_enabled");
+			modified_attributes -= MODATTR_ACTIVE_CHECKS_ENABLED;
+			if (modified_attributes != MODATTR_NONE)
+				strcat(attr, ", ");
+		}
+		if (modified_attributes & MODATTR_PASSIVE_CHECKS_ENABLED) {
+			strcat(attr, "passive_checks_enabled");
+			modified_attributes -= MODATTR_PASSIVE_CHECKS_ENABLED;
+			if (modified_attributes != MODATTR_NONE)
+				strcat(attr, ", ");
+		}
+		if (modified_attributes & MODATTR_EVENT_HANDLER_ENABLED) {
+			strcat(attr, "event_handler_enabled");
+			modified_attributes -= MODATTR_EVENT_HANDLER_ENABLED;
+			if (modified_attributes != MODATTR_NONE)
+				strcat(attr, ", ");
+		}
+		if (modified_attributes & MODATTR_FLAP_DETECTION_ENABLED) {
+			strcat(attr, "flap_detection_enabled");
+			modified_attributes -= MODATTR_FLAP_DETECTION_ENABLED;
+			if (modified_attributes != MODATTR_NONE)
+				strcat(attr, ", ");
+		}
+		if (modified_attributes & MODATTR_FAILURE_PREDICTION_ENABLED) {
+			strcat(attr, "failure_prediction_enabled");
+			modified_attributes -= MODATTR_FAILURE_PREDICTION_ENABLED;
+			if (modified_attributes != MODATTR_NONE)
+				strcat(attr, ", ");
+		}
+		if (modified_attributes & MODATTR_PERFORMANCE_DATA_ENABLED) {
+			strcat(attr, "performance_data_enabled");
+			modified_attributes -= MODATTR_PERFORMANCE_DATA_ENABLED;
+			if (modified_attributes != MODATTR_NONE)
+				strcat(attr, ", ");
+		}
+		if (modified_attributes & MODATTR_OBSESSIVE_HANDLER_ENABLED) {
+			strcat(attr, "obsessive_handler_enabled");
+			modified_attributes -= MODATTR_OBSESSIVE_HANDLER_ENABLED;
+			if (modified_attributes != MODATTR_NONE)
+				strcat(attr, ", ");
+		}
+		if (modified_attributes & MODATTR_EVENT_HANDLER_COMMAND) {
+			strcat(attr, "event_handler_command");
+			modified_attributes -= MODATTR_EVENT_HANDLER_COMMAND;
+			if (modified_attributes != MODATTR_NONE)
+				strcat(attr, ", ");
+		}
+		if (modified_attributes & MODATTR_CHECK_COMMAND) {
+			strcat(attr, "check_command");
+			modified_attributes -= MODATTR_CHECK_COMMAND;
+			if (modified_attributes != MODATTR_NONE)
+				strcat(attr, ", ");
+		}
+		if (modified_attributes & MODATTR_NORMAL_CHECK_INTERVAL) {
+			strcat(attr, "check_interval");
+			modified_attributes -= MODATTR_NORMAL_CHECK_INTERVAL;
+			if (modified_attributes != MODATTR_NONE)
+				strcat(attr, ", ");
+		}
+		if (modified_attributes & MODATTR_RETRY_CHECK_INTERVAL) {
+			strcat(attr, "retry_interval");
+			modified_attributes -= MODATTR_RETRY_CHECK_INTERVAL;
+			if (modified_attributes != MODATTR_NONE)
+				strcat(attr, ", ");
+		}
+		if (modified_attributes & MODATTR_MAX_CHECK_ATTEMPTS) {
+			strcat(attr, "max_check_attemps");
+			modified_attributes -= MODATTR_MAX_CHECK_ATTEMPTS;
+			if (modified_attributes != MODATTR_NONE)
+				strcat(attr, ", ");
+		}
+		if (modified_attributes & MODATTR_FRESHNESS_CHECKS_ENABLED) {
+			strcat(attr, "freshness_checks_enabled");
+			modified_attributes -= MODATTR_FRESHNESS_CHECKS_ENABLED;
+			if (modified_attributes != MODATTR_NONE)
+				strcat(attr, ", ");
+		}
+		if (modified_attributes & MODATTR_CHECK_TIMEPERIOD) {
+			strcat(attr, "check_timeperiod");
+			modified_attributes -= MODATTR_CHECK_TIMEPERIOD;
+			if (modified_attributes != MODATTR_NONE)
+				strcat(attr, ", ");
+		}
+		if (modified_attributes & MODATTR_CUSTOM_VARIABLE) {
+			strcat(attr, "custom_variable");
+			modified_attributes -= MODATTR_CUSTOM_VARIABLE;
+			if (modified_attributes != MODATTR_NONE)
+				strcat(attr, ", ");
+		}
+		if (modified_attributes & MODATTR_NOTIFICATION_TIMEPERIOD) {
+			strcat(attr, "Notification Timeperiod");
+			modified_attributes -= MODATTR_NOTIFICATION_TIMEPERIOD;
+			if (modified_attributes != MODATTR_NONE)
+				strcat(attr, ", ");
+		}
+	}
+
+	if (content_type == HTML_CONTENT) {
+		printf("<div class=\"serviceWARNING\">%s</div>", attr);
+	} else if (content_type == JSON_CONTENT) {
+		printf("%s", attr);
+	}
+	return;
+}
+
+/******************************************************************/
+/*******************  pagination functions ************************/
+/******************************************************************/
+void page_num_selector(int result_start, int total_entries, int displayed_entries) {
+
+	char link[MAX_INPUT_BUFFER] = "";
+	char stripped_query_string[MAX_INPUT_BUFFER] = "";
+	char *temp_buffer;
+	int total_pages = 1;
+	int current_page = 1;
+	int next_page = 0;
+	int previous_page = 0;
+	int display_from = 0;
+	int display_to = 0;
+
+	/* define base url */
+	switch (CGI_ID) {
+	/* not used in this case, cause status.cgi has a own page number selector function */
+	// case STATUS_CGI_ID:
+	// 	strcat(link, STATUS_CGI);
+	// 	break;
+	case CONFIG_CGI_ID:
+		strcat(link, CONFIG_CGI);
+		break;
+	case EXTINFO_CGI_ID:
+		strcat(link, EXTINFO_CGI);
+		break;
+	case HISTORY_CGI_ID:
+		strcat(link, HISTORY_CGI);
+		break;
+	case NOTIFICATIONS_CGI_ID:
+		strcat(link, NOTIFICATIONS_CGI);
+		break;
+	case SHOWLOG_CGI_ID:
+		strcat(link, SHOWLOG_CGI);
+		break;
+	default:
+		strcat(link, "NO_URL_DEFINED");
+		break;
+	}
+
+	/* get url options but filter out "limit" and "status" */
+	if (getenv("QUERY_STRING") != NULL && strcmp(getenv("QUERY_STRING"), "")) {
+		if(strlen(getenv("QUERY_STRING")) > MAX_INPUT_BUFFER) {
+			printf("page_num_selector(): Could not allocate memory for stripped_query_string\n");
+			exit(1);
+		}
+		strcpy(stripped_query_string, getenv("QUERY_STRING"));
+		strip_html_brackets(stripped_query_string);
+
+		for (temp_buffer = my_strtok(stripped_query_string, "&"); temp_buffer != NULL; temp_buffer = my_strtok(NULL, "&")) {
+			if (strncmp(temp_buffer, "limit=", 6) != 0 && strncmp(temp_buffer, "start=", 6) != 0) {
+				if (strstr(link, "?"))
+					strcat(link, "&");
+				else
+					strcat(link, "?");
+				strcat(link, temp_buffer);
+			}
+		}
+	}
+
+	/* calculate pages */
+	if (result_limit > 0 && total_entries > 0) {
+		total_pages = (total_entries / result_limit);
+
+		if ((total_entries % result_limit) != 0)
+			total_pages++;
+
+		current_page = (result_start / result_limit) + 1;
+		previous_page = (result_start - result_limit) > 0 ? (result_start - result_limit) : 0;
+		next_page = (result_start + result_limit) > total_entries ? result_start : (result_start + result_limit);
+	}
+
+	/* links page select elements and counters */
+	printf("<div class='page_selector'>\n");
+	printf("<div id='page_navigation' class='page_select_dd'>");
+
+	if (current_page != 1 || (result_limit != 0 && result_start != 1))
+		printf("<a href='%s%sstart=1&limit=%d' title='First Page'><img src='%s%s' style='vertical-align: middle;' height='16' width='16' alt='<<'></a>\n", link, (strstr(link, "?")) ? "&" : "?", result_limit, url_images_path, FIRST_PAGE_ACTIVE_ICON);
+	else
+		printf("<img src='%s%s' style='vertical-align: middle;' height='16' width='16'>\n", url_images_path, FIRST_PAGE_INACTIVE_ICON);
+
+	if (current_page != 1)
+		printf("<a href='%s%sstart=%d&limit=%d' title='Previous Page'><img src='%s%s' style='vertical-align: middle;' height='16' width='16' alt='<'></a>\n", link, (strstr(link, "?")) ? "&" : "?", previous_page, result_limit, url_images_path, PREVIOUS_PAGE_ACTIVE_ICON);
+	else
+		printf("<img src='%s%s' style='vertical-align: middle;' height='16' width='16'>\n", url_images_path, PREVIOUS_PAGE_INACTIVE_ICON);
+
+	printf("<span style='vertical-align:middle; font-size:8pt;'> Page </span>");
+
+	/* with inline javascript to send new page on "Enter" */
+	printf("<input type='text' value='%d' style='width:30px; vertical-align:middle; border:1px #D0D0D0 solid;text-align:center; font-size:8pt;'", current_page);
+	printf("onkeydown='if (event.keyCode == 13) window.location.href = \"%s\" + \"%slimit=%d&start=\" + (((this.value -1) * %d) + 1) ;'>", link, (strstr(link, "?")) ? "&" : "?", result_limit, result_limit);
+
+	printf("<span style='vertical-align:middle; font-size:8pt;'> of %d </span>", total_pages);
+
+	if (current_page != total_pages) {
+		printf("<a href='%s%sstart=%d&limit=%d' title='Next Page'><img src='%s%s' style='vertical-align: middle;' height='16' width='16' alt='>'></a>\n", link, (strstr(link, "?")) ? "&" : "?", (result_start + result_limit), result_limit, url_images_path, NEXT_PAGE_ACTIVE_ICON);
+		printf("<a href='%s%sstart=%d&limit=%d' title='Last Page'><img src='%s%s' style='vertical-align: middle;' height='16' width='16' alt='>>'></a>\n", link, (strstr(link, "?")) ? "&" : "?", ((total_pages - 1)*result_limit) + 1, result_limit, url_images_path, LAST_PAGE_ACTIVE_ICON);
+	} else
+		printf("<img src='%s%s' style='vertical-align: middle;' height='16' width='16'><img src='%s%s' style='vertical-align: middle;' height='16' width='16'>\n", url_images_path, NEXT_PAGE_INACTIVE_ICON, url_images_path, LAST_PAGE_INACTIVE_ICON);
+
+	printf("</div>\n");
+	page_limit_selector(result_start);
+	printf("</div>\n");
+
+	/* calculating the displayed reults */
+	if (result_start > total_entries || displayed_entries == 0) {
+		display_from = 0;
+		display_to = 0;
+	} else {
+		display_from = result_start;
+		display_to = result_start + displayed_entries - 1;
+	}
+
+	printf("<div style='text-align:center;padding-top:6px;font-size:8pt;'>Displaying Result %d - %d of %d Matching Results</div>\n", display_from, display_to, total_entries);
+
+	/* copy page navigation to top of the page */
+	printf("<script language='javascript' type='text/javascript'>\n");
+	printf("$(document).ready(function() { \n");
+	printf("$('#page_navigation').clone(true).appendTo('#page_navigation_copy');\n");
+	printf("});\n");
+	printf("</script>\n");
+
+	return;
+}
+
+void page_limit_selector(int result_start) {
+
+	static int id = 0;	// gets every dropdown a single id to activate msdropdown
+	char link[MAX_INPUT_BUFFER] = "";
+	char stripped_query_string[MAX_INPUT_BUFFER] = "";
+	char *temp_buffer;
+
+	/* define base url */
+	switch (CGI_ID) {
+	case STATUS_CGI_ID:
+		strcat(link, STATUS_CGI);
+		break;
+	case CONFIG_CGI_ID:
+		strcat(link, CONFIG_CGI);
+		break;
+	case EXTINFO_CGI_ID:
+		strcat(link, EXTINFO_CGI);
+		break;
+	case HISTORY_CGI_ID:
+		strcat(link, HISTORY_CGI);
+		break;
+	case NOTIFICATIONS_CGI_ID:
+		strcat(link, NOTIFICATIONS_CGI);
+		break;
+	case SHOWLOG_CGI_ID:
+		strcat(link, SHOWLOG_CGI);
+		break;
+	default:
+		strcat(link, "NO_URL_DEFINED");
+		break;
+	}
+
+	/* get url options but filter out "limit" and "status" */
+	if (getenv("QUERY_STRING") != NULL && strcmp(getenv("QUERY_STRING"), "")) {
+		if(strlen(getenv("QUERY_STRING")) > MAX_INPUT_BUFFER) {
+			printf("display_nav_table(): Could not allocate memory for stripped_query_string\n");
+			exit(1);
+		}
+		strcpy(stripped_query_string, getenv("QUERY_STRING"));
+		strip_html_brackets(stripped_query_string);
+
+		for (temp_buffer = my_strtok(stripped_query_string, "&"); temp_buffer != NULL; temp_buffer = my_strtok(NULL, "&")) {
+			if (strncmp(temp_buffer, "limit=", 6) != 0 && strncmp(temp_buffer, "start=", 6) != 0) {
+				if (strstr(link, "?"))
+					strcat(link, "&");
+				else
+					strcat(link, "?");
+				strcat(link, temp_buffer);
+			}
+		}
+	}
+
+	/* display drop down menu to select result limit */
+	printf("<div class='page_select_dd'>\n");
+	printf("<select style='display:none; vertical-align:middle; width:140px;' name='limit' id='limit_dd_%d' class='result_limit_dd' onChange='if (this.value) window.location.href = \"%s\" + \"%slimit=\" + this.value ", id, link, (strstr(link, "?")) ? "&" : "?");
+	if (result_start != 0)
+		printf("+ \"&start=%d\"", result_start);
+	printf(";'>\n");
+
+	if (result_limit == 0)
+		printf("<option>Results: All</option>\n");
+	else
+		printf("<option>Results: %d</option>\n", result_limit);
+
+	printf("<option value='50'>50</option>\n");
+	printf("<option value='100'>100</option>\n");
+	printf("<option value='250'>250</option>\n");
+	printf("<option value='1000'>1000</option>\n");
+	printf("<option value='0'>All</option>\n");
+
+	printf("</select>\n");
+
+	/* Print out the activator for the dropdown (which must be between the body tags */
+	printf("<script language='javascript' type='text/javascript'>\n");
+	printf("$(document).ready(function() { \n");
+	printf("try { \n$(\"#limit_dd_%d\").msDropDown({visibleRows:6}).data(\"dd\").visible(true);\n", id);
+	printf("} catch(e) {\n");
+	printf("if (console) { console.log(e); }\n}\n");
+	printf("});\n");
+	printf("</script>\n");
+
+	printf("</div>\n");
+
+	id++;
+
+	return;
 }

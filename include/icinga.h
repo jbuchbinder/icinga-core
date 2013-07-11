@@ -3,8 +3,8 @@
  * Icinga Main Header File
  *
  * Copyright (c) 1999-2009 Ethan Galstad (egalstad@nagios.org)
- * Copyright (c) 2009-2011 Nagios Core Development Team and Community Contributors
- * Copyright (c) 2009-2011 Icinga Development Team (http://www.icinga.org)
+ * Copyright (c) 2009-2013 Nagios Core Development Team and Community Contributors
+ * Copyright (c) 2009-2013 Icinga Development Team (http://www.icinga.org)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -17,7 +17,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  ************************************************************************/
 
 #ifndef _ICINGA_H
@@ -147,6 +147,7 @@ extern "C" {
 
 #define DEFAULT_ALLOW_EMPTY_HOSTGROUP_ASSIGNMENT                0	/* Do not allow empty hostgroup assignment by default */
 
+#define DEFAULT_MAX_CHECK_RESULT_LIST_ITEMS              	0	/* max items in checkresult lists, where reaper will not process anymore files into the lists. 0 means *all* */
 
 /******************** HOST STATUS *********************/
 
@@ -210,8 +211,8 @@ extern "C" {
 #define NOTIFICATION_DOWNTIMESTART      5
 #define NOTIFICATION_DOWNTIMEEND        6
 #define NOTIFICATION_DOWNTIMECANCELLED  7
-#define NOTIFICATION_CUSTOM             99
-#define NOTIFICATION_STALKING		16211	
+#define NOTIFICATION_CUSTOM             8
+#define NOTIFICATION_STALKING		9	
 
 
 
@@ -256,6 +257,7 @@ extern "C" {
 #define EVENT_RESCHEDULE_CHECKS		14      /* adjust scheduling of host and service checks */
 #define EVENT_EXPIRE_COMMENT            15      /* removes expired comments */
 #define EVENT_EXPIRE_ACKNOWLEDGEMENT    16      /* removes expired acknowledgements */
+#define EVENT_EXPIRE_DISABLED_NOTIFICATIONS 17	/* re-enables disabled notifications */
 #define EVENT_SLEEP                     98      /* asynchronous sleep event that occurs when event queues are empty */
 #define EVENT_USER_FUNCTION             99      /* USER-defined function (modules) */
 
@@ -439,6 +441,7 @@ void display_scheduling_info(void);				/* displays service check scheduling info
 
 /**** Event Queue Functions ****/
 int schedule_new_event(int,int,time_t,int,unsigned long,void *,int,void *,void *,int);	/* schedules a new timed event */
+int delete_scheduled_event(int,int,time_t,int,unsigned long,void *,int,void *,void *,int);	/* delete a scheduled event */
 void reschedule_event(timed_event *,timed_event **,timed_event **);   		/* reschedules an event */
 void add_event(timed_event *,timed_event **,timed_event **);     		/* adds an event to the execution queue */
 void remove_event(timed_event *,timed_event **,timed_event **);     		/* remove an event from the execution queue */
@@ -660,6 +663,7 @@ void schedule_service_check(service *,time_t,int);	/* schedules an immediate or 
 void schedule_host_check(host *,time_t,int);		/* schedules an immediate or delayed host check */
 void enable_all_notifications(void);                    /* enables notifications on a program-wide basis */
 void disable_all_notifications(void);                   /* disables notifications on a program-wide basis */
+void disable_all_notifications_expire_time(int, char*);	/* disables notifications with expire time on a program-wide basis */
 void enable_service_notifications(service *);		/* enables service notifications */
 void disable_service_notifications(service *);		/* disables service notifications */
 void enable_host_notifications(host *);			/* enables host notifications */

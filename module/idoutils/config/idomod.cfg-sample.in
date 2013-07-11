@@ -33,9 +33,9 @@ output_type=unixsocket
 # of fully qualified domain name of the host that the module should
 # connect to for sending output.
 
-#output=@localstatedir@/ido.dat
+#output=@STATEDIR@/ido.dat
 #output=127.0.0.1
-output=@localstatedir@/ido.sock
+output=@IDOSOCKFILE@
 
 
 
@@ -80,7 +80,7 @@ output_buffer_items=5000
 # Icinga (re)starts, the IDO NEB module will read the contents of this
 # file and send it to the IDO2DB daemon for processing.
 
-buffer_file=@localstatedir@/idomod.tmp
+buffer_file=@IDOMODTMPFILE@
 
 
 
@@ -175,6 +175,9 @@ reconnect_warning_interval=15
 #
 #define IDOMOD_PROCESS_EVERYTHING                     67108863
 #
+# ATTENTION: if process data is not dumped via idomod, ido2db won't
+#            clean tables and set objects inactive!!!
+#
 # You may use the Online Calculator by Gerhard Lausser:
 # http://labs.consol.de/nagios/ndo-data-processing-options/
 # (please note that there is a checkbox for everything!)
@@ -229,14 +232,14 @@ debug_level=0
 #         1 = More detailed
 #         2 = Very detailed
 
-debug_verbosity=1
+debug_verbosity=2
 
 
 
 # DEBUG FILE
 # This option determines where the daemon should write debugging information.
 
-debug_file=@localstatedir@/idomod.debug
+debug_file=@LOGDIR@/idomod.debug
 
 
 

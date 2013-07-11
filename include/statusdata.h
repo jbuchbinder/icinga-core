@@ -3,8 +3,8 @@
  * STATUSDATA.H - Header for external status data routines
  *
  * Copyright (c) 1999-2009 Ethan Galstad (egalstad@nagios.org)
- * Copyright (c) 2009-2011 Nagios Core Development Team and Community Contributors
- * Copyright (c) 2009-2011 Icinga Development Team (http://www.icinga.org)
+ * Copyright (c) 2009-2013 Nagios Core Development Team and Community Contributors
+ * Copyright (c) 2009-2013 Icinga Development Team (http://www.icinga.org)
  *
  * License:
  *
@@ -19,7 +19,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  *****************************************************************************/
 
@@ -84,10 +84,6 @@ typedef struct hoststatus_struct{
 	int     problem_has_been_acknowledged;
 	int     acknowledgement_type;
 	int     current_notification_number;
-#ifdef USE_ST_BASED_ESCAL_RANGES
-	int     current_down_notification_number;
-	int     current_unreachable_notification_number;
-#endif
 	int     accept_passive_host_checks;
 	int     event_handler_enabled;
 	int     checks_enabled;
@@ -104,6 +100,14 @@ typedef struct hoststatus_struct{
 	struct  hoststatus_struct *nexthash;
 	time_t  acknowledgement_end_time;
 	int	search_matched;
+	int	added;
+	unsigned long modified_attributes;
+        /*
+         * we'll use compiler tricks again, putting this at the end,
+         * invisible, in order to stay compatible with neb modules
+         */
+	int     current_down_notification_number;
+	int     current_unreachable_notification_number;
         }hoststatus;
 
 
@@ -140,11 +144,6 @@ typedef struct servicestatus_struct{
 	int     problem_has_been_acknowledged;
 	int     acknowledgement_type;
 	int     current_notification_number;
-#ifdef USE_ST_BASED_ESCAL_RANGES
-	int     current_warning_notification_number;
-	int     current_critical_notification_number;
-	int     current_unknown_notification_number;
-#endif
 	int     accept_passive_service_checks;
 	int     event_handler_enabled;
 	int     flap_detection_enabled;
@@ -160,6 +159,15 @@ typedef struct servicestatus_struct{
 	struct  servicestatus_struct *nexthash;
 	time_t  acknowledgement_end_time;
 	int	search_matched;
+	int	added;
+	unsigned long modified_attributes;
+        /*
+         * we'll use compiler tricks again, putting this at the end,
+         * invisible, in order to stay compatible with neb modules
+         */
+	int     current_warning_notification_number;
+	int     current_critical_notification_number;
+	int     current_unknown_notification_number;
         }servicestatus;
 
 

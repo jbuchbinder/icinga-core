@@ -28,7 +28,7 @@
 *
 * You should have received a copy of the GNU General Public License
 * along with this program; if not, write to the Free Software
-* Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 *
 *****************************************************************************/
 
@@ -45,7 +45,7 @@ unsigned long downtime_id = 0L;
 
 int main(int argc, char **argv) {
 
-	plan_tests(8);
+	plan(8);
 
 	downtime_id = strtoul(svr_hostname, &end_ptr, 10);
 	ok(downtime_id == 0, "hostname downtime_id is 0");

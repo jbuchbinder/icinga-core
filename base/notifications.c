@@ -3,8 +3,8 @@
  * NOTIFICATIONS.C - Service and host notification functions for Icinga
  *
  * Copyright (c) 1999-2008 Ethan Galstad (egalstad@nagios.org)
- * Copyright (c) 2009-2011 Nagios Core Development Team and Community Contributors
- * Copyright (c) 2009-2011 Icinga Development Team (http://www.icinga.org)
+ * Copyright (c) 2009-2013 Nagios Core Development Team and Community Contributors
+ * Copyright (c) 2009-2013 Icinga Development Team (http://www.icinga.org)
  *
  * License:
  *
@@ -19,7 +19,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  *****************************************************************************/
 
@@ -50,9 +50,25 @@ extern unsigned long   next_notification_id;
 
 extern char            *generic_summary;
 
+extern int		enable_state_based_escalation_ranges;
+
 int check_escalation_condition(escalation_condition*);
 
 int dummy;	/* reduce compiler warnings */
+
+const char *notification_reason_name (unsigned int reason_type) {
+	static const char *names[] = {
+		"NORMAL", "ACKNOWLEDGEMENT",
+		"FLAPPINGSTART", "FLAPPINGSTOP", "FLAPPINGDISABLED",
+		"DOWNTIMESTART", "DOWNTIMEEND", "DOWNTIMECANCELLED",
+		"CUSTOM", "STALKING"
+	};
+
+	if (reason_type < sizeof(names))
+		return names[reason_type];
+
+	return "(unknown)";
+}
 
 /******************************************************************/
 /***************** SERVICE NOTIFICATION FUNCTIONS *****************/
@@ -80,7 +96,7 @@ int service_notification(service *svc, int type, char *not_author, char *not_dat
 	time(&current_time);
 	gettimeofday(&start_time, NULL);
 
-	log_debug_info(DEBUGL_NOTIFICATIONS, 0, "** Service Notification Attempt ** Host: '%s', Service: '%s', Type: %d, Options: %d, Current State: %d, Last Notification: %s", svc->host_name, svc->description, type, options, svc->current_state, ctime(&svc->last_notification));
+	log_debug_info(DEBUGL_NOTIFICATIONS, 0, "** Service Notification Attempt ** Host: '%s', Service: '%s', Type: %s, Options: %d, Current State: %d, Last Notification: %s", svc->host_name, svc->description, notification_reason_name(type), options, svc->current_state, ctime(&svc->last_notification));
 
 	/* if we couldn't find the host, return an error */
 	if ((temp_host = svc->host_ptr) == NULL) {
@@ -100,7 +116,7 @@ int service_notification(service *svc, int type, char *not_author, char *not_dat
 	if (type == NOTIFICATION_NORMAL || (options & NOTIFICATION_OPTION_INCREMENT)) {
 		svc->current_notification_number++;
 
-#ifdef USE_ST_BASED_ESCAL_RANGES
+		/* state based escalation ranges */
 		/* also increment the warning/critical/unknown state counter */
 		if (svc->current_state == STATE_WARNING) {
 			svc->current_warning_notification_number++;
@@ -111,17 +127,16 @@ int service_notification(service *svc, int type, char *not_author, char *not_dat
 		if (svc->current_state == STATE_UNKNOWN) {
 			svc->current_unknown_notification_number++;
 		}
-#endif
+
 		increment_notification_number = TRUE;
 	}
 
 	log_debug_info(DEBUGL_NOTIFICATIONS, 1, "Current notification number: %d (%s)\n", svc->current_notification_number, (increment_notification_number == TRUE) ? "incremented" : "unchanged");
 
-#ifdef USE_ST_BASED_ESCAL_RANGES
+	/* state based escalation ranges */
 	log_debug_info(DEBUGL_NOTIFICATIONS, 1, "Current warning notification number: %d (%s)\n", svc->current_warning_notification_number, (increment_notification_number == TRUE) ? "incremented" : "unchanged");
 	log_debug_info(DEBUGL_NOTIFICATIONS, 1, "Current critical notification number: %d (%s)\n", svc->current_critical_notification_number, (increment_notification_number == TRUE) ? "incremented" : "unchanged");
 	log_debug_info(DEBUGL_NOTIFICATIONS, 1, "Current unknown notification number: %d (%s)\n", svc->current_unknown_notification_number, (increment_notification_number == TRUE) ? "incremented" : "unchanged");
-#endif
 
 	/* save and increase the current notification id */
 	svc->current_notification_id = next_notification_id;
@@ -133,6 +148,20 @@ int service_notification(service *svc, int type, char *not_author, char *not_dat
 	memset(&mac, 0, sizeof(mac));
 
 	/* create the contact notification list for this service */
+
+#ifdef USE_EVENT_BROKER
+	/* send data to event broker */
+	end_time.tv_sec = 0L;
+	end_time.tv_usec = 0L;
+	neb_result = broker_notification_data(NEBTYPE_NOTIFICATION_START, NEBFLAG_NONE, NEBATTR_NONE, SERVICE_NOTIFICATION, type, start_time, end_time, (void *)svc, not_author, not_data, escalated, 0, NULL);
+	if (NEBERROR_CALLBACKCANCEL == neb_result) {
+		free_notification_list();
+		return ERROR;
+	} else if (NEBERROR_CALLBACKOVERRIDE == neb_result) {
+		free_notification_list();
+		return OK;
+	}
+#endif
 
 	/* 2011-10-21 MF:  
 	   check viability before adding a contact
@@ -150,20 +179,6 @@ int service_notification(service *svc, int type, char *not_author, char *not_dat
 	   original patch by Opsview Team
 	*/
 	create_notification_list_from_service(&mac, svc, options, &escalated, type);
-
-#ifdef USE_EVENT_BROKER
-	/* send data to event broker */
-	end_time.tv_sec = 0L;
-	end_time.tv_usec = 0L;
-	neb_result = broker_notification_data(NEBTYPE_NOTIFICATION_START, NEBFLAG_NONE, NEBATTR_NONE, SERVICE_NOTIFICATION, type, start_time, end_time, (void *)svc, not_author, not_data, escalated, 0, NULL);
-	if (NEBERROR_CALLBACKCANCEL == neb_result) {
-		free_notification_list();
-		return ERROR;
-	} else if (NEBERROR_CALLBACKOVERRIDE == neb_result) {
-		free_notification_list();
-		return OK;
-	}
-#endif
 
 	/* XXX: crazy indent */
 	/* we have contacts to notify... */
@@ -281,8 +296,19 @@ int service_notification(service *svc, int type, char *not_author, char *not_dat
                 /* this gets set in add_notification() */
                 my_free(mac.x[MACRO_NOTIFICATIONRECIPIENTS]);
 
-		/* clear summary macros so they will be regenerated without contact filters when needed next */
-		clear_summary_macros_r(&mac);
+                /*
+                 * Clear all macros customized per contact that will
+                 * otherwise linger in memory now that we're done with
+                 * the notifications.
+                 */
+                clear_summary_macros_r(&mac);
+                clear_contact_macros_r(&mac);
+                clear_argv_macros_r(&mac);
+		clear_service_macros_r(&mac);
+		clear_host_macros_r(&mac);
+
+                /* this gets set in create_notification_list_from_service() */
+                my_free(mac.x[MACRO_NOTIFICATIONISESCALATED]);
 
 		if (type == NOTIFICATION_NORMAL) {
 
@@ -312,7 +338,7 @@ int service_notification(service *svc, int type, char *not_author, char *not_dat
 				/* adjust current notification number */
 				svc->current_notification_number--;
 
-#ifdef USE_ST_BASED_ESCAL_RANGES
+				/* state based escalation ranges */
 				if (svc->current_state == STATE_WARNING) {
 					svc->current_warning_notification_number--;
 				}
@@ -322,7 +348,6 @@ int service_notification(service *svc, int type, char *not_author, char *not_dat
 				if (svc->current_state == STATE_UNKNOWN) {
 					svc->current_unknown_notification_number--;
 				}
-#endif
 
 				log_debug_info(DEBUGL_NOTIFICATIONS, 0, "No contacts were notified.  Next possible notification time: %s", ctime(&svc->next_notification));
 			}
@@ -339,7 +364,7 @@ int service_notification(service *svc, int type, char *not_author, char *not_dat
 		if (increment_notification_number == TRUE) {
 			svc->current_notification_number--;
 
-#ifdef USE_ST_BASED_ESCAL_RANGES
+			/* state based escalation ranges */
 			if (svc->current_state == STATE_WARNING) {
 				svc->current_warning_notification_number--;
 			}
@@ -349,7 +374,6 @@ int service_notification(service *svc, int type, char *not_author, char *not_dat
 			if (svc->current_state == STATE_UNKNOWN) {
 				svc->current_unknown_notification_number--;
 			}
-#endif
 		}
 
 		log_debug_info(DEBUGL_NOTIFICATIONS, 0, "No contacts were found for notification purposes.  No notification was sent out.\n");
@@ -819,6 +843,7 @@ int notify_contact_of_service(icinga_macros *mac, contact *cntct, service *svc, 
 
 		/* process any macros contained in the argument */
 		process_macros_r(mac, raw_command, &processed_command, macro_options);
+		my_free(raw_command);
 		if (processed_command == NULL)
 			continue;
 
@@ -869,6 +894,17 @@ int notify_contact_of_service(icinga_macros *mac, contact *cntct, service *svc, 
 			my_free(processed_buffer);
 		}
 
+#ifdef USE_EVENT_BROKER
+                /* send data to event broker */
+                method_end_time.tv_sec = 0L;
+                method_end_time.tv_usec = 0L;
+                neb_result = broker_contact_notification_method_data(NEBTYPE_CONTACTNOTIFICATIONMETHOD_EXECUTE, NEBFLAG_NONE, NEBATTR_NONE, SERVICE_NOTIFICATION, type, method_start_time, method_end_time, (void *)svc, cntct, temp_commandsmember->command, not_author, not_data, escalated, NULL);
+                if (NEBERROR_CALLBACKCANCEL == neb_result)
+                        break ;
+                else if (NEBERROR_CALLBACKOVERRIDE == neb_result)
+                        continue ;
+#endif
+
 		/* run the notification command */
 		my_system_r(mac, processed_command, notification_timeout, &early_timeout, &exectime, NULL, 0);
 
@@ -879,7 +915,6 @@ int notify_contact_of_service(icinga_macros *mac, contact *cntct, service *svc, 
 
 		/* free memory */
 		my_free(command_name);
-		my_free(raw_command);
 		my_free(processed_command);
 
 		/* get end time */
@@ -909,12 +944,12 @@ int notify_contact_of_service(icinga_macros *mac, contact *cntct, service *svc, 
 /* checks to see if a service escalation entry is a match for the current service notification */
 int is_valid_escalation_for_service_notification(service *svc, serviceescalation *se, int options) {
 	int notification_number = 0;
-#ifdef USE_ST_BASED_ESCAL_RANGES
+	/* state based escalation ranges */
 	int warning_notification_number = 0;
 	int critical_notification_number = 0;
 	int unknown_notification_number = 0;
 	int widematch = 1;
-#endif
+
 	time_t current_time = 0L;
 	service *temp_service = NULL;
 
@@ -929,12 +964,11 @@ int is_valid_escalation_for_service_notification(service *svc, serviceescalation
 	else
 		notification_number = svc->current_notification_number;
 
-#ifdef USE_ST_BASED_ESCAL_RANGES
+	/* state based escalation ranges */
 	/* These will not be incremented in the case of a recovery, so use the current values regardless of the state */
 	warning_notification_number = svc->current_warning_notification_number;
 	critical_notification_number = svc->current_critical_notification_number;
 	unknown_notification_number = svc->current_unknown_notification_number;
-#endif
 
 	/* this entry if it is not for this service */
 	temp_service = se->service_ptr;
@@ -946,72 +980,64 @@ int is_valid_escalation_for_service_notification(service *svc, serviceescalation
 	if (options & NOTIFICATION_OPTION_BROADCAST)
 		return TRUE;
 
-#ifndef USE_ST_BASED_ESCAL_RANGES
 	/* skip this escalation if it happens later */
-	if (se->first_notification > notification_number)
-		return FALSE;
-#else
-	/* skip this escalation if it happens later
-	 * Only skip if none of the notifications numbers match */
+	if (enable_state_based_escalation_ranges == FALSE) {
+		if (se->first_notification > notification_number)
+			return FALSE;
+	} else {
+		/* state based escalation ranges
+		 * Only skip if none of the notifications numbers match */
+		if (se->first_notification == -2 || se->first_notification > notification_number)
+			widematch = 0;
 
-	if (se->first_notification == -2 || se->first_notification > notification_number)
-		widematch = 0;
-
-	if (!widematch) {
-		switch (svc->current_state) {
-		case STATE_WARNING: {
-			if (se->first_warning_notification == -2 || se->first_warning_notification > warning_notification_number)
-				return FALSE;
-			break;
-		}
-		case STATE_CRITICAL: {
-			if (se->first_critical_notification == -2 || se->first_critical_notification > critical_notification_number)
-				return FALSE;
-			break;
-		}
-		case STATE_UNKNOWN: {
-			if (se->first_unknown_notification == -2 || se->first_unknown_notification > unknown_notification_number)
-				return FALSE;
-			break;
-		}
+		if (!widematch) {
+			switch (svc->current_state) {
+			case STATE_WARNING:
+				if (se->first_warning_notification == -2 || se->first_warning_notification > warning_notification_number)
+					return FALSE;
+				break;
+			case STATE_CRITICAL:
+				if (se->first_critical_notification == -2 || se->first_critical_notification > critical_notification_number)
+					return FALSE;
+				break;
+			case STATE_UNKNOWN:
+				if (se->first_unknown_notification == -2 || se->first_unknown_notification > unknown_notification_number)
+					return FALSE;
+				break;
+			}
 		}
 	}
-#endif
 
 
-#ifndef USE_ST_BASED_ESCAL_RANGES
 	/* skip this escalation if it has already passed */
-	if (se->last_notification != 0 && se->last_notification < notification_number)
-		return FALSE;
-#else
-	/* skip this escalation if it has already passed
-	 * only skip if none of the notifications numbers match */
+	if (enable_state_based_escalation_ranges == FALSE) {
+		if (se->last_notification != 0 && se->last_notification < notification_number)
+			return FALSE;
+	} else {
+		/* state based escalation ranges
+		 * only skip if none of the notifications numbers match */
+		widematch = 1;
+		if (se->last_notification == -2 || ((se->last_notification != 0) && (se->last_notification < notification_number)))
+			widematch = 0;
 
-	widematch = 1;
-	if (se->last_notification == -2 || ((se->last_notification != 0) && (se->last_notification < notification_number)))
-		widematch = 0;
 
-
-	if (!widematch) {
-		switch (svc->current_state) {
-		case STATE_WARNING: {
-			if (se->last_warning_notification == -2 || ((se->last_warning_notification != 0) && (se->last_warning_notification < warning_notification_number)))
-				return FALSE;
-			break;
-		}
-		case STATE_CRITICAL: {
-			if (se->last_critical_notification == -2 || ((se->last_critical_notification != 0) && (se->last_critical_notification < critical_notification_number)))
-				return FALSE;
-			break;
-		}
-		case STATE_UNKNOWN: {
-			if (se->last_unknown_notification == -2 || ((se->last_unknown_notification != 0) && (se->last_unknown_notification < unknown_notification_number)))
-				return FALSE;
-			break;
-		}
+		if (!widematch) {
+			switch (svc->current_state) {
+			case STATE_WARNING:
+				if (se->last_warning_notification == -2 || ((se->last_warning_notification != 0) && (se->last_warning_notification < warning_notification_number)))
+					return FALSE;
+				break;
+			case STATE_CRITICAL:
+				if (se->last_critical_notification == -2 || ((se->last_critical_notification != 0) && (se->last_critical_notification < critical_notification_number)))
+					return FALSE;
+				break;
+			case STATE_UNKNOWN:
+				if (se->last_unknown_notification == -2 || ((se->last_unknown_notification != 0) && (se->last_unknown_notification < unknown_notification_number)))
+					return FALSE;
+				break;
+			}
 		}
 	}
-#endif
 
 	/* skip this escalation if it has a timeperiod and the current time isn't valid */
 	if (se->escalation_period != NULL && check_time_against_period(current_time, se->escalation_period_ptr) == ERROR)
@@ -1267,7 +1293,7 @@ int host_notification(host *hst, int type, char *not_author, char *not_data, int
 	time(&current_time);
 	gettimeofday(&start_time, NULL);
 
-	log_debug_info(DEBUGL_NOTIFICATIONS, 0, "** Host Notification Attempt ** Host: '%s', Type: %d, Options: %d, Current State: %d, Last Notification: %s", hst->name, type, options, hst->current_state, ctime(&hst->last_host_notification));
+	log_debug_info(DEBUGL_NOTIFICATIONS, 0, "** Host Notification Attempt ** Host: '%s', Type: %s, Options: %d, Current State: %d, Last Notification: %s", hst->name, notification_reason_name(type), options, hst->current_state, ctime(&hst->last_host_notification));
 
 
 	/* check viability of sending out a host notification */
@@ -1285,7 +1311,7 @@ int host_notification(host *hst, int type, char *not_author, char *not_data, int
 	if (type == NOTIFICATION_NORMAL || (options & NOTIFICATION_OPTION_INCREMENT)) {
 		hst->current_notification_number++;
 
-#ifdef USE_ST_BASED_ESCAL_RANGES
+		/* state based escalation ranges */
 		/* also increment down/unreachable state counter */
 		if (hst->current_state == HOST_DOWN) {
 			hst->current_down_notification_number++;
@@ -1293,7 +1319,7 @@ int host_notification(host *hst, int type, char *not_author, char *not_data, int
 		if (hst->current_state == HOST_UNREACHABLE) {
 			hst->current_unreachable_notification_number++;
 		}
-#endif
+
 		increment_notification_number = TRUE;
 	}
 
@@ -1306,6 +1332,20 @@ int host_notification(host *hst, int type, char *not_author, char *not_data, int
 	log_debug_info(DEBUGL_NOTIFICATIONS, 2, "Creating list of contacts to be notified.\n");
 
 	/* create the contact notification list for this host */
+
+#ifdef USE_EVENT_BROKER
+	/* send data to event broker */
+	end_time.tv_sec = 0L;
+	end_time.tv_usec = 0L;
+	neb_result = broker_notification_data(NEBTYPE_NOTIFICATION_START, NEBFLAG_NONE, NEBATTR_NONE, HOST_NOTIFICATION, type, start_time, end_time, (void *)hst, not_author, not_data, escalated, 0, NULL);
+	if (NEBERROR_CALLBACKCANCEL == neb_result) {
+		free_notification_list();
+		return ERROR;
+	} else if (NEBERROR_CALLBACKOVERRIDE == neb_result) {
+		free_notification_list();
+		return OK;
+	}
+#endif
 
         /* 2011-10-21 MF:  
            check viability before adding a contact
@@ -1323,20 +1363,6 @@ int host_notification(host *hst, int type, char *not_author, char *not_data, int
            original patch by Opsview Team
         */
 	create_notification_list_from_host(&mac, hst, options, &escalated, type);
-
-#ifdef USE_EVENT_BROKER
-	/* send data to event broker */
-	end_time.tv_sec = 0L;
-	end_time.tv_usec = 0L;
-	neb_result = broker_notification_data(NEBTYPE_NOTIFICATION_START, NEBFLAG_NONE, NEBATTR_NONE, HOST_NOTIFICATION, type, start_time, end_time, (void *)hst, not_author, not_data, escalated, 0, NULL);
-	if (NEBERROR_CALLBACKCANCEL == neb_result) {
-		free_notification_list();
-		return ERROR;
-	} else if (NEBERROR_CALLBACKOVERRIDE == neb_result) {
-		free_notification_list();
-		return OK;
-	}
-#endif
 
 	/* XXX: crazy indent */
 	/* there are contacts to be notified... */
@@ -1453,8 +1479,18 @@ int host_notification(host *hst, int type, char *not_author, char *not_data, int
 		/* this gets set in add_notification() */
 		my_free(mac.x[MACRO_NOTIFICATIONRECIPIENTS]);
 
-		/* clear summary macros so they will be regenerated without contact filters when needednext */
+		/*
+		 * Clear all macros customized per contact that will
+		 * otherwise linger in memory now that we're done with
+		 * the notifications.
+		 */
 		clear_summary_macros_r(&mac);
+		clear_contact_macros_r(&mac);
+		clear_argv_macros_r(&mac);
+		clear_host_macros_r(&mac);
+
+		/* this gets set in create_notification_list_from_service() */
+		my_free(mac.x[MACRO_NOTIFICATIONISESCALATED]);
 
 		if (type == NOTIFICATION_NORMAL) {
 
@@ -1482,14 +1518,14 @@ int host_notification(host *hst, int type, char *not_author, char *not_data, int
 				/* adjust current notification number */
 				hst->current_notification_number--;
 
-#ifdef USE_ST_BASED_ESCAL_RANGES
+				/* state based escalation ranges */
 				if (hst->current_state == HOST_DOWN) {
 					hst->current_down_notification_number--;
 				}
 				if (hst->current_state == HOST_UNREACHABLE) {
 					hst->current_unreachable_notification_number--;
 				}
-#endif
+
 
 				log_debug_info(DEBUGL_NOTIFICATIONS, 0, "No contacts were notified.  Next possible notification time: %s", ctime(&hst->next_host_notification));
 			}
@@ -1505,14 +1541,13 @@ int host_notification(host *hst, int type, char *not_author, char *not_data, int
 		if (increment_notification_number == TRUE) {
 			hst->current_notification_number--;
 
-#ifdef USE_ST_BASED_ESCAL_RANGES
+			/* state based escalation ranges */
 			if (hst->current_state == HOST_DOWN) {
 				hst->current_down_notification_number--;
 			}
 			if (hst->current_state == HOST_UNREACHABLE) {
 				hst->current_unreachable_notification_number--;
 			}
-#endif
 		}
 
 		log_debug_info(DEBUGL_NOTIFICATIONS, 0, "No contacts were found for notification purposes.  No notification was sent out.\n");
@@ -1921,6 +1956,7 @@ int notify_contact_of_host(icinga_macros *mac, contact *cntct, host *hst, int ty
 
 		/* process any macros contained in the argument */
 		process_macros_r(mac, raw_command, &processed_command, macro_options);
+		my_free(raw_command);
 		if (processed_command == NULL)
 			continue;
 
@@ -1971,6 +2007,17 @@ int notify_contact_of_host(icinga_macros *mac, contact *cntct, host *hst, int ty
 			my_free(processed_buffer);
 		}
 
+#ifdef USE_EVENT_BROKER
+                /* send data to event broker */
+                method_end_time.tv_sec = 0L;
+                method_end_time.tv_usec = 0L;
+                neb_result = broker_contact_notification_method_data(NEBTYPE_CONTACTNOTIFICATIONMETHOD_EXECUTE, NEBFLAG_NONE, NEBATTR_NONE, HOST_NOTIFICATION, type, method_start_time, method_end_time, (void *)hst, cntct, temp_commandsmember->command, not_author, not_data, escalated, NULL);
+                if (NEBERROR_CALLBACKCANCEL == neb_result)
+                        break;
+                else if (NEBERROR_CALLBACKOVERRIDE == neb_result)
+                        continue;
+#endif
+
 		/* run the notification command */
 		my_system_r(mac, processed_command, notification_timeout, &early_timeout, &exectime, NULL, 0);
 
@@ -1981,7 +2028,6 @@ int notify_contact_of_host(icinga_macros *mac, contact *cntct, host *hst, int ty
 
 		/* free memory */
 		my_free(command_name);
-		my_free(raw_command);
 		my_free(processed_command);
 
 		/* get end time */
@@ -2012,11 +2058,10 @@ int notify_contact_of_host(icinga_macros *mac, contact *cntct, host *hst, int ty
 int is_valid_escalation_for_host_notification(host *hst, hostescalation *he, int options) {
 	int notification_number = 0;
 
-#ifdef USE_ST_BASED_ESCAL_RANGES
+	/* state based escalation ranges */
 	int down_notification_number = 0;
 	int unreachable_notification_number = 0;
 	int widematch = 1;
-#endif
 
 	time_t current_time = 0L;
 	host *temp_host = NULL;
@@ -2032,11 +2077,10 @@ int is_valid_escalation_for_host_notification(host *hst, hostescalation *he, int
 	else
 		notification_number = hst->current_notification_number;
 
-#ifdef USE_ST_BASED_ESCAL_RANGES
+	/* state based escalation ranges */
 	/* these are not incremented in the case of recovery, so don't need special handling */
 	down_notification_number = hst->current_down_notification_number;
 	unreachable_notification_number = hst->current_unreachable_notification_number;
-#endif
 
 	/* find the host this escalation entry is associated with */
 	temp_host = he->host_ptr;
@@ -2048,55 +2092,53 @@ int is_valid_escalation_for_host_notification(host *hst, hostescalation *he, int
 	if (options & NOTIFICATION_OPTION_BROADCAST)
 		return TRUE;
 
-#ifndef USE_ST_BASED_ESCAL_RANGES
-	if (he->first_notification > notification_number)
-		return FALSE;
-#else
 	/* skip this escalation if it happens later */
-	if (he->first_notification == -2 || he->first_notification > notification_number)
-		widematch = 0;
+	if (enable_state_based_escalation_ranges == FALSE) {
+		if (he->first_notification > notification_number)
+			return FALSE;
+	} else {
+		/* state based escalation ranges */
+		if (he->first_notification == -2 || he->first_notification > notification_number)
+			widematch = 0;
 
-	if (!widematch) {
-		switch (hst->current_state) {
-		case HOST_DOWN: {
-			if (he->first_down_notification == -2 || he->first_down_notification > down_notification_number)
-				return FALSE;
-			break;
-		}
-		case HOST_UNREACHABLE: {
-			if (he->first_unreachable_notification == -2 || he->first_unreachable_notification > unreachable_notification_number)
-				return FALSE;
-			break;
-		}
+		if (!widematch) {
+			switch (hst->current_state) {
+			case HOST_DOWN:
+				if (he->first_down_notification == -2 || he->first_down_notification > down_notification_number)
+					return FALSE;
+				break;
+			case HOST_UNREACHABLE:
+				if (he->first_unreachable_notification == -2 || he->first_unreachable_notification > unreachable_notification_number)
+					return FALSE;
+				break;
+			}
 		}
 	}
-#endif
 
-#ifndef USE_ST_BASED_ESCAL_RANGES
 	/* skip this escalation if it has already passed */
-	if (he->last_notification != 0 && he->last_notification < notification_number)
-		return FALSE;
-#else
-	/* skip this escalation if it has already passed. only skip if none match */
-	widematch = 1;
-	if ((he->last_notification == -2) || ((he->last_notification != 0) && (he->last_notification < notification_number)))
-		widematch = 0;
+	if (enable_state_based_escalation_ranges == FALSE) {
+		if (he->last_notification != 0 && he->last_notification < notification_number)
+			return FALSE;
+	} else {
+		/* state based escalation ranges */
+		widematch = 1;
+		if ((he->last_notification == -2) || ((he->last_notification != 0) && (he->last_notification < notification_number)))
+			widematch = 0;
 
-	if (!widematch) {
-		switch (hst->current_state) {
-		case HOST_DOWN: {
-			if ((he->last_down_notification == -2) || ((he->last_down_notification != 0) && (he->last_down_notification < down_notification_number)))
-				return FALSE;
-			break;
-		}
-		case HOST_UNREACHABLE: {
-			if ((he->last_unreachable_notification == -2) || ((he->last_unreachable_notification) && (he->last_unreachable_notification < unreachable_notification_number)))
-				return FALSE;
-			break;
-		}
+		if (!widematch) {
+			switch (hst->current_state) {
+			case HOST_DOWN:
+				if ((he->last_down_notification == -2) || ((he->last_down_notification != 0) && (he->last_down_notification < down_notification_number)))
+					return FALSE;
+				break;
+			case HOST_UNREACHABLE:
+				if ((he->last_unreachable_notification == -2) || ((he->last_unreachable_notification) && (he->last_unreachable_notification < unreachable_notification_number)))
+					return FALSE;
+				break;
+			}
 		}
 	}
-#endif
+
 	/* skip this escalation if it has a timeperiod and the current time isn't valid */
 	if (he->escalation_period != NULL && check_time_against_period(current_time, he->escalation_period_ptr) == ERROR)
 		return FALSE;

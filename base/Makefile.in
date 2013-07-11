@@ -12,7 +12,8 @@ CC=@CC@
 CFLAGS=@CFLAGS@ @DEFS@ -DNSCORE
 
 # Compiler flags for use with gprof
-#CFLAGS=-pg -DHAVE_CONFIG_H -DNSCORE
+# when running prof, make sure to remove drop_privilegues when running!
+#CFLAGS += -pg -ftest-coverage
 
 # Compiler flags for use with Valgrind
 #CFLAGS=-O0 -g -DHAVE_CONFIG_H -DNSCORE
@@ -31,9 +32,10 @@ LIBS=@LIBS@
 
 prefix=@prefix@
 exec_prefix=@exec_prefix@
-LOGDIR=@localstatedir@
+LOGDIR=@LOGDIR@
 CFGDIR=@sysconfdir@
 BINDIR=@bindir@
+LIBDIR=@libdir@
 CGIDIR=@sbindir@
 HTMLDIR=@datarootdir@
 INSTALL=@INSTALL@
@@ -206,8 +208,9 @@ install-unstripped:
 
 install-basic:
 	$(INSTALL) -m 775 $(INSTALL_OPTS) -d $(DESTDIR)$(BINDIR)
-	$(INSTALL) -m 774 $(INSTALL_OPTS) @icinga_name@ $(DESTDIR)$(BINDIR)
-	$(INSTALL) -m 774 $(INSTALL_OPTS) @icingastats_name@ $(DESTDIR)$(BINDIR)
+	$(INSTALL) -m 775 $(INSTALL_OPTS) -d $(DESTDIR)$(LIBDIR)
+	$(INSTALL) -m 755 $(INSTALL_OPTS) @icinga_name@ $(DESTDIR)$(BINDIR)
+	$(INSTALL) -m 755 $(INSTALL_OPTS) @icingastats_name@ $(DESTDIR)$(BINDIR)
 
 strip-post-install:
 	$(STRIP) $(DESTDIR)$(BINDIR)/@icinga_name@

@@ -3,13 +3,15 @@
 # chkconfig: 345 99 01
 # description: Icinga network monitor
 ### BEGIN INIT INFO
-# Provides: icinga
-# Required-Start: $local_fs $network
-# Required-Stop: $local_fs $network
-# Default-Start:  3 4 5
-# Default-Stop: 0 1 6
+# Provides:          icinga
+# Required-Start:    $local_fs $remote_fs $syslog $named $network $time
+# Required-Stop:     $local_fs $remote_fs $syslog $named $network
+# Should-Start:
+# Should-Stop:
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
 # Short-Description: start and stop Icinga monitoring daemon
-# Description: Icinga is a service monitoring system
+# Description:       Icinga is a service monitoring system
 ### END INIT INFO
 
 ## definitions ##
@@ -17,16 +19,13 @@ prefix=@prefix@
 exec_prefix=@exec_prefix@
 IcingaBin=@bindir@/icinga
 IcingaCfgFile=@sysconfdir@/icinga.cfg
-IcingaStatusFile=@localstatedir@/status.dat
-IcingaRetentionFile=@localstatedir@/retention.dat
 IcingaCommandFile=@EXTCMDFILEDIR@/icinga.cmd
-IcingaVarDir=@localstatedir@
 IcingaRunFile=@lockfile@
 IcingaLockDir=/var/lock/subsys
 IcingaLockFile=icinga
 IcingaUser=@icinga_user@
 IcingaGroup=@icinga_grp@
-IcingaChkFile=@localstatedir@/icinga.chk
+IcingaChkFile=@ICINGACHKFILE@
 
 # load extra environment variables
 if [ -f /etc/sysconfig/icinga ]; then
@@ -56,6 +55,14 @@ fi
 
 
 ## helper functions ##
+check_pid_file_exists ()
+{
+        if test ! -f $IcingaRunFile; then
+                return 1;
+        fi
+
+        return 0
+}
 
 status_icinga ()
 {
@@ -70,16 +77,25 @@ status_icinga ()
 }
 
 
-printstatus_icinga()
+checkstatus_icinga()
 {
-
-	if status_icinga $1 $2; then
-		echo "icinga (pid $IcingaPID) is running..."
-	else
-		echo "icinga is not running"
-	fi
+        if check_pid_file_exists > /dev/null; then
+                pid_icinga
+                if status_icinga $1 $2; then
+                        echo "icinga (pid $IcingaPID) is running..."
+                        exit 0
+                else
+                        echo "icinga is not running. removing $IcingaRunFile"
+                        # pid file exists, but daemon is dead
+                        rm -f $IcingaRunFile
+                        exit 1
+                fi
+        else
+                # daemon not running
+                echo "icinga is not running"
+                exit 3
+        fi
 }
-
 
 killproc_icinga ()
 {
@@ -103,7 +119,6 @@ pid_icinga ()
 
 	IcingaPID=`head -n 1 $IcingaRunFile`
 }
-
 
 chk_config ()
 {
@@ -191,8 +206,7 @@ case "$1" in
 		;;
 
 	status)
-		pid_icinga
-		printstatus_icinga icinga
+		checkstatus_icinga icinga
 		;;
 
 	checkconfig)

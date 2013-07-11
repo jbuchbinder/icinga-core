@@ -3,8 +3,8 @@
  * BROKER.H - Event broker includes for Icinga
  *
  * Copyright (c) 2002-2009 Ethan Galstad (egalstad@nagios.org)
- * Copyright (c) 2009-2011 Nagios Core Development Team and Community Contributors
- * Copyright (c) 2009-2011 Icinga Development Team (http://www.icinga.org)
+ * Copyright (c) 2009-2013 Nagios Core Development Team and Community Contributors
+ * Copyright (c) 2009-2013 Icinga Development Team (http://www.icinga.org)
  *
  * License:
  *
@@ -19,7 +19,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  *****************************************************************************/
 
@@ -98,6 +98,7 @@
 #define NEBTYPE_CONTACTNOTIFICATION_END          603
 #define NEBTYPE_CONTACTNOTIFICATIONMETHOD_START  604
 #define NEBTYPE_CONTACTNOTIFICATIONMETHOD_END    605
+#define NEBTYPE_CONTACTNOTIFICATIONMETHOD_EXECUTE 606
 
 #define NEBTYPE_SERVICECHECK_INITIATE            700
 #define NEBTYPE_SERVICECHECK_PROCESSED           701
@@ -195,7 +196,7 @@ void broker_system_command(int,int,int,struct timeval,struct timeval,double,int,
 int broker_host_check(int,int,int,host *,int,int,int,struct timeval,struct timeval,char *,double,double,int,int,int,char *,char *,char *,char *,struct timeval *);
 int broker_service_check(int,int,int,service *,int,struct timeval,struct timeval,char *,double,double,int,int,int,char *,struct timeval *);
 void broker_comment_data(int,int,int,int,int,char *,char *,time_t,char *,char *,int,int,int,time_t,unsigned long,struct timeval *);
-void broker_downtime_data(int,int,int,int,char *,char *,time_t,char *,char *,time_t,time_t,int,unsigned long,unsigned long,unsigned long,struct timeval *);
+void broker_downtime_data(int,int,int,int,char *,char *,time_t,char *,char *,time_t,time_t,int,unsigned long,unsigned long,unsigned long,struct timeval *,int,time_t);
 void broker_flapping_data(int,int,int,int,void *,double,double,double,struct timeval *);
 void broker_program_status(int,int,int,struct timeval *);
 void broker_host_status(int,int,int,host *,struct timeval *);

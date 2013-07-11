@@ -3,7 +3,7 @@
  * TAC.C - Icinga Tactical Monitoring Overview CGI
  *
  * Copyright (c) 2001-2008 Ethan Galstad (egalstad@nagios.org)
- * Copyright (c) 2009-2011 Icinga Development Team (http://www.icinga.org)
+ * Copyright (c) 2009-2013 Icinga Development Team (http://www.icinga.org)
  *
  * This CGI program will display the contents of the Icinga
  * log file.
@@ -21,8 +21,14 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  ***********************************************************************/
+
+/** @file tac.c
+ *  @brief display a tactical monitoring overview and the tac header 
+**/
+
+/* #define DEBUG 1*/
 
 #include "../include/config.h"
 #include "../include/common.h"
@@ -33,25 +39,11 @@
 #include "../include/cgiutils.h"
 #include "../include/cgiauth.h"
 
-
-#define HEALTH_WARNING_PERCENTAGE	90
-#define HEALTH_CRITICAL_PERCENTAGE	75
-
-
-/* HOSTOUTAGE structure */
-typedef struct hostoutage_struct {
-	host *hst;
-	int  affected_child_hosts;
-	struct hostoutage_struct *next;
-} hostoutage;
-
-
-extern char   main_config_file[MAX_FILENAME_LENGTH];
-extern char   url_html_path[MAX_FILENAME_LENGTH];
-extern char   url_images_path[MAX_FILENAME_LENGTH];
-extern char   url_stylesheets_path[MAX_FILENAME_LENGTH];
-extern char   url_js_path[MAX_FILENAME_LENGTH];
-extern char   url_media_path[MAX_FILENAME_LENGTH];
+/** @name external vars
+    @{ **/
+extern char main_config_file[MAX_FILENAME_LENGTH];
+extern char url_images_path[MAX_FILENAME_LENGTH];
+extern char url_media_path[MAX_FILENAME_LENGTH];
 
 extern char *service_critical_sound;
 extern char *service_warning_sound;
@@ -72,60 +64,59 @@ extern int accept_passive_service_checks;
 extern int accept_passive_host_checks;
 extern int enable_event_handlers;
 extern int enable_flap_detection;
-
-extern int nagios_process_state;
-
 extern int tac_show_only_hard_state;
 extern int show_tac_header;
 extern int show_tac_header_pending;
-
-
-void analyze_status_data(void);
-void display_tac_overview(void);
-
-void find_hosts_causing_outages(void);
-void calculate_outage_effect_of_host(host *, int *);
-int is_route_to_host_blocked(host *);
-int number_of_host_services(host *);
-void add_hostoutage(host *);
-void free_hostoutage_list(void);
-
-int process_cgivars(void);
-
-authdata current_authdata;
-
 extern int embedded;
 extern int refresh;
+extern int refresh_type;
 extern int display_header;
 extern int daemon_check;
 extern int tac_header;
 extern int content_type;
+/** @} */
 
-hostoutage *hostoutage_list = NULL;
 
+/** @name TAC WARNING/CRITICAL PERCENTAGE
+ @{**/
+#define HEALTH_WARNING_PERCENTAGE	90			/**< health below this value is considered as in warning state */
+#define HEALTH_CRITICAL_PERCENTAGE	75			/**< health below this value is considered as in critical state */
+/** @} */
+
+
+/** @brief host outage struct
+ *
+ * holds a list hosts causing network outages
+**/
+typedef struct hostoutage_struct {
+	host *hst;						/**< pointer to host element which cuase outage */
+	int  affected_child_hosts;				/**< number of affected hosts */
+	struct hostoutage_struct *next;				/**< pointer to next host outage element */
+} hostoutage;
+
+hostoutage *hostoutage_list = NULL;				/**< list of all host outage elements */
+
+authdata current_authdata;					/**< struct to hold current authentication data */
+int CGI_ID = TAC_CGI_ID;					/**< ID to identify the cgi for functions in cgiutils.c */
+
+/** @name outages counters
+ @{**/
 int total_blocking_outages = 0;
 int total_nonblocking_outages = 0;
+/** @} */
 
+/** @name health counters
+ @{**/
 int total_service_health = 0;
 int total_host_health = 0;
 int potential_service_health = 0;
 int potential_host_health = 0;
 double percent_service_health = 0.0;
 double percent_host_health = 0.0;
+/** @} */
 
-int total_hosts = 0;
-int total_services = 0;
-
-int total_active_host_checks = 0;
-int total_passive_host_checks = 0;
-int total_disabled_host_checks = 0;
-int total_active_host_checks_with_passive_disabled = 0;
-
-int total_active_service_checks = 0;
-int total_passive_service_checks = 0;
-int total_disabled_service_checks = 0;
-int total_active_service_checks_with_passive_disabled = 0;
-
+/** @name statistics counters
+ @{**/
 double min_service_execution_time = -1.0;
 double max_service_execution_time = -1.0;
 double total_service_execution_time = 0.0;
@@ -142,7 +133,24 @@ double min_host_latency = -1.0;
 double max_host_latency = -1.0;
 double total_host_latency = 0.0;
 double average_host_latency = -1.0;
+/** @} */
 
+/** @name total counters
+ @{**/
+int total_hosts = 0;
+int total_services = 0;
+int total_active_host_checks = 0;
+int total_passive_host_checks = 0;
+int total_disabled_host_checks = 0;
+int total_active_host_checks_with_passive_disabled = 0;
+int total_active_service_checks = 0;
+int total_passive_service_checks = 0;
+int total_disabled_service_checks = 0;
+int total_active_service_checks_with_passive_disabled = 0;
+/** @} */
+
+/** @name flapping and disabled counters
+ @{**/
 int flapping_services = 0;
 int flapping_hosts = 0;
 int flap_disabled_services = 0;
@@ -151,8 +159,10 @@ int notification_disabled_services = 0;
 int notification_disabled_hosts = 0;
 int event_handler_disabled_services = 0;
 int event_handler_disabled_hosts = 0;
+/** @} */
 
-// host status counting
+/** @name host status counters
+ @{**/
 int hosts_pending = 0;
 int hosts_pending_active = 0;
 int hosts_pending_passive = 0;
@@ -202,8 +212,10 @@ int hosts_unreachable_unacknowledged = 0;
 int hosts_unreachable_active_unacknowledged = 0;
 int hosts_unreachable_passive_unacknowledged = 0;
 int hosts_unreachable_disabled_unacknowledged = 0;
+/** @} */
 
-// service status counting
+/** @name service status counters
+ @{**/
 int services_pending = 0;
 int services_pending_host_down = 0;
 int services_pending_active = 0;
@@ -329,23 +341,74 @@ int services_critical_passive_unacknowledged = 0;
 int services_critical_passive_unacknowledged_host_down = 0;
 int services_critical_disabled_unacknowledged = 0;
 int services_critical_disabled_unacknowledged_host_down = 0;
+/** @} */
 
-int display_type = DISPLAY_HOSTS;
-int show_all_hosts = TRUE;
-int show_all_hostgroups = TRUE;
-int show_all_servicegroups = TRUE;
 
-char *host_name = NULL;
-char *host_filter = NULL;
-char *hostgroup_name = NULL;
-char *servicegroup_name = NULL;
-char *service_desc = NULL;
-char *service_filter = NULL;
+/** @brief Parses the requested GET/POST variables
+ *  @retval TRUE
+ *  @retval FALSE
+ *  @return wether parsing was successful or not
+ *
+ *  @n This function parses the request and set's the necessary variables
+**/
+int process_cgivars(void);
 
-int CGI_ID = TAC_CGI_ID;
 
-/* #define DEBUG 1*/
+/** @brief fills all the counters
+ *
+ *  Iterates through @ref servicestatus_list and @ref hoststatus_list to count all host and service states
+**/
+void analyze_status_data(void);
 
+/** @brief displays all data
+ *
+ *  After we calculated all data we have to display it.
+ *  This functions is also responsible for the "tac header".
+**/
+void display_tac_overview(void);
+
+/** @brief find all hosts that are causing network outages
+ *
+ *  Function tries to find hosts causig outages and calculates how many child hosts are affected by that.
+ *
+ *  Loops through @ref hoststatus_list and looks for hosts which are DOWN or UNREACHABLE and haven't been
+ *  blocked by other DOWN/UNREACHABLE hosts (@ref is_route_to_host_blocked).
+ *  These hosts get added to @ref hostoutage_list via @ref add_hostoutage
+ *
+ *  Then it loops through @ref hostoutage_list and calls @ref calculate_outage_effect_of_host to find
+ *  out how many hosts are affected by this outage.
+**/
+void find_hosts_causing_outages(void);
+
+/** @brief calculates network outage effect of a particular host being down or unreachable
+ *  @param [in] hst host element to calculate outage for
+ *  @param [out] affected_hosts returns number of affected hosts
+ *
+ *  Finds immediate childs of "hst" and calls itself again to finaly find all child hosts and sums them up to affected_hosts.
+ *  This is a recursice function.
+**/
+void calculate_outage_effect_of_host(host *, int *);
+
+/** @brief tests whether or not a host is "blocked" by upstream parents (host is already assumed to be down or unreachable)
+ *  @param [in] hst host element to see if this host is blocked
+ *	@retval TRUE
+ *	@retval FALSE
+ *  @return wether host is completely blocked or not
+ *
+ *  Loops through all parent hosts of "hst" and tries to find a parent in state UP or PENDING. If it finds a parent in UP or
+ *  PENDING state the function returns FALSE otherwise TRUE
+**/
+int is_route_to_host_blocked(host *);
+
+/** @brief adds a host to @ref hostoutage_list
+ *  @param [in] hst host element to add to hostoutage_list
+**/
+void add_hostoutage(host *);
+
+/** @brief frees all memory allocated to @ref hostoutage_list entries in memory **/
+void free_hostoutage_list(void);
+
+/** @brief Yes we need a main function **/
 int main(void) {
 	int result = OK;
 	char *sound = NULL;
@@ -367,8 +430,8 @@ int main(void) {
 	/* read the CGI configuration file */
 	result = read_cgi_config_file(get_cgi_config_location());
 	if (result == ERROR) {
-		document_header(CGI_ID, FALSE);
-		print_error(get_cgi_config_location(), ERROR_CGI_CFG_FILE);
+		document_header(CGI_ID, FALSE, "Error");
+		print_error(get_cgi_config_location(), ERROR_CGI_CFG_FILE, tac_header);
 		document_footer(CGI_ID);
 		return ERROR;
 	}
@@ -380,8 +443,8 @@ int main(void) {
 	/* read the main configuration file */
 	result = read_main_config_file(main_config_file);
 	if (result == ERROR) {
-		document_header(CGI_ID, FALSE);
-		print_error(main_config_file, ERROR_CGI_MAIN_CFG);
+		document_header(CGI_ID, FALSE, "Error");
+		print_error(main_config_file, ERROR_CGI_MAIN_CFG, tac_header);
 		document_footer(CGI_ID);
 		return ERROR;
 	}
@@ -393,8 +456,8 @@ int main(void) {
 	/* read all object configuration data */
 	result = read_all_object_configuration_data(main_config_file, READ_ALL_OBJECT_DATA);
 	if (result == ERROR) {
-		document_header(CGI_ID, FALSE);
-		print_error(NULL, ERROR_CGI_OBJECT_DATA);
+		document_header(CGI_ID, FALSE, "Error");
+		print_error(NULL, ERROR_CGI_OBJECT_DATA, tac_header);
 		document_footer(CGI_ID);
 		return ERROR;
 	}
@@ -404,10 +467,10 @@ int main(void) {
 #endif
 
 	/* read all status data */
-	result = read_all_status_data(get_cgi_config_location(), READ_ALL_STATUS_DATA);
+	result = read_all_status_data(main_config_file, READ_ALL_STATUS_DATA);
 	if (result == ERROR && daemon_check == TRUE) {
-		document_header(CGI_ID, FALSE);
-		print_error(NULL, ERROR_CGI_STATUS_DATA);
+		document_header(CGI_ID, FALSE, "Error");
+		print_error(NULL, ERROR_CGI_STATUS_DATA, tac_header);
 		document_footer(CGI_ID);
 		free_memory();
 		return ERROR;
@@ -417,7 +480,10 @@ int main(void) {
 	time(&t5);
 #endif
 
-	document_header(CGI_ID, TRUE);
+	if (tac_header == TRUE)
+		document_header(CGI_ID, TRUE, "Icinga");
+	else
+		document_header(CGI_ID, TRUE, "Tactical Monitoring Overview");
 
 	/* get authentication information */
 	get_authentication_information(&current_authdata);
@@ -521,10 +587,8 @@ int process_cgivars(void) {
 			daemon_check = FALSE;
 
 		/* we found the tac_header option */
-		else if (!strcmp(variables[x], "tac_header")) {
+		else if (!strcmp(variables[x], "tac_header"))
 			tac_header = TRUE;
-			embedded = TRUE;
-		}
 
 		/* we found the JSON output option */
 		else if (!strcmp(variables[x], "jsonoutput")) {
@@ -543,7 +607,6 @@ int process_cgivars(void) {
 
 	return error;
 }
-
 
 void analyze_status_data(void) {
 	servicestatus *temp_servicestatus;
@@ -1005,7 +1068,6 @@ void analyze_status_data(void) {
 	return;
 }
 
-
 /* determine what hosts are causing network outages */
 void find_hosts_causing_outages(void) {
 	hoststatus *temp_hoststatus;
@@ -1049,7 +1111,6 @@ void find_hosts_causing_outages(void) {
 	return;
 }
 
-
 /* adds a host outage entry */
 void add_hostoutage(host *hst) {
 	hostoutage *new_hostoutage;
@@ -1070,7 +1131,6 @@ void add_hostoutage(host *hst) {
 	return;
 }
 
-
 /* frees all memory allocated to the host outage list */
 void free_hostoutage_list(void) {
 	hostoutage *this_hostoutage;
@@ -1084,14 +1144,11 @@ void free_hostoutage_list(void) {
 	return;
 }
 
-
-
 /* calculates network outage effect of a particular host being down or unreachable */
 void calculate_outage_effect_of_host(host *hst, int *affected_hosts) {
 	int total_child_hosts_affected = 0;
 	int temp_child_hosts_affected = 0;
 	host *temp_host;
-
 
 	/* find all child hosts of this host */
 	for (temp_host = host_list; temp_host != NULL; temp_host = temp_host->next) {
@@ -1111,8 +1168,6 @@ void calculate_outage_effect_of_host(host *hst, int *affected_hosts) {
 
 	return;
 }
-
-
 
 /* tests whether or not a host is "blocked" by upstream parents (host is already assumed to be down or unreachable) */
 int is_route_to_host_blocked(host *hst) {
@@ -1140,7 +1195,6 @@ int is_route_to_host_blocked(host *hst) {
 	return TRUE;
 }
 
-
 void display_tac_overview(void) {
 	char host_health_image[16];
 	char service_health_image[16];
@@ -1150,7 +1204,7 @@ void display_tac_overview(void) {
 
 	if (tac_header == TRUE && show_tac_header == FALSE) { // we want the top header, but not the tac version
 
-		printf("	<div id='banner' align='center'><img src='%s%s' alt='%s' /></div>", url_images_path, TAC_HEADER_DEFAULT_LOGO, TAC_HEADER_DEFAULT_LOGO_ALT);
+		printf("	<div class='tac_banner' align='center'><img src='%s%s' alt='%s' /></div>", url_images_path, TAC_HEADER_DEFAULT_LOGO, TAC_HEADER_DEFAULT_LOGO_ALT);
 		return; //we're done here
 
 	} else if (tac_header == TRUE && show_tac_header == TRUE) { // we want the tac header
@@ -1162,7 +1216,7 @@ void display_tac_overview(void) {
 
 		printf("<tr>\n");
 		printf("<td nowrap='nowrap'><img src='%s%s' alt='Hosts' width='16' height='16' align='right' /></td>\n", url_images_path, TAC_HEADER_HOST_ICON);
-		printf("<td><table width='92%%' border='0'>\n");
+		printf("<td><table width='95%%' border='0'>\n");
 
 		/* 1. Row Hosts */
 		printf("<tr>\n");
@@ -1172,11 +1226,11 @@ void display_tac_overview(void) {
 		printf("<div class='tacheader-overall-status-item'>\n");
 		printf("<div class='tacheader-status %s'>", (hosts_up > 0) ? "tacheader-status-up color" : "gray");
 		if (hosts_up_disabled > 0) {
-			printf("<a target='main' href='%s?hostgroup=all&style=hostdetail&hoststatustypes=%d&hostprops=%d&nostatusheader' title='%s UP'> %d </a>/\n", STATUS_CGI, HOST_UP, HOST_NOT_ALL_CHECKS_DISABLED, TAC_TITLE_HOST_NOT_DISABLED, hosts_up_active + hosts_up_passive);
-			printf("<a target='main' href='%s?hostgroup=all&style=hostdetail&hoststatustypes=%d&hostprops=%d&nostatusheader' title='%s UP'> %d </a>\n", STATUS_CGI, HOST_UP, HOST_CHECKS_DISABLED | HOST_PASSIVE_CHECKS_DISABLED, TAC_TITLE_HOST_DISABLED, hosts_up_disabled);
-			printf("<a target='main' href='%s?hostgroup=all&style=hostdetail&hoststatustypes=%d&nostatusheader' title='%s UP'> UP </a></div>\n", STATUS_CGI, HOST_UP, TAC_TITLE_HOST_ALL);
+			printf("<a target='main' href='%s?host=all&style=hostdetail&hoststatustypes=%d&hostprops=%d' title='%s UP'> %d </a>/\n", STATUS_CGI, HOST_UP, HOST_NOT_ALL_CHECKS_DISABLED, TAC_TITLE_HOST_NOT_DISABLED, hosts_up_active + hosts_up_passive);
+			printf("<a target='main' href='%s?host=all&style=hostdetail&hoststatustypes=%d&hostprops=%d' title='%s UP'> %d </a>\n", STATUS_CGI, HOST_UP, HOST_CHECKS_DISABLED | HOST_PASSIVE_CHECKS_DISABLED, TAC_TITLE_HOST_DISABLED, hosts_up_disabled);
+			printf("<a target='main' href='%s?host=all&style=hostdetail&hoststatustypes=%d' title='%s UP'> UP </a></div>\n", STATUS_CGI, HOST_UP, TAC_TITLE_HOST_ALL);
 		} else
-			printf("<a target='main' href='%s?hostgroup=all&style=hostdetail&hoststatustypes=%d&nostatusheader' title='%s UP'> %d UP </a></div>\n", STATUS_CGI, HOST_UP, TAC_TITLE_HOST_ALL, hosts_up);
+			printf("<a target='main' href='%s?host=all&style=hostdetail&hoststatustypes=%d' title='%s UP'> %d UP </a></div>\n", STATUS_CGI, HOST_UP, TAC_TITLE_HOST_ALL, hosts_up);
 		printf("</div>\n");
 		printf("</td>\n");
 
@@ -1196,10 +1250,10 @@ void display_tac_overview(void) {
 			tacheader_color = "gray";
 
 		printf("<div class='tacheader-status %s'>", tacheader_color);
-		printf("<a target='main' href='%s?hostgroup=all&style=hostdetail&hoststatustypes=%d&hostprops=%d&nostatusheader' title='%s DOWN'> %d </a>/", STATUS_CGI, HOST_DOWN, HOST_NO_SCHEDULED_DOWNTIME | HOST_STATE_UNACKNOWLEDGED | HOST_NOT_ALL_CHECKS_DISABLED, TAC_TITLE_HOST_UNACK_HOSTS, hosts_down_active_unacknowledged + hosts_down_passive_unacknowledged);
-		printf("<a target='main' href='%s?hostgroup=all&style=hostdetail&hoststatustypes=%d&hostprops=%d&nostatusheader' title='%s DOWN'> %d </a>/", STATUS_CGI, HOST_DOWN, HOST_NO_SCHEDULED_DOWNTIME | HOST_STATE_ACKNOWLEDGED | HOST_NOT_ALL_CHECKS_DISABLED, TAC_TITLE_HOST_ACK_HOSTS, hosts_down_active_acknowledged + hosts_down_passive_acknowledged);
-		printf("<a target='main' href='%s?hostgroup=all&style=hostdetail&hoststatustypes=%d&hostprops=%d&nostatusheader' title='%s DOWN'> %d </a>", STATUS_CGI, HOST_DOWN, HOST_STATE_HANDLED, TAC_TITLE_HOST_NON_URGENT, handled_count);
-		printf("<a target='main' href='%s?hostgroup=all&style=hostdetail&hoststatustypes=%d&nostatusheader' title='%s DOWN'>DOWN</a>&nbsp;</div>\n", STATUS_CGI, HOST_DOWN, TAC_TITLE_HOST_ALL);
+		printf("<a target='main' href='%s?host=all&style=hostdetail&hoststatustypes=%d&hostprops=%d' title='%s DOWN'> %d </a>/", STATUS_CGI, HOST_DOWN, HOST_NO_SCHEDULED_DOWNTIME | HOST_STATE_UNACKNOWLEDGED | HOST_NOT_ALL_CHECKS_DISABLED, TAC_TITLE_HOST_UNACK_HOSTS, hosts_down_active_unacknowledged + hosts_down_passive_unacknowledged);
+		printf("<a target='main' href='%s?host=all&style=hostdetail&hoststatustypes=%d&hostprops=%d' title='%s DOWN'> %d </a>/", STATUS_CGI, HOST_DOWN, HOST_NO_SCHEDULED_DOWNTIME | HOST_STATE_ACKNOWLEDGED | HOST_NOT_ALL_CHECKS_DISABLED, TAC_TITLE_HOST_ACK_HOSTS, hosts_down_active_acknowledged + hosts_down_passive_acknowledged);
+		printf("<a target='main' href='%s?host=all&style=hostdetail&hoststatustypes=%d&hostprops=%d' title='%s DOWN'> %d </a>", STATUS_CGI, HOST_DOWN, HOST_STATE_HANDLED, TAC_TITLE_HOST_NON_URGENT, handled_count);
+		printf("<a target='main' href='%s?host=all&style=hostdetail&hoststatustypes=%d' title='%s DOWN'>DOWN</a>&nbsp;</div>\n", STATUS_CGI, HOST_DOWN, TAC_TITLE_HOST_ALL);
 		printf("</div>\n");
 		printf("</td>\n");
 
@@ -1219,10 +1273,10 @@ void display_tac_overview(void) {
 			tacheader_color = "gray";
 
 		printf("<div class='tacheader-status %s'>", tacheader_color);
-		printf("<a target='main' href='%s?hostgroup=all&style=hostdetail&hoststatustypes=%d&hostprops=%d&nostatusheader' title='%s UNREACHABLE'> %d </a>/", STATUS_CGI, HOST_UNREACHABLE, HOST_NO_SCHEDULED_DOWNTIME | HOST_STATE_UNACKNOWLEDGED | HOST_NOT_ALL_CHECKS_DISABLED, TAC_TITLE_HOST_UNACK_HOSTS, hosts_unreachable_active_unacknowledged + hosts_unreachable_passive_unacknowledged);
-		printf("<a target='main' href='%s?hostgroup=all&style=hostdetail&hoststatustypes=%d&hostprops=%d&nostatusheader' title='%s UNREACHABLE'> %d </a>/", STATUS_CGI, HOST_UNREACHABLE, HOST_NO_SCHEDULED_DOWNTIME | HOST_STATE_ACKNOWLEDGED | HOST_NOT_ALL_CHECKS_DISABLED, TAC_TITLE_HOST_ACK_HOSTS, hosts_unreachable_active_acknowledged + hosts_unreachable_passive_acknowledged);
-		printf("<a target='main' href='%s?hostgroup=all&style=hostdetail&hoststatustypes=%d&hostprops=%d&nostatusheader' title='%s UNREACHABLE'> %d </a>", STATUS_CGI, HOST_UNREACHABLE, HOST_STATE_HANDLED, TAC_TITLE_HOST_NON_URGENT, handled_count);
-		printf("<a target='main' href='%s?hostgroup=all&style=hostdetail&hoststatustypes=%d&nostatusheader' title='%s UNREACHABLE'>UNREACHABLE</a>&nbsp;</div>\n", STATUS_CGI, HOST_UNREACHABLE, TAC_TITLE_HOST_ALL);
+		printf("<a target='main' href='%s?host=all&style=hostdetail&hoststatustypes=%d&hostprops=%d' title='%s UNREACHABLE'> %d </a>/", STATUS_CGI, HOST_UNREACHABLE, HOST_NO_SCHEDULED_DOWNTIME | HOST_STATE_UNACKNOWLEDGED | HOST_NOT_ALL_CHECKS_DISABLED, TAC_TITLE_HOST_UNACK_HOSTS, hosts_unreachable_active_unacknowledged + hosts_unreachable_passive_unacknowledged);
+		printf("<a target='main' href='%s?host=all&style=hostdetail&hoststatustypes=%d&hostprops=%d' title='%s UNREACHABLE'> %d </a>/", STATUS_CGI, HOST_UNREACHABLE, HOST_NO_SCHEDULED_DOWNTIME | HOST_STATE_ACKNOWLEDGED | HOST_NOT_ALL_CHECKS_DISABLED, TAC_TITLE_HOST_ACK_HOSTS, hosts_unreachable_active_acknowledged + hosts_unreachable_passive_acknowledged);
+		printf("<a target='main' href='%s?host=all&style=hostdetail&hoststatustypes=%d&hostprops=%d' title='%s UNREACHABLE'> %d </a>", STATUS_CGI, HOST_UNREACHABLE, HOST_STATE_HANDLED, TAC_TITLE_HOST_NON_URGENT, handled_count);
+		printf("<a target='main' href='%s?host=all&style=hostdetail&hoststatustypes=%d' title='%s UNREACHABLE'>UNREACHABLE</a>&nbsp;</div>\n", STATUS_CGI, HOST_UNREACHABLE, TAC_TITLE_HOST_ALL);
 		printf("</div>\n");
 		printf("</td>\n");
 
@@ -1232,11 +1286,11 @@ void display_tac_overview(void) {
 			printf("<div class='tacheader-overall-status-item'>\n");
 			printf("<div class='tacheader-status %s'>", (hosts_pending > 0) ? "tacheader-status-pending color" : "gray");
 			if (hosts_pending_disabled > 0) {
-				printf("<a target='main' href='%s?hostgroup=all&style=hostdetail&hoststatustypes=%d&hostprops=%d&nostatusheader' title='%s PENDING'> %d </a>/\n", STATUS_CGI, HOST_PENDING, HOST_NOT_ALL_CHECKS_DISABLED, TAC_TITLE_HOST_NOT_DISABLED, hosts_pending_active + hosts_pending_passive);
-				printf("<a target='main' href='%s?hostgroup=all&style=hostdetail&hoststatustypes=%d&hostprops=%d&nostatusheader' title='%s PENDING'> %d </a>\n", STATUS_CGI, HOST_PENDING, HOST_CHECKS_DISABLED | HOST_PASSIVE_CHECKS_DISABLED, TAC_TITLE_HOST_DISABLED, hosts_pending_disabled);
-				printf("<a target='main' href='%s?hostgroup=all&style=hostdetail&hoststatustypes=%d&nostatusheader' title='%s PENDING'> PENDING </a></div>\n", STATUS_CGI, HOST_PENDING, TAC_TITLE_HOST_ALL);
+				printf("<a target='main' href='%s?host=all&style=hostdetail&hoststatustypes=%d&hostprops=%d' title='%s PENDING'> %d </a>/\n", STATUS_CGI, HOST_PENDING, HOST_NOT_ALL_CHECKS_DISABLED, TAC_TITLE_HOST_NOT_DISABLED, hosts_pending_active + hosts_pending_passive);
+				printf("<a target='main' href='%s?host=all&style=hostdetail&hoststatustypes=%d&hostprops=%d' title='%s PENDING'> %d </a>\n", STATUS_CGI, HOST_PENDING, HOST_CHECKS_DISABLED | HOST_PASSIVE_CHECKS_DISABLED, TAC_TITLE_HOST_DISABLED, hosts_pending_disabled);
+				printf("<a target='main' href='%s?host=all&style=hostdetail&hoststatustypes=%d' title='%s PENDING'> PENDING </a></div>\n", STATUS_CGI, HOST_PENDING, TAC_TITLE_HOST_ALL);
 			} else
-				printf("<a target='main' href='%s?hostgroup=all&style=hostdetail&hoststatustypes=%d&nostatusheader' title='%s PENDING'> %d PENDING </a></div>\n", STATUS_CGI, HOST_PENDING, TAC_TITLE_HOST_ALL, hosts_pending);
+				printf("<a target='main' href='%s?host=all&style=hostdetail&hoststatustypes=%d' title='%s PENDING'> %d PENDING </a></div>\n", STATUS_CGI, HOST_PENDING, TAC_TITLE_HOST_ALL, hosts_pending);
 			printf("</div>\n");
 			printf("</td>\n");
 		}
@@ -1246,12 +1300,18 @@ void display_tac_overview(void) {
 		printf("<div class='tacheader-overall-status-item'>\n");
 		printf("<div class='tacheader-status gray'>");
 		if (show_tac_header_pending == TRUE)
-			printf("<a target='main' href='%s?hostgroup=all&style=hostdetail&hoststatustypes=%d&nostatusheader' title='%s'> %d /</a>", STATUS_CGI, HOST_UNREACHABLE | HOST_DOWN | HOST_PENDING, TAC_TITLE_HOST_PROBLEM_ALL, hosts_down + hosts_unreachable + hosts_pending);
+			printf("<a target='main' href='%s?host=all&style=hostdetail&hoststatustypes=%d' title='%s'> %d /</a>", STATUS_CGI, HOST_UNREACHABLE | HOST_DOWN | HOST_PENDING, TAC_TITLE_HOST_PROBLEM_ALL, hosts_down + hosts_unreachable + hosts_pending);
 		else
-			printf("<a target='main' href='%s?hostgroup=all&style=hostdetail&hoststatustypes=%d&nostatusheader' title='%s'> %d /</a>", STATUS_CGI, HOST_UNREACHABLE | HOST_DOWN, TAC_TITLE_HOST_ALL, hosts_down + hosts_unreachable);
-		printf("<a target='main' href='%s?hostgroup=all&style=hostdetail&nostatusheader' title='%s'> %d TOTAL </a></div>\n", STATUS_CGI, TAC_TITLE_HOST_ALL, total_hosts);
+			printf("<a target='main' href='%s?host=all&style=hostdetail&hoststatustypes=%d' title='%s'> %d /</a>", STATUS_CGI, HOST_UNREACHABLE | HOST_DOWN, TAC_TITLE_HOST_ALL, hosts_down + hosts_unreachable);
+		printf("<a target='main' href='%s?host=all&style=hostdetail' title='%s'> %d TOTAL </a></div>\n", STATUS_CGI, TAC_TITLE_HOST_ALL, total_hosts);
 		printf("</div>\n");
 		printf("</td>\n");
+
+		if (refresh_type == JAVASCRIPT_REFRESH) {
+			printf("<td nowrap align=center>\n");
+			printf("&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href='#' onClick='icinga_do_refresh(); return false;' title=\"I'm so lonely up here. Where should I go?\"><img src='%s%s' border=0 style='margin-bottom:-2px;'></a>\n", url_images_path, RELOAD_ICON);
+			printf("</td>\n");
+		}
 
 		printf("</tr>\n");
 		printf("</table></td>\n");
@@ -1269,11 +1329,11 @@ void display_tac_overview(void) {
 		printf("<div class='tacheader-overall-status-item'>\n");
 		printf("<div class='tacheader-status %s'>", (services_ok + services_ok_host_down > 0) ? "tacheader-status-ok color" : "gray");
 		if (services_ok_disabled + services_ok_disabled_host_down > 0) {
-			printf("<a target='main' href='%s?host=all&style=detail&servicestatustypes=%d&serviceprops=%d&nostatusheader' title='%s OK'> %d </a>/", STATUS_CGI, SERVICE_OK, SERVICE_NOT_ALL_CHECKS_DISABLED, TAC_TITLE_SVC_NOT_DISABLED, services_ok_active + services_ok_active_host_down + services_ok_passive + services_ok_passive_host_down);
-			printf("<a target='main' href='%s?host=all&style=detail&servicestatustypes=%d&serviceprops=%d&nostatusheader' title='%s OK'> %d </a>", STATUS_CGI, SERVICE_OK, SERVICE_CHECKS_DISABLED | SERVICE_PASSIVE_CHECKS_DISABLED, TAC_TITLE_SVC_DISABLED, services_ok_disabled + services_ok_disabled_host_down);
-			printf("<a target='main' href='%s?host=all&style=detail&servicestatustypes=%d&nostatusheader' title='%s OK'> OK </a></div>\n", STATUS_CGI, SERVICE_OK, TAC_TITLE_SVC_ALL);
+			printf("<a target='main' href='%s?host=all&style=detail&servicestatustypes=%d&serviceprops=%d' title='%s OK'> %d </a>/", STATUS_CGI, SERVICE_OK, SERVICE_NOT_ALL_CHECKS_DISABLED, TAC_TITLE_SVC_NOT_DISABLED, services_ok_active + services_ok_active_host_down + services_ok_passive + services_ok_passive_host_down);
+			printf("<a target='main' href='%s?host=all&style=detail&servicestatustypes=%d&serviceprops=%d' title='%s OK'> %d </a>", STATUS_CGI, SERVICE_OK, SERVICE_CHECKS_DISABLED | SERVICE_PASSIVE_CHECKS_DISABLED, TAC_TITLE_SVC_DISABLED, services_ok_disabled + services_ok_disabled_host_down);
+			printf("<a target='main' href='%s?host=all&style=detail&servicestatustypes=%d' title='%s OK'> OK </a></div>\n", STATUS_CGI, SERVICE_OK, TAC_TITLE_SVC_ALL);
 		} else
-			printf("<a target='main' href='%s?host=all&style=detail&servicestatustypes=%d&nostatusheader' title='%s OK'> %d OK </a></div>\n", STATUS_CGI, SERVICE_OK, TAC_TITLE_SVC_ALL, services_ok + services_ok_host_down);
+			printf("<a target='main' href='%s?host=all&style=detail&servicestatustypes=%d' title='%s OK'> %d OK </a></div>\n", STATUS_CGI, SERVICE_OK, TAC_TITLE_SVC_ALL, services_ok + services_ok_host_down);
 		printf("</div>\n");
 		printf("</td>\n");
 
@@ -1301,10 +1361,10 @@ void display_tac_overview(void) {
 
 
 		printf("<div class='tacheader-status %s'>", tacheader_color);
-		printf("<a target='main' href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d&nostatusheader' title='%s WARNING'> %d </a>/", STATUS_CGI, SERVICE_WARNING, HOST_UP | HOST_PENDING, SERVICE_NO_SCHEDULED_DOWNTIME | SERVICE_STATE_UNACKNOWLEDGED | SERVICE_NOT_ALL_CHECKS_DISABLED, TAC_TITLE_SVC_UNACK_SERVICES, services_warning_active_unacknowledged + services_warning_passive_unacknowledged);
-		printf("<a target='main' href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d&nostatusheader' title='%s WARNING'> %d </a>/", STATUS_CGI, SERVICE_WARNING, HOST_UP | HOST_PENDING, SERVICE_NO_SCHEDULED_DOWNTIME | SERVICE_STATE_ACKNOWLEDGED | SERVICE_NOT_ALL_CHECKS_DISABLED, TAC_TITLE_SVC_ACK_SERVICES, services_warning_active_acknowledged + services_warning_passive_acknowledged);
-		printf("<a target='main' href='%s?host=all&type=detail&servicestatustypes=%d&serviceprops=%d&nostatusheader' title='%s WARNING'> %d </a>", STATUS_CGI, SERVICE_WARNING, SERVICE_STATE_HANDLED, TAC_TITLE_SVC_NON_URGENT, handled_count);
-		printf("<a target='main' href='%s?host=all&type=detail&servicestatustypes=%d&nostatusheader' title='%s WARNING'>WARNING</a>&nbsp;</div>\n", STATUS_CGI, SERVICE_WARNING, TAC_TITLE_SVC_ALL);
+		printf("<a target='main' href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d' title='%s WARNING'> %d </a>/", STATUS_CGI, SERVICE_WARNING, HOST_UP | HOST_PENDING, SERVICE_NO_SCHEDULED_DOWNTIME | SERVICE_STATE_UNACKNOWLEDGED | SERVICE_NOT_ALL_CHECKS_DISABLED, TAC_TITLE_SVC_UNACK_SERVICES, services_warning_active_unacknowledged + services_warning_passive_unacknowledged);
+		printf("<a target='main' href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d' title='%s WARNING'> %d </a>/", STATUS_CGI, SERVICE_WARNING, HOST_UP | HOST_PENDING, SERVICE_NO_SCHEDULED_DOWNTIME | SERVICE_STATE_ACKNOWLEDGED | SERVICE_NOT_ALL_CHECKS_DISABLED, TAC_TITLE_SVC_ACK_SERVICES, services_warning_active_acknowledged + services_warning_passive_acknowledged);
+		printf("<a target='main' href='%s?host=all&type=detail&servicestatustypes=%d&serviceprops=%d' title='%s WARNING'> %d </a>", STATUS_CGI, SERVICE_WARNING, SERVICE_STATE_HANDLED, TAC_TITLE_SVC_NON_URGENT, handled_count);
+		printf("<a target='main' href='%s?host=all&type=detail&servicestatustypes=%d' title='%s WARNING'>WARNING</a>&nbsp;</div>\n", STATUS_CGI, SERVICE_WARNING, TAC_TITLE_SVC_ALL);
 		printf("</div>\n");
 		printf("</td>\n");
 
@@ -1332,10 +1392,10 @@ void display_tac_overview(void) {
 
 
 		printf("<div class='tacheader-status %s'>", tacheader_color);
-		printf("<a target='main' href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d&nostatusheader' title='%s CRITICAL'> %d </a>/", STATUS_CGI, SERVICE_CRITICAL, HOST_UP | HOST_PENDING, SERVICE_NO_SCHEDULED_DOWNTIME | SERVICE_STATE_UNACKNOWLEDGED | SERVICE_NOT_ALL_CHECKS_DISABLED, TAC_TITLE_SVC_UNACK_SERVICES, services_critical_active_unacknowledged + services_critical_passive_unacknowledged);
-		printf("<a target='main' href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d&nostatusheader' title='%s CRITICAL'> %d </a>/", STATUS_CGI, SERVICE_CRITICAL, HOST_UP | HOST_PENDING, SERVICE_NO_SCHEDULED_DOWNTIME | SERVICE_STATE_ACKNOWLEDGED | SERVICE_NOT_ALL_CHECKS_DISABLED, TAC_TITLE_SVC_ACK_SERVICES, services_critical_active_acknowledged + services_critical_passive_acknowledged);
-		printf("<a target='main' href='%s?host=all&type=detail&servicestatustypes=%d&serviceprops=%d&nostatusheader' title='%s CRITICAL'> %d </a>", STATUS_CGI, SERVICE_CRITICAL, SERVICE_STATE_HANDLED, TAC_TITLE_SVC_NON_URGENT, handled_count);
-		printf("<a target='main' href='%s?host=all&type=detail&servicestatustypes=%d&nostatusheader' title='%s CRITICAL'>CRITICAL</a>&nbsp;</div>\n", STATUS_CGI, SERVICE_CRITICAL, TAC_TITLE_SVC_ALL);
+		printf("<a target='main' href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d' title='%s CRITICAL'> %d </a>/", STATUS_CGI, SERVICE_CRITICAL, HOST_UP | HOST_PENDING, SERVICE_NO_SCHEDULED_DOWNTIME | SERVICE_STATE_UNACKNOWLEDGED | SERVICE_NOT_ALL_CHECKS_DISABLED, TAC_TITLE_SVC_UNACK_SERVICES, services_critical_active_unacknowledged + services_critical_passive_unacknowledged);
+		printf("<a target='main' href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d' title='%s CRITICAL'> %d </a>/", STATUS_CGI, SERVICE_CRITICAL, HOST_UP | HOST_PENDING, SERVICE_NO_SCHEDULED_DOWNTIME | SERVICE_STATE_ACKNOWLEDGED | SERVICE_NOT_ALL_CHECKS_DISABLED, TAC_TITLE_SVC_ACK_SERVICES, services_critical_active_acknowledged + services_critical_passive_acknowledged);
+		printf("<a target='main' href='%s?host=all&type=detail&servicestatustypes=%d&serviceprops=%d' title='%s CRITICAL'> %d </a>", STATUS_CGI, SERVICE_CRITICAL, SERVICE_STATE_HANDLED, TAC_TITLE_SVC_NON_URGENT, handled_count);
+		printf("<a target='main' href='%s?host=all&type=detail&servicestatustypes=%d' title='%s CRITICAL'>CRITICAL</a>&nbsp;</div>\n", STATUS_CGI, SERVICE_CRITICAL, TAC_TITLE_SVC_ALL);
 		printf("</div>\n");
 		printf("</td>\n");
 
@@ -1362,10 +1422,10 @@ void display_tac_overview(void) {
 			tacheader_color = "gray";
 
 		printf("<div class='tacheader-status %s'>", tacheader_color);
-		printf("<a target='main' href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d&nostatusheader' title='%s UNKNOWN'> %d </a>/", STATUS_CGI, SERVICE_UNKNOWN, HOST_UP | HOST_PENDING, SERVICE_NO_SCHEDULED_DOWNTIME | SERVICE_STATE_UNACKNOWLEDGED | SERVICE_NOT_ALL_CHECKS_DISABLED, TAC_TITLE_SVC_UNACK_SERVICES, services_unknown_active_unacknowledged + services_unknown_passive_unacknowledged);
-		printf("<a target='main' href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d&nostatusheader' title='%s UNKNOWN'> %d </a>/", STATUS_CGI, SERVICE_UNKNOWN, HOST_UP | HOST_PENDING, SERVICE_NO_SCHEDULED_DOWNTIME | SERVICE_STATE_ACKNOWLEDGED | SERVICE_NOT_ALL_CHECKS_DISABLED, TAC_TITLE_SVC_ACK_SERVICES, services_unknown_active_acknowledged + services_unknown_passive_acknowledged);
-		printf("<a target='main' href='%s?host=all&type=detail&servicestatustypes=%d&serviceprops=%d&nostatusheader' title='%s UNKNOWN'> %d </a>", STATUS_CGI, SERVICE_UNKNOWN, SERVICE_STATE_HANDLED, TAC_TITLE_SVC_NON_URGENT, handled_count);
-		printf("<a target='main' href='%s?host=all&type=detail&servicestatustypes=%d&nostatusheader' title='%s UNKNOWN'>UNKNOWN</a>&nbsp;</div>\n", STATUS_CGI, SERVICE_UNKNOWN, TAC_TITLE_SVC_ALL);
+		printf("<a target='main' href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d' title='%s UNKNOWN'> %d </a>/", STATUS_CGI, SERVICE_UNKNOWN, HOST_UP | HOST_PENDING, SERVICE_NO_SCHEDULED_DOWNTIME | SERVICE_STATE_UNACKNOWLEDGED | SERVICE_NOT_ALL_CHECKS_DISABLED, TAC_TITLE_SVC_UNACK_SERVICES, services_unknown_active_unacknowledged + services_unknown_passive_unacknowledged);
+		printf("<a target='main' href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d' title='%s UNKNOWN'> %d </a>/", STATUS_CGI, SERVICE_UNKNOWN, HOST_UP | HOST_PENDING, SERVICE_NO_SCHEDULED_DOWNTIME | SERVICE_STATE_ACKNOWLEDGED | SERVICE_NOT_ALL_CHECKS_DISABLED, TAC_TITLE_SVC_ACK_SERVICES, services_unknown_active_acknowledged + services_unknown_passive_acknowledged);
+		printf("<a target='main' href='%s?host=all&type=detail&servicestatustypes=%d&serviceprops=%d' title='%s UNKNOWN'> %d </a>", STATUS_CGI, SERVICE_UNKNOWN, SERVICE_STATE_HANDLED, TAC_TITLE_SVC_NON_URGENT, handled_count);
+		printf("<a target='main' href='%s?host=all&type=detail&servicestatustypes=%d' title='%s UNKNOWN'>UNKNOWN</a>&nbsp;</div>\n", STATUS_CGI, SERVICE_UNKNOWN, TAC_TITLE_SVC_ALL);
 		printf("</div>\n");
 		printf("</td>\n");
 
@@ -1376,11 +1436,11 @@ void display_tac_overview(void) {
 			printf("<div class='tacheader-overall-status-item'>\n");
 			printf("<div class='tacheader-status %s'>", (services_pending > 0) ? "tacheader-status-pending color" : "gray");
 			if (services_pending_disabled + services_pending_disabled_host_down > 0) {
-				printf("<a target='main' href='%s?host=all&type=detail&servicestatustypes=%d&serviceprops=%d&nostatusheader' title='%s PENDING'> %d </a>/", STATUS_CGI, SERVICE_PENDING, SERVICE_NOT_ALL_CHECKS_DISABLED, TAC_TITLE_SVC_NOT_DISABLED, services_pending_active + services_pending_active_host_down + services_pending_passive + services_pending_passive_host_down);
-				printf("<a target='main' href='%s?host=all&type=detail&servicestatustypes=%d&serviceprops=%d&nostatusheader' title='%s PENDING'> %d </a>", STATUS_CGI, SERVICE_PENDING, SERVICE_CHECKS_DISABLED | SERVICE_PASSIVE_CHECKS_DISABLED, TAC_TITLE_SVC_DISABLED, services_pending_disabled + services_pending_disabled_host_down);
-				printf("<a target='main' href='%s?host=all&type=detail&servicestatustypes=%d&nostatusheader' title='%s PENDING'> PENDING </a></div>\n", STATUS_CGI, SERVICE_PENDING, TAC_TITLE_SVC_ALL);
+				printf("<a target='main' href='%s?host=all&type=detail&servicestatustypes=%d&serviceprops=%d' title='%s PENDING'> %d </a>/", STATUS_CGI, SERVICE_PENDING, SERVICE_NOT_ALL_CHECKS_DISABLED, TAC_TITLE_SVC_NOT_DISABLED, services_pending_active + services_pending_active_host_down + services_pending_passive + services_pending_passive_host_down);
+				printf("<a target='main' href='%s?host=all&type=detail&servicestatustypes=%d&serviceprops=%d' title='%s PENDING'> %d </a>", STATUS_CGI, SERVICE_PENDING, SERVICE_CHECKS_DISABLED | SERVICE_PASSIVE_CHECKS_DISABLED, TAC_TITLE_SVC_DISABLED, services_pending_disabled + services_pending_disabled_host_down);
+				printf("<a target='main' href='%s?host=all&type=detail&servicestatustypes=%d' title='%s PENDING'> PENDING </a></div>\n", STATUS_CGI, SERVICE_PENDING, TAC_TITLE_SVC_ALL);
 			} else
-				printf("<a target='main' href='%s?host=all&type=detail&servicestatustypes=%d&nostatusheader' title='%s PENDING'> %d PENDING </a></div>\n", STATUS_CGI, SERVICE_PENDING, TAC_TITLE_SVC_ALL, services_pending + services_pending_host_down);
+				printf("<a target='main' href='%s?host=all&type=detail&servicestatustypes=%d' title='%s PENDING'> %d PENDING </a></div>\n", STATUS_CGI, SERVICE_PENDING, TAC_TITLE_SVC_ALL, services_pending + services_pending_host_down);
 			printf("</div>\n");
 			printf("</td>\n");
 		}
@@ -1395,13 +1455,13 @@ void display_tac_overview(void) {
 		                services_critical + services_critical_host_down;
 
 		if (show_tac_header_pending == FALSE)
-			printf("<a target='main' href='%s?host=all&type=detail&servicestatustypes=%d&nostatusheader' title='%s'> %d /</a>", STATUS_CGI, SERVICE_UNKNOWN | SERVICE_CRITICAL | SERVICE_WARNING, TAC_TITLE_SVC_PROBLEM_ALL, handled_count);
+			printf("<a target='main' href='%s?host=all&type=detail&servicestatustypes=%d' title='%s'> %d /</a>", STATUS_CGI, SERVICE_UNKNOWN | SERVICE_CRITICAL | SERVICE_WARNING, TAC_TITLE_SVC_PROBLEM_ALL, handled_count);
 		else {
 			handled_count = handled_count + services_pending + services_pending_host_down;
-			printf("<a target='main' href='%s?host=all&type=detail&servicestatustypes=%d&nostatusheader' title='%s'> %d /</a>", STATUS_CGI, SERVICE_UNKNOWN | SERVICE_CRITICAL | SERVICE_WARNING | SERVICE_PENDING, TAC_TITLE_SVC_PROBLEM_ALL, handled_count);
+			printf("<a target='main' href='%s?host=all&type=detail&servicestatustypes=%d' title='%s'> %d /</a>", STATUS_CGI, SERVICE_UNKNOWN | SERVICE_CRITICAL | SERVICE_WARNING | SERVICE_PENDING, TAC_TITLE_SVC_PROBLEM_ALL, handled_count);
 		}
 
-		printf("<a target='main' href='%s?host=all&nostatusheader' title='%s'> %d TOTAL </a></div>\n", STATUS_CGI, TAC_TITLE_SVC_ALL, total_services);
+		printf("<a target='main' href='%s?host=all' title='%s'> %d TOTAL </a></div>\n", STATUS_CGI, TAC_TITLE_SVC_ALL, total_services);
 		printf("</div>\n");
 		printf("</td>\n");
 
@@ -1412,17 +1472,17 @@ void display_tac_overview(void) {
 		printf("</table></td>\n");
 
 		/* Monitor Performance */
-		printf("<td width='460px' style='background-image: url(%s%s)'><table width='280px' border='0' align='right' class='tacheader-monitor-performance-container'>\n", url_images_path, TAC_HEADER_LOGO);
+		printf("<td width='460px' height='70px' style='background-image: url(%s%s)'><table width='280px' border='0' align='right' class='tacheader-monitor-performance-container'>\n", url_images_path, TAC_HEADER_LOGO);
 		printf("<tr>\n");
 		printf("<td><img src='%s%s' width='16' height='16' alt='Hosts (active/passive)' /></td>\n", url_images_path, TAC_HEADER_HOST_ICON);
 		printf("<td>\n");
 		printf("<div class='tacheader-monitor'>");
-		printf("<a target='main' href='%s?hostgroup=all&hostprops=%d&style=hostdetail&nostatusheader' title='Hosts Active'>%d</a> / <a target='main' href='%s?hostgroup=all&hostprops=%d&style=hostdetail&nostatusheader' title='Hosts Passive'>%d</a> / <a target='main' href='%s?hostgroup=all&hostprops=%d&style=hostdetail&nostatusheader' title='Hosts Disabled'>%d</a></div>\n", STATUS_CGI, HOST_CHECKS_ENABLED, total_active_host_checks, STATUS_CGI, HOST_PASSIVE_CHECKS_ENABLED | HOST_CHECKS_DISABLED, total_passive_host_checks, STATUS_CGI, HOST_PASSIVE_CHECKS_DISABLED | HOST_CHECKS_DISABLED, total_disabled_host_checks);
+		printf("<a target='main' href='%s?host=all&hostprops=%d&style=hostdetail' title='Hosts Active'>%d</a> / <a target='main' href='%s?host=all&hostprops=%d&style=hostdetail' title='Hosts Passive'>%d</a> / <a target='main' href='%s?host=all&hostprops=%d&style=hostdetail' title='Hosts Disabled'>%d</a></div>\n", STATUS_CGI, HOST_CHECKS_ENABLED, total_active_host_checks, STATUS_CGI, HOST_PASSIVE_CHECKS_ENABLED | HOST_CHECKS_DISABLED, total_passive_host_checks, STATUS_CGI, HOST_PASSIVE_CHECKS_DISABLED | HOST_CHECKS_DISABLED, total_disabled_host_checks);
 		printf("</td>\n");
 		printf("<td><img src='%s%s' width='16' height='16' alt='Services (active/passive)' /></td>\n", url_images_path, TAC_HEADER_SERVICE_ICON);
 		printf("<td>\n");
 		printf("<div class='tacheader-monitor'>");
-		printf("<a target='main' href='%s?host=all&serviceprops=%d&nostatusheader' title='Services Active'>%d</a> / <a target='main' href='%s?host=all&serviceprops=%d&nostatusheader' title='Services Passive'>%d</a> / <a target='main' href='%s?host=all&serviceprops=%d&nostatusheader' title='Services Disabled'>%d</a></div>\n", STATUS_CGI, SERVICE_CHECKS_ENABLED, total_active_service_checks, STATUS_CGI, SERVICE_CHECKS_DISABLED | SERVICE_PASSIVE_CHECKS_ENABLED, total_passive_service_checks, STATUS_CGI, SERVICE_CHECKS_DISABLED | SERVICE_PASSIVE_CHECKS_DISABLED, total_disabled_service_checks);
+		printf("<a target='main' href='%s?host=all&serviceprops=%d' title='Services Active'>%d</a> / <a target='main' href='%s?host=all&serviceprops=%d' title='Services Passive'>%d</a> / <a target='main' href='%s?host=all&serviceprops=%d' title='Services Disabled'>%d</a></div>\n", STATUS_CGI, SERVICE_CHECKS_ENABLED, total_active_service_checks, STATUS_CGI, SERVICE_CHECKS_DISABLED | SERVICE_PASSIVE_CHECKS_ENABLED, total_passive_service_checks, STATUS_CGI, SERVICE_CHECKS_DISABLED | SERVICE_PASSIVE_CHECKS_DISABLED, total_disabled_service_checks);
 		printf("</td>\n");
 		printf("</tr>\n");
 		printf("<tr>\n");
@@ -1710,8 +1770,8 @@ void display_tac_overview(void) {
 		printf("\"total_active_host_checks_with_passive_disabled\": %d,\n", total_active_host_checks_with_passive_disabled);
 
 		printf("\"total_active_service_checks\": %d,\n", total_active_service_checks);
-		printf("\"total_passive_service_checks\": %d\n", total_passive_service_checks);
-		printf("\"total_disabled_service_checks\": %d\n", total_disabled_service_checks);
+		printf("\"total_passive_service_checks\": %d,\n", total_passive_service_checks);
+		printf("\"total_disabled_service_checks\": %d,\n", total_disabled_service_checks);
 		printf("\"total_active_service_checks_with_passive_disabled\": %d\n", total_active_service_checks_with_passive_disabled);
 
 		printf(" }\n");
@@ -1729,7 +1789,7 @@ void display_tac_overview(void) {
 		/* left column */
 		printf("<td align=left valign=top width=50%%>\n");
 
-		display_info_table("Tactical Monitoring Overview", refresh, &current_authdata, daemon_check);
+		display_info_table("Tactical Monitoring Overview", &current_authdata, daemon_check);
 
 		printf("</td>\n");
 
@@ -1742,10 +1802,6 @@ void display_tac_overview(void) {
 		printf("<tr>\n");
 
 		printf("<td valign=bottom align=right>\n");
-
-		/* display context-sensitive help */
-		display_context_help(CONTEXTHELP_TAC);
-
 		printf("</td>\n");
 
 		printf("<td>\n");
@@ -1781,21 +1837,21 @@ void display_tac_overview(void) {
 			printf("</tr>\n");
 			printf("<tr>\n");
 			printf("<td align=left valign=center class='perfItem'>");
-			printf("<a href='%s?hostgroup=all&hostprops=%d&style=hostdetail&nostatusheader' title='Active Hosts' class='perfItem'># Active Host</a> / ", STATUS_CGI, HOST_CHECKS_ENABLED);
-			printf("<a href='%s?host=all&serviceprops=%d&nostatusheader' title='Active Services' class='perfItem'>Service Checks</a></td>", STATUS_CGI, SERVICE_CHECKS_ENABLED);
-			printf("<td valign=top class='perfValue' nowrap><a href='%s?hostgroup=all&hostprops=%d&style=hostdetail&nostatusheader' title='Active Hosts' class='perfValue'>%d</a> / <a href='%s?host=all&serviceprops=%d&nostatusheader' title='Active Services' class='perfValue'>%d</a></td>\n", STATUS_CGI, HOST_CHECKS_ENABLED, total_active_host_checks, STATUS_CGI, SERVICE_CHECKS_ENABLED, total_active_service_checks);
+			printf("<a href='%s?host=all&hostprops=%d&style=hostdetail' title='Active Hosts' class='perfItem'># Active Host</a> / ", STATUS_CGI, HOST_CHECKS_ENABLED);
+			printf("<a href='%s?host=all&serviceprops=%d' title='Active Services' class='perfItem'>Service Checks</a></td>", STATUS_CGI, SERVICE_CHECKS_ENABLED);
+			printf("<td valign=top class='perfValue' nowrap><a href='%s?host=all&hostprops=%d&style=hostdetail' title='Active Hosts' class='perfValue'>%d</a> / <a href='%s?host=all&serviceprops=%d' title='Active Services' class='perfValue'>%d</a></td>\n", STATUS_CGI, HOST_CHECKS_ENABLED, total_active_host_checks, STATUS_CGI, SERVICE_CHECKS_ENABLED, total_active_service_checks);
 			printf("</tr>\n");
 			printf("<tr>\n");
 			printf("<td align=left valign=center class='perfItem'>");
-			printf("<a href='%s?hostgroup=all&hostprops=%d&style=hostdetail&nostatusheader' title='Passive Hosts' class='perfItem'># Passive Host</a> / ", STATUS_CGI, HOST_CHECKS_DISABLED | HOST_PASSIVE_CHECKS_ENABLED);
-			printf("<a href='%s?host=all&serviceprops=%d&nostatusheader' title='Passive Services' class='perfItem'>Service Checks</a></td>", STATUS_CGI, SERVICE_CHECKS_DISABLED | SERVICE_PASSIVE_CHECKS_ENABLED);
-			printf("<td valign=top class='perfValue' nowrap><a href='%s?hostgroup=all&hostprops=%d&style=hostdetail&nostatusheader' title='Passive Hosts' class='perfValue'>%d</a> / <a href='%s?host=all&serviceprops=%d&nostatusheader' title='Passive Services' class='perfValue'>%d</a></td>\n", STATUS_CGI, HOST_CHECKS_DISABLED | HOST_PASSIVE_CHECKS_ENABLED, total_passive_host_checks, STATUS_CGI, SERVICE_CHECKS_DISABLED | SERVICE_PASSIVE_CHECKS_ENABLED, total_passive_service_checks);
+			printf("<a href='%s?host=all&hostprops=%d&style=hostdetail' title='Passive Hosts' class='perfItem'># Passive Host</a> / ", STATUS_CGI, HOST_CHECKS_DISABLED | HOST_PASSIVE_CHECKS_ENABLED);
+			printf("<a href='%s?host=all&serviceprops=%d' title='Passive Services' class='perfItem'>Service Checks</a></td>", STATUS_CGI, SERVICE_CHECKS_DISABLED | SERVICE_PASSIVE_CHECKS_ENABLED);
+			printf("<td valign=top class='perfValue' nowrap><a href='%s?host=all&hostprops=%d&style=hostdetail' title='Passive Hosts' class='perfValue'>%d</a> / <a href='%s?host=all&serviceprops=%d' title='Passive Services' class='perfValue'>%d</a></td>\n", STATUS_CGI, HOST_CHECKS_DISABLED | HOST_PASSIVE_CHECKS_ENABLED, total_passive_host_checks, STATUS_CGI, SERVICE_CHECKS_DISABLED | SERVICE_PASSIVE_CHECKS_ENABLED, total_passive_service_checks);
 			printf("</tr>\n");
 			printf("<tr>\n");
 			printf("<td align=left valign=center class='perfItem'>");
-			printf("<a href='%s?hostgroup=all&hostprops=%d&style=hostdetail&nostatusheader' title='Disabled Hosts' class='perfItem'># Disabled Host</a> / ", STATUS_CGI, HOST_CHECKS_DISABLED | HOST_PASSIVE_CHECKS_DISABLED);
-			printf("<a href='%s?host=all&serviceprops=%d&nostatusheader' title='Disabled Services' class='perfItem'>Service Checks</a></td>", STATUS_CGI, SERVICE_CHECKS_DISABLED | SERVICE_PASSIVE_CHECKS_DISABLED);
-			printf("<td valign=top class='perfValue' nowrap><a href='%s?hostgroup=all&hostprops=%d&style=hostdetail&nostatusheader' title='Disabled Hosts' class='perfValue'>%d</a> / <a href='%s?host=all&serviceprops=%d&nostatusheader' title='Disabled Services' class='perfValue'>%d</a></td>\n", STATUS_CGI, HOST_CHECKS_DISABLED | HOST_PASSIVE_CHECKS_DISABLED, total_disabled_host_checks, STATUS_CGI, SERVICE_CHECKS_DISABLED | SERVICE_PASSIVE_CHECKS_DISABLED, total_disabled_service_checks);
+			printf("<a href='%s?host=all&hostprops=%d&style=hostdetail' title='Disabled Hosts' class='perfItem'># Disabled Host</a> / ", STATUS_CGI, HOST_CHECKS_DISABLED | HOST_PASSIVE_CHECKS_DISABLED);
+			printf("<a href='%s?host=all&serviceprops=%d' title='Disabled Services' class='perfItem'>Service Checks</a></td>", STATUS_CGI, SERVICE_CHECKS_DISABLED | SERVICE_PASSIVE_CHECKS_DISABLED);
+			printf("<td valign=top class='perfValue' nowrap><a href='%s?host=all&hostprops=%d&style=hostdetail' title='Disabled Hosts' class='perfValue'>%d</a> / <a href='%s?host=all&serviceprops=%d' title='Disabled Services' class='perfValue'>%d</a></td>\n", STATUS_CGI, HOST_CHECKS_DISABLED | HOST_PASSIVE_CHECKS_DISABLED, total_disabled_host_checks, STATUS_CGI, SERVICE_CHECKS_DISABLED | SERVICE_PASSIVE_CHECKS_DISABLED, total_disabled_service_checks);
 			printf("</tr>\n");
 			printf("</table>\n");
 			printf("</td>\n");
@@ -1913,11 +1969,11 @@ void display_tac_overview(void) {
 	printf("<table border=0 cellspacing=4 cellspadding=0>\n");
 	printf("<tr>\n");
 	printf("<td align=left valign=center class='healthItem'>Host Health:</td>");
-	printf("<td valign=top width=100 class='healthBar'><img src='%s%s' border=0 width=%d height=20 alt='%2.1f%% Health' title='%2.1f%% Health'></td>\n", url_images_path, host_health_image, (percent_host_health < 5.0) ? 5 : (int)percent_host_health, percent_host_health, percent_host_health);
+	printf("<td valign=top width=100 class='healthBar'><a href='%s?host=all&style=hostdetail&hoststatustypes=%d'><img src='%s%s' border=0 width=%d height=20 alt='%2.1f%% Health' title='%2.1f%% Health'></a></td>\n", STATUS_CGI, HOST_DOWN | HOST_UNREACHABLE, url_images_path, host_health_image, (percent_host_health < 5.0) ? 5 : (int)percent_host_health, percent_host_health, percent_host_health);
 	printf("</tr>\n");
 	printf("<tr>\n");
 	printf("<td align=left valign=center class='healthItem'>Service Health:</td>");
-	printf("<td valign=top width=100 class='healthBar'><img src='%s%s' border=0 width=%d height=20 alt='%2.1f%% Health' title='%2.1f%% Health'></td>\n", url_images_path, service_health_image, (percent_service_health < 5.0) ? 5 : (int)percent_service_health, percent_service_health, percent_service_health);
+	printf("<td valign=top width=100 class='healthBar'><a href='%s?host=all&style=detail&servicestatustypes=%d'><img src='%s%s' border=0 width=%d height=20 alt='%2.1f%% Health' title='%2.1f%% Health'></td>\n", STATUS_CGI, SERVICE_CRITICAL | SERVICE_WARNING | SERVICE_PENDING, url_images_path, service_health_image, (percent_service_health < 5.0) ? 5 : (int)percent_service_health, percent_service_health, percent_service_health);
 	printf("</tr>\n");
 	printf("</table>\n");
 	printf("</td>\n");
@@ -1947,10 +2003,10 @@ void display_tac_overview(void) {
 	printf("<tr><td colspan=4 height=20 class='hostTitle'>&nbsp;Hosts</td></tr>\n");
 
 	printf("<tr>\n");
-	printf("<td class='hostHeader' width=125><a href='%s?hostgroup=all&style=hostdetail&hoststatustypes=%d&nostatusheader' class='hostHeader'>%d Down</a></td>\n", STATUS_CGI, HOST_DOWN, hosts_down);
-	printf("<td class='hostHeader' width=125><a href='%s?hostgroup=all&style=hostdetail&hoststatustypes=%d&nostatusheader' class='hostHeader'>%d Unreachable</a></td>\n", STATUS_CGI, HOST_UNREACHABLE, hosts_unreachable);
-	printf("<td class='hostHeader' width=125><a href='%s?hostgroup=all&style=hostdetail&hoststatustypes=%d&nostatusheader' class='hostHeader'>%d Up</a></td>\n", STATUS_CGI, HOST_UP, hosts_up);
-	printf("<td class='hostHeader' width=125><a href='%s?hostgroup=all&style=hostdetail&hoststatustypes=%d&nostatusheader' class='hostHeader'>%d Pending</a></td>\n", STATUS_CGI, HOST_PENDING, hosts_pending);
+	printf("<td class='hostHeader' width=125><a href='%s?host=all&style=hostdetail&hoststatustypes=%d' class='hostHeader'>%d Down</a></td>\n", STATUS_CGI, HOST_DOWN, hosts_down);
+	printf("<td class='hostHeader' width=125><a href='%s?host=all&style=hostdetail&hoststatustypes=%d' class='hostHeader'>%d Unreachable</a></td>\n", STATUS_CGI, HOST_UNREACHABLE, hosts_unreachable);
+	printf("<td class='hostHeader' width=125><a href='%s?host=all&style=hostdetail&hoststatustypes=%d' class='hostHeader'>%d Up</a></td>\n", STATUS_CGI, HOST_UP, hosts_up);
+	printf("<td class='hostHeader' width=125><a href='%s?host=all&style=hostdetail&hoststatustypes=%d' class='hostHeader'>%d Pending</a></td>\n", STATUS_CGI, HOST_PENDING, hosts_pending);
 	printf("</tr>\n");
 
 	printf("<tr>\n");
@@ -1968,40 +2024,40 @@ void display_tac_overview(void) {
 	if (hosts_down_active_unacknowledged + hosts_down_passive_unacknowledged > 0) {
 
 		problem_found = FALSE;
-		printf("<tr><td width=100%% class='hostImportantProblem'><a href='%s?hostgroup=all&style=hostdetail&hoststatustypes=%d&hostprops=%d&nostatusheader'>Unhandled Problems</a><br>", STATUS_CGI, HOST_DOWN, HOST_NO_SCHEDULED_DOWNTIME | HOST_STATE_UNACKNOWLEDGED | HOST_NOT_ALL_CHECKS_DISABLED);
+		printf("<tr><td width=100%% class='hostImportantProblem'><a href='%s?host=all&style=hostdetail&hoststatustypes=%d&hostprops=%d'>Unhandled Problems</a><br>", STATUS_CGI, HOST_DOWN, HOST_NO_SCHEDULED_DOWNTIME | HOST_STATE_UNACKNOWLEDGED | HOST_NOT_ALL_CHECKS_DISABLED);
 
 		if (hosts_down_active_unacknowledged > 0) {
 			problem_found = TRUE;
-			printf("<a href='%s?hostgroup=all&style=hostdetail&hoststatustypes=%d&hostprops=%d&nostatusheader'>%d Active</a>\n", STATUS_CGI, HOST_DOWN, HOST_NO_SCHEDULED_DOWNTIME | HOST_STATE_UNACKNOWLEDGED | HOST_CHECKS_ENABLED, hosts_down_active_unacknowledged);
+			printf("<a href='%s?host=all&style=hostdetail&hoststatustypes=%d&hostprops=%d'>%d Active</a>\n", STATUS_CGI, HOST_DOWN, HOST_NO_SCHEDULED_DOWNTIME | HOST_STATE_UNACKNOWLEDGED | HOST_CHECKS_ENABLED, hosts_down_active_unacknowledged);
 		}
 		if (hosts_down_passive_unacknowledged > 0) {
 			if (problem_found == TRUE) printf("<br>");
 			else problem_found = TRUE;
-			printf("<a href='%s?hostgroup=all&style=hostdetail&hoststatustypes=%d&hostprops=%d&nostatusheader'>%d Passive</a>\n", STATUS_CGI, HOST_DOWN, HOST_NO_SCHEDULED_DOWNTIME | HOST_STATE_UNACKNOWLEDGED | HOST_PASSIVE_CHECKS_ENABLED | HOST_CHECKS_DISABLED, hosts_down_passive_unacknowledged);
+			printf("<a href='%s?host=all&style=hostdetail&hoststatustypes=%d&hostprops=%d'>%d Passive</a>\n", STATUS_CGI, HOST_DOWN, HOST_NO_SCHEDULED_DOWNTIME | HOST_STATE_UNACKNOWLEDGED | HOST_PASSIVE_CHECKS_ENABLED | HOST_CHECKS_DISABLED, hosts_down_passive_unacknowledged);
 		}
 		printf("</td></tr>\n");
 	}
 	if (hosts_down_disabled_unacknowledged > 0)
-		printf("<tr><td width=100%% class='hostUnimportantProblem'><a href='%s?hostgroup=all&style=hostdetail&hoststatustypes=%d&hostprops=%d&nostatusheader'>Unacknowledged<br>%d Disabled</a></td></tr>\n", STATUS_CGI, HOST_DOWN, HOST_NO_SCHEDULED_DOWNTIME | HOST_STATE_UNACKNOWLEDGED | HOST_CHECKS_DISABLED | HOST_PASSIVE_CHECKS_DISABLED, hosts_down_disabled_unacknowledged);
+		printf("<tr><td width=100%% class='hostUnimportantProblem'><a href='%s?host=all&style=hostdetail&hoststatustypes=%d&hostprops=%d'>Unacknowledged<br>%d Disabled</a></td></tr>\n", STATUS_CGI, HOST_DOWN, HOST_NO_SCHEDULED_DOWNTIME | HOST_STATE_UNACKNOWLEDGED | HOST_CHECKS_DISABLED | HOST_PASSIVE_CHECKS_DISABLED, hosts_down_disabled_unacknowledged);
 
 	if (hosts_down_acknowledged > 0) {
 
 		problem_found = FALSE;
-		printf("<tr><td width=100%% class='hostUnimportantProblem'><a href='%s?hostgroup=all&style=hostdetail&hoststatustypes=%d&hostprops=%d&nostatusheader'>Acknowledged</a><br>", STATUS_CGI, HOST_DOWN, HOST_STATE_ACKNOWLEDGED | HOST_NO_SCHEDULED_DOWNTIME);
+		printf("<tr><td width=100%% class='hostUnimportantProblem'><a href='%s?host=all&style=hostdetail&hoststatustypes=%d&hostprops=%d'>Acknowledged</a><br>", STATUS_CGI, HOST_DOWN, HOST_STATE_ACKNOWLEDGED | HOST_NO_SCHEDULED_DOWNTIME);
 
 		if (hosts_down_active_acknowledged > 0) {
 			problem_found = TRUE;
-			printf("<a href='%s?hostgroup=all&style=hostdetail&hoststatustypes=%d&hostprops=%d&nostatusheader'>%d Active</a>\n", STATUS_CGI, HOST_DOWN, HOST_STATE_ACKNOWLEDGED | HOST_NO_SCHEDULED_DOWNTIME | HOST_CHECKS_ENABLED, hosts_down_active_acknowledged);
+			printf("<a href='%s?host=all&style=hostdetail&hoststatustypes=%d&hostprops=%d'>%d Active</a>\n", STATUS_CGI, HOST_DOWN, HOST_STATE_ACKNOWLEDGED | HOST_NO_SCHEDULED_DOWNTIME | HOST_CHECKS_ENABLED, hosts_down_active_acknowledged);
 		}
 		if (hosts_down_passive_acknowledged > 0) {
 			if (problem_found == TRUE) printf("<br>");
 			else problem_found = TRUE;
-			printf("<a href='%s?hostgroup=all&style=hostdetail&hoststatustypes=%d&hostprops=%d&nostatusheader'>%d Passive</a>\n", STATUS_CGI, HOST_DOWN, HOST_STATE_ACKNOWLEDGED | HOST_NO_SCHEDULED_DOWNTIME | HOST_PASSIVE_CHECKS_ENABLED | HOST_CHECKS_DISABLED, hosts_down_passive_acknowledged);
+			printf("<a href='%s?host=all&style=hostdetail&hoststatustypes=%d&hostprops=%d'>%d Passive</a>\n", STATUS_CGI, HOST_DOWN, HOST_STATE_ACKNOWLEDGED | HOST_NO_SCHEDULED_DOWNTIME | HOST_PASSIVE_CHECKS_ENABLED | HOST_CHECKS_DISABLED, hosts_down_passive_acknowledged);
 		}
 		if (hosts_down_disabled_acknowledged > 0) {
 			if (problem_found == TRUE) printf("<br>");
 			else problem_found = TRUE;
-			printf("<a href='%s?hostgroup=all&style=hostdetail&hoststatustypes=%d&hostprops=%d&nostatusheader'>%d Disabled</a>\n", STATUS_CGI, HOST_DOWN, HOST_STATE_ACKNOWLEDGED | HOST_NO_SCHEDULED_DOWNTIME | HOST_PASSIVE_CHECKS_DISABLED | HOST_CHECKS_DISABLED, hosts_down_disabled_acknowledged);
+			printf("<a href='%s?host=all&style=hostdetail&hoststatustypes=%d&hostprops=%d'>%d Disabled</a>\n", STATUS_CGI, HOST_DOWN, HOST_STATE_ACKNOWLEDGED | HOST_NO_SCHEDULED_DOWNTIME | HOST_PASSIVE_CHECKS_DISABLED | HOST_CHECKS_DISABLED, hosts_down_disabled_acknowledged);
 		}
 		printf("</td></tr>\n");
 	}
@@ -2009,21 +2065,21 @@ void display_tac_overview(void) {
 	if (hosts_down_scheduled > 0) {
 
 		problem_found = FALSE;
-		printf("<tr><td width=100%% class='hostUnimportantProblem'><a href='%s?hostgroup=all&style=hostdetail&hoststatustypes=%d&hostprops=%d&nostatusheader'>Scheduled Downtime</a><br>", STATUS_CGI, HOST_DOWN, HOST_SCHEDULED_DOWNTIME);
+		printf("<tr><td width=100%% class='hostUnimportantProblem'><a href='%s?host=all&style=hostdetail&hoststatustypes=%d&hostprops=%d'>Scheduled Downtime</a><br>", STATUS_CGI, HOST_DOWN, HOST_SCHEDULED_DOWNTIME);
 
 		if (hosts_down_active_scheduled > 0) {
 			problem_found = TRUE;
-			printf("<a href='%s?hostgroup=all&style=hostdetail&hoststatustypes=%d&hostprops=%d&nostatusheader'>%d Active</a>\n", STATUS_CGI, HOST_DOWN, HOST_SCHEDULED_DOWNTIME | HOST_CHECKS_ENABLED, hosts_down_active_scheduled);
+			printf("<a href='%s?host=all&style=hostdetail&hoststatustypes=%d&hostprops=%d'>%d Active</a>\n", STATUS_CGI, HOST_DOWN, HOST_SCHEDULED_DOWNTIME | HOST_CHECKS_ENABLED, hosts_down_active_scheduled);
 		}
 		if (hosts_down_passive_scheduled > 0) {
 			if (problem_found == TRUE) printf("<br>");
 			else problem_found = TRUE;
-			printf("<a href='%s?hostgroup=all&style=hostdetail&hoststatustypes=%d&hostprops=%d&nostatusheader'>%d Passive</a>\n", STATUS_CGI, HOST_DOWN, HOST_SCHEDULED_DOWNTIME | HOST_PASSIVE_CHECKS_ENABLED | HOST_CHECKS_DISABLED, hosts_down_passive_scheduled);
+			printf("<a href='%s?host=all&style=hostdetail&hoststatustypes=%d&hostprops=%d'>%d Passive</a>\n", STATUS_CGI, HOST_DOWN, HOST_SCHEDULED_DOWNTIME | HOST_PASSIVE_CHECKS_ENABLED | HOST_CHECKS_DISABLED, hosts_down_passive_scheduled);
 		}
 		if (hosts_down_disabled_scheduled > 0) {
 			if (problem_found == TRUE) printf("<br>");
 			else problem_found = TRUE;
-			printf("<a href='%s?hostgroup=all&style=hostdetail&hoststatustypes=%d&hostprops=%d&nostatusheader'>%d Disabled</a>\n", STATUS_CGI, HOST_DOWN, HOST_SCHEDULED_DOWNTIME | HOST_PASSIVE_CHECKS_DISABLED | HOST_CHECKS_DISABLED, hosts_down_disabled_scheduled);
+			printf("<a href='%s?host=all&style=hostdetail&hoststatustypes=%d&hostprops=%d'>%d Disabled</a>\n", STATUS_CGI, HOST_DOWN, HOST_SCHEDULED_DOWNTIME | HOST_PASSIVE_CHECKS_DISABLED | HOST_CHECKS_DISABLED, hosts_down_disabled_scheduled);
 		}
 		printf("</td></tr>\n");
 	}
@@ -2048,40 +2104,40 @@ void display_tac_overview(void) {
 	if (hosts_unreachable_active_unacknowledged + hosts_unreachable_passive_unacknowledged > 0) {
 
 		problem_found = FALSE;
-		printf("<tr><td width=100%% class='hostImportantProblem'><a href='%s?hostgroup=all&style=hostdetail&hoststatustypes=%d&hostprops=%d&nostatusheader'>Unhandled Problems</a><br>", STATUS_CGI, HOST_UNREACHABLE, HOST_NO_SCHEDULED_DOWNTIME | HOST_STATE_UNACKNOWLEDGED | HOST_NOT_ALL_CHECKS_DISABLED);
+		printf("<tr><td width=100%% class='hostImportantProblem'><a href='%s?host=all&style=hostdetail&hoststatustypes=%d&hostprops=%d'>Unhandled Problems</a><br>", STATUS_CGI, HOST_UNREACHABLE, HOST_NO_SCHEDULED_DOWNTIME | HOST_STATE_UNACKNOWLEDGED | HOST_NOT_ALL_CHECKS_DISABLED);
 
 		if (hosts_unreachable_active_unacknowledged > 0) {
 			problem_found = TRUE;
-			printf("<a href='%s?hostgroup=all&style=hostdetail&hoststatustypes=%d&hostprops=%d&nostatusheader'>%d Active</a>\n", STATUS_CGI, HOST_UNREACHABLE, HOST_NO_SCHEDULED_DOWNTIME | HOST_STATE_UNACKNOWLEDGED | HOST_CHECKS_ENABLED, hosts_unreachable_active_unacknowledged);
+			printf("<a href='%s?host=all&style=hostdetail&hoststatustypes=%d&hostprops=%d'>%d Active</a>\n", STATUS_CGI, HOST_UNREACHABLE, HOST_NO_SCHEDULED_DOWNTIME | HOST_STATE_UNACKNOWLEDGED | HOST_CHECKS_ENABLED, hosts_unreachable_active_unacknowledged);
 		}
 		if (hosts_unreachable_passive_unacknowledged > 0) {
 			if (problem_found == TRUE) printf("<br>");
 			else problem_found = TRUE;
-			printf("<a href='%s?hostgroup=all&style=hostdetail&hoststatustypes=%d&hostprops=%d&nostatusheader'>%d Passive</a>\n", STATUS_CGI, HOST_UNREACHABLE, HOST_NO_SCHEDULED_DOWNTIME | HOST_STATE_UNACKNOWLEDGED | HOST_PASSIVE_CHECKS_ENABLED | HOST_CHECKS_DISABLED, hosts_unreachable_passive_unacknowledged);
+			printf("<a href='%s?host=all&style=hostdetail&hoststatustypes=%d&hostprops=%d'>%d Passive</a>\n", STATUS_CGI, HOST_UNREACHABLE, HOST_NO_SCHEDULED_DOWNTIME | HOST_STATE_UNACKNOWLEDGED | HOST_PASSIVE_CHECKS_ENABLED | HOST_CHECKS_DISABLED, hosts_unreachable_passive_unacknowledged);
 		}
 		printf("</td></tr>\n");
 	}
 	if (hosts_unreachable_disabled_unacknowledged > 0)
-		printf("<tr><td width=100%% class='hostUnimportantProblem'><a href='%s?hostgroup=all&style=hostdetail&hoststatustypes=%d&hostprops=%d&nostatusheader'>Unacknowledged<br>%d Disabled</a></td></tr>\n", STATUS_CGI, HOST_UNREACHABLE, HOST_NO_SCHEDULED_DOWNTIME | HOST_STATE_UNACKNOWLEDGED | HOST_CHECKS_DISABLED | HOST_PASSIVE_CHECKS_DISABLED, hosts_unreachable_disabled_unacknowledged);
+		printf("<tr><td width=100%% class='hostUnimportantProblem'><a href='%s?host=all&style=hostdetail&hoststatustypes=%d&hostprops=%d'>Unacknowledged<br>%d Disabled</a></td></tr>\n", STATUS_CGI, HOST_UNREACHABLE, HOST_NO_SCHEDULED_DOWNTIME | HOST_STATE_UNACKNOWLEDGED | HOST_CHECKS_DISABLED | HOST_PASSIVE_CHECKS_DISABLED, hosts_unreachable_disabled_unacknowledged);
 
 	if (hosts_unreachable_acknowledged > 0) {
 
 		problem_found = FALSE;
-		printf("<tr><td width=100%% class='hostUnimportantProblem'><a href='%s?hostgroup=all&style=hostdetail&hoststatustypes=%d&hostprops=%d&nostatusheader'>Acknowledged</a><br>", STATUS_CGI, HOST_UNREACHABLE, HOST_STATE_ACKNOWLEDGED | HOST_NO_SCHEDULED_DOWNTIME);
+		printf("<tr><td width=100%% class='hostUnimportantProblem'><a href='%s?host=all&style=hostdetail&hoststatustypes=%d&hostprops=%d'>Acknowledged</a><br>", STATUS_CGI, HOST_UNREACHABLE, HOST_STATE_ACKNOWLEDGED | HOST_NO_SCHEDULED_DOWNTIME);
 
 		if (hosts_unreachable_active_acknowledged > 0) {
 			problem_found = TRUE;
-			printf("<a href='%s?hostgroup=all&style=hostdetail&hoststatustypes=%d&hostprops=%d&nostatusheader'>%d Active</a>\n", STATUS_CGI, HOST_UNREACHABLE, HOST_STATE_ACKNOWLEDGED | HOST_NO_SCHEDULED_DOWNTIME | HOST_CHECKS_ENABLED, hosts_unreachable_active_acknowledged);
+			printf("<a href='%s?host=all&style=hostdetail&hoststatustypes=%d&hostprops=%d'>%d Active</a>\n", STATUS_CGI, HOST_UNREACHABLE, HOST_STATE_ACKNOWLEDGED | HOST_NO_SCHEDULED_DOWNTIME | HOST_CHECKS_ENABLED, hosts_unreachable_active_acknowledged);
 		}
 		if (hosts_unreachable_passive_acknowledged > 0) {
 			if (problem_found == TRUE) printf("<br>");
 			else problem_found = TRUE;
-			printf("<a href='%s?hostgroup=all&style=hostdetail&hoststatustypes=%d&hostprops=%d&nostatusheader'>%d Passive</a>\n", STATUS_CGI, HOST_UNREACHABLE, HOST_STATE_ACKNOWLEDGED | HOST_NO_SCHEDULED_DOWNTIME | HOST_PASSIVE_CHECKS_ENABLED | HOST_CHECKS_DISABLED, hosts_unreachable_passive_acknowledged);
+			printf("<a href='%s?host=all&style=hostdetail&hoststatustypes=%d&hostprops=%d'>%d Passive</a>\n", STATUS_CGI, HOST_UNREACHABLE, HOST_STATE_ACKNOWLEDGED | HOST_NO_SCHEDULED_DOWNTIME | HOST_PASSIVE_CHECKS_ENABLED | HOST_CHECKS_DISABLED, hosts_unreachable_passive_acknowledged);
 		}
 		if (hosts_unreachable_disabled_acknowledged > 0) {
 			if (problem_found == TRUE) printf("<br>");
 			else problem_found = TRUE;
-			printf("<a href='%s?hostgroup=all&style=hostdetail&hoststatustypes=%d&hostprops=%d&nostatusheader'>%d Disabled</a>\n", STATUS_CGI, HOST_UNREACHABLE, HOST_STATE_ACKNOWLEDGED | HOST_NO_SCHEDULED_DOWNTIME | HOST_PASSIVE_CHECKS_DISABLED | HOST_CHECKS_DISABLED, hosts_unreachable_disabled_acknowledged);
+			printf("<a href='%s?host=all&style=hostdetail&hoststatustypes=%d&hostprops=%d'>%d Disabled</a>\n", STATUS_CGI, HOST_UNREACHABLE, HOST_STATE_ACKNOWLEDGED | HOST_NO_SCHEDULED_DOWNTIME | HOST_PASSIVE_CHECKS_DISABLED | HOST_CHECKS_DISABLED, hosts_unreachable_disabled_acknowledged);
 		}
 		printf("</td></tr>\n");
 	}
@@ -2089,21 +2145,21 @@ void display_tac_overview(void) {
 	if (hosts_unreachable_scheduled > 0) {
 
 		problem_found = FALSE;
-		printf("<tr><td width=100%% class='hostUnimportantProblem'><a href='%s?hostgroup=all&style=hostdetail&hoststatustypes=%d&hostprops=%d&nostatusheader'>Scheduled Downtime</a><br>", STATUS_CGI, HOST_UNREACHABLE, HOST_SCHEDULED_DOWNTIME);
+		printf("<tr><td width=100%% class='hostUnimportantProblem'><a href='%s?host=all&style=hostdetail&hoststatustypes=%d&hostprops=%d'>Scheduled Downtime</a><br>", STATUS_CGI, HOST_UNREACHABLE, HOST_SCHEDULED_DOWNTIME);
 
 		if (hosts_unreachable_active_scheduled > 0) {
 			problem_found = TRUE;
-			printf("<a href='%s?hostgroup=all&style=hostdetail&hoststatustypes=%d&hostprops=%d&nostatusheader'>%d Active</a>\n", STATUS_CGI, HOST_UNREACHABLE, HOST_SCHEDULED_DOWNTIME | HOST_CHECKS_ENABLED, hosts_unreachable_active_scheduled);
+			printf("<a href='%s?host=all&style=hostdetail&hoststatustypes=%d&hostprops=%d'>%d Active</a>\n", STATUS_CGI, HOST_UNREACHABLE, HOST_SCHEDULED_DOWNTIME | HOST_CHECKS_ENABLED, hosts_unreachable_active_scheduled);
 		}
 		if (hosts_unreachable_passive_scheduled > 0) {
 			if (problem_found == TRUE) printf("<br>");
 			else problem_found = TRUE;
-			printf("<a href='%s?hostgroup=all&style=hostdetail&hoststatustypes=%d&hostprops=%d&nostatusheader'>%d Passive</a>\n", STATUS_CGI, HOST_UNREACHABLE, HOST_SCHEDULED_DOWNTIME | HOST_PASSIVE_CHECKS_ENABLED | HOST_CHECKS_DISABLED, hosts_unreachable_passive_scheduled);
+			printf("<a href='%s?host=all&style=hostdetail&hoststatustypes=%d&hostprops=%d'>%d Passive</a>\n", STATUS_CGI, HOST_UNREACHABLE, HOST_SCHEDULED_DOWNTIME | HOST_PASSIVE_CHECKS_ENABLED | HOST_CHECKS_DISABLED, hosts_unreachable_passive_scheduled);
 		}
 		if (hosts_unreachable_disabled_scheduled > 0) {
 			if (problem_found == TRUE) printf("<br>");
 			else problem_found = TRUE;
-			printf("<a href='%s?hostgroup=all&style=hostdetail&hoststatustypes=%d&hostprops=%d&nostatusheader'>%d Disabled</a>\n", STATUS_CGI, HOST_UNREACHABLE, HOST_SCHEDULED_DOWNTIME | HOST_PASSIVE_CHECKS_DISABLED | HOST_CHECKS_DISABLED, hosts_unreachable_disabled_scheduled);
+			printf("<a href='%s?host=all&style=hostdetail&hoststatustypes=%d&hostprops=%d'>%d Disabled</a>\n", STATUS_CGI, HOST_UNREACHABLE, HOST_SCHEDULED_DOWNTIME | HOST_PASSIVE_CHECKS_DISABLED | HOST_CHECKS_DISABLED, hosts_unreachable_disabled_scheduled);
 		}
 		printf("</td></tr>\n");
 	}
@@ -2126,7 +2182,7 @@ void display_tac_overview(void) {
 	printf("<table border=0 width=100%%>\n");
 
 	if (hosts_up_disabled > 0)
-		printf("<tr><td width=100%% class='hostUnimportantProblem'><a href='%s?hostgroup=all&style=hostdetail&hoststatustypes=%d&hostprops=%d&nostatusheader'>%d Disabled</a></td></tr>\n", STATUS_CGI, HOST_UP, HOST_PASSIVE_CHECKS_DISABLED | HOST_CHECKS_DISABLED, hosts_up_disabled);
+		printf("<tr><td width=100%% class='hostUnimportantProblem'><a href='%s?host=all&style=hostdetail&hoststatustypes=%d&hostprops=%d'>%d Disabled</a></td></tr>\n", STATUS_CGI, HOST_UP, HOST_PASSIVE_CHECKS_DISABLED | HOST_CHECKS_DISABLED, hosts_up_disabled);
 
 	printf("</table>\n");
 	printf("</td>\n");
@@ -2146,7 +2202,7 @@ void display_tac_overview(void) {
 	printf("<table border=0 width=100%%>\n");
 
 	if (hosts_pending_disabled > 0)
-		printf("<tr><td width=100%% class='hostUnimportantProblem'><a href='%s?hostgroup=all&style=hostdetail&hoststatustypes=%d&hostprops=%d&nostatusheader'>%d Disabled</a></td></tr>\n", STATUS_CGI, HOST_PENDING, HOST_PASSIVE_CHECKS_DISABLED | HOST_CHECKS_DISABLED, hosts_pending_disabled);
+		printf("<tr><td width=100%% class='hostUnimportantProblem'><a href='%s?host=all&style=hostdetail&hoststatustypes=%d&hostprops=%d'>%d Disabled</a></td></tr>\n", STATUS_CGI, HOST_PENDING, HOST_PASSIVE_CHECKS_DISABLED | HOST_CHECKS_DISABLED, hosts_pending_disabled);
 
 	printf("</table>\n");
 	printf("</td>\n");
@@ -2171,11 +2227,11 @@ void display_tac_overview(void) {
 	printf("<tr><td colspan=5 height=20 class='serviceTitle'>&nbsp;Services</td></tr>\n");
 
 	printf("<tr>\n");
-	printf("<td class='serviceHeader' width=125><a href='%s?host=all&style=detail&servicestatustypes=%d&nostatusheader' class='serviceHeader'>%d Critical</a></td>\n", STATUS_CGI, SERVICE_CRITICAL, services_critical + services_critical_host_down);
-	printf("<td class='serviceHeader' width=125><a href='%s?host=all&style=detail&servicestatustypes=%d&nostatusheader' class='serviceHeader'>%d Warning</a></td>\n", STATUS_CGI, SERVICE_WARNING, services_warning + services_warning_host_down);
-	printf("<td class='serviceHeader' width=125><a href='%s?host=all&style=detail&servicestatustypes=%d&nostatusheader' class='serviceHeader'>%d Unknown</a></td>\n", STATUS_CGI, SERVICE_UNKNOWN, services_unknown + services_unknown_host_down);
-	printf("<td class='serviceHeader' width=125><a href='%s?host=all&style=detail&servicestatustypes=%d&nostatusheader' class='serviceHeader'>%d Ok</a></td>\n", STATUS_CGI, SERVICE_OK, services_ok + services_ok_host_down);
-	printf("<td class='serviceHeader' width=125><a href='%s?host=all&style=detail&servicestatustypes=%d&nostatusheader' class='serviceHeader'>%d Pending</a></td>\n", STATUS_CGI, SERVICE_PENDING, services_pending + services_pending_host_down);
+	printf("<td class='serviceHeader' width=125><a href='%s?host=all&style=detail&servicestatustypes=%d' class='serviceHeader'>%d Critical</a></td>\n", STATUS_CGI, SERVICE_CRITICAL, services_critical + services_critical_host_down);
+	printf("<td class='serviceHeader' width=125><a href='%s?host=all&style=detail&servicestatustypes=%d' class='serviceHeader'>%d Warning</a></td>\n", STATUS_CGI, SERVICE_WARNING, services_warning + services_warning_host_down);
+	printf("<td class='serviceHeader' width=125><a href='%s?host=all&style=detail&servicestatustypes=%d' class='serviceHeader'>%d Unknown</a></td>\n", STATUS_CGI, SERVICE_UNKNOWN, services_unknown + services_unknown_host_down);
+	printf("<td class='serviceHeader' width=125><a href='%s?host=all&style=detail&servicestatustypes=%d' class='serviceHeader'>%d Ok</a></td>\n", STATUS_CGI, SERVICE_OK, services_ok + services_ok_host_down);
+	printf("<td class='serviceHeader' width=125><a href='%s?host=all&style=detail&servicestatustypes=%d' class='serviceHeader'>%d Pending</a></td>\n", STATUS_CGI, SERVICE_PENDING, services_pending + services_pending_host_down);
 	printf("</tr>\n");
 
 	printf("<tr>\n");
@@ -2193,41 +2249,41 @@ void display_tac_overview(void) {
 	if (services_critical_active_unacknowledged + services_critical_passive_unacknowledged > 0) {
 
 		problem_found = FALSE;
-		printf("<tr><td width=100%% class='serviceImportantProblem'><a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d&nostatusheader'>Unhandled Problems</a><br>\n", STATUS_CGI, SERVICE_CRITICAL, HOST_UP | HOST_PENDING, SERVICE_NO_SCHEDULED_DOWNTIME | SERVICE_STATE_UNACKNOWLEDGED | SERVICE_NOT_ALL_CHECKS_DISABLED);
+		printf("<tr><td width=100%% class='serviceImportantProblem'><a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d'>Unhandled Problems</a><br>\n", STATUS_CGI, SERVICE_CRITICAL, HOST_UP | HOST_PENDING, SERVICE_NO_SCHEDULED_DOWNTIME | SERVICE_STATE_UNACKNOWLEDGED | SERVICE_NOT_ALL_CHECKS_DISABLED);
 
 		if (services_critical_active_unacknowledged > 0) {
 			problem_found = TRUE;
-			printf("<a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d&nostatusheader'>%d Active</a>\n", STATUS_CGI, SERVICE_CRITICAL, HOST_UP | HOST_PENDING, SERVICE_NO_SCHEDULED_DOWNTIME | SERVICE_STATE_UNACKNOWLEDGED | SERVICE_CHECKS_ENABLED, services_critical_active_unacknowledged);
+			printf("<a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d'>%d Active</a>\n", STATUS_CGI, SERVICE_CRITICAL, HOST_UP | HOST_PENDING, SERVICE_NO_SCHEDULED_DOWNTIME | SERVICE_STATE_UNACKNOWLEDGED | SERVICE_CHECKS_ENABLED, services_critical_active_unacknowledged);
 		}
 		if (services_critical_passive_unacknowledged > 0) {
 			if (problem_found == TRUE) printf("<br>");
 			else problem_found = TRUE;
-			printf("<a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d&nostatusheader'>%d Passive</a>\n", STATUS_CGI, SERVICE_CRITICAL, HOST_UP | HOST_PENDING, SERVICE_NO_SCHEDULED_DOWNTIME | SERVICE_STATE_UNACKNOWLEDGED | SERVICE_CHECKS_DISABLED | SERVICE_PASSIVE_CHECKS_ENABLED, services_critical_passive_unacknowledged);
+			printf("<a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d'>%d Passive</a>\n", STATUS_CGI, SERVICE_CRITICAL, HOST_UP | HOST_PENDING, SERVICE_NO_SCHEDULED_DOWNTIME | SERVICE_STATE_UNACKNOWLEDGED | SERVICE_CHECKS_DISABLED | SERVICE_PASSIVE_CHECKS_ENABLED, services_critical_passive_unacknowledged);
 		}
 		printf("</td></tr>\n");
 	}
 
 	if (services_critical_disabled_unacknowledged > 0)
-		printf("<tr><td width=100%% class='serviceUnimportantProblem'><a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d&nostatusheader'>Unacknowledged<br>%d Disabled</a></td></tr>\n", STATUS_CGI, SERVICE_CRITICAL, HOST_UP | HOST_PENDING, SERVICE_NO_SCHEDULED_DOWNTIME | SERVICE_STATE_UNACKNOWLEDGED | SERVICE_CHECKS_DISABLED | SERVICE_PASSIVE_CHECKS_DISABLED, services_critical_disabled_unacknowledged);
+		printf("<tr><td width=100%% class='serviceUnimportantProblem'><a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d'>Unacknowledged<br>%d Disabled</a></td></tr>\n", STATUS_CGI, SERVICE_CRITICAL, HOST_UP | HOST_PENDING, SERVICE_NO_SCHEDULED_DOWNTIME | SERVICE_STATE_UNACKNOWLEDGED | SERVICE_CHECKS_DISABLED | SERVICE_PASSIVE_CHECKS_DISABLED, services_critical_disabled_unacknowledged);
 
 	if (services_critical_acknowledged > 0) {
 
 		problem_found = FALSE;
-		printf("<tr><td width=100%% class='serviceUnimportantProblem'><a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d&nostatusheader'>Acknowledged</a><br>\n", STATUS_CGI, SERVICE_CRITICAL, HOST_UP | HOST_PENDING, SERVICE_STATE_ACKNOWLEDGED | SERVICE_NO_SCHEDULED_DOWNTIME);
+		printf("<tr><td width=100%% class='serviceUnimportantProblem'><a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d'>Acknowledged</a><br>\n", STATUS_CGI, SERVICE_CRITICAL, HOST_UP | HOST_PENDING, SERVICE_STATE_ACKNOWLEDGED | SERVICE_NO_SCHEDULED_DOWNTIME);
 
 		if (services_critical_active_acknowledged > 0) {
 			problem_found = TRUE;
-			printf("<a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d&nostatusheader'>%d Active</a>\n", STATUS_CGI, SERVICE_CRITICAL, HOST_UP | HOST_PENDING, SERVICE_STATE_ACKNOWLEDGED | SERVICE_NO_SCHEDULED_DOWNTIME | SERVICE_CHECKS_ENABLED, services_critical_active_acknowledged);
+			printf("<a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d'>%d Active</a>\n", STATUS_CGI, SERVICE_CRITICAL, HOST_UP | HOST_PENDING, SERVICE_STATE_ACKNOWLEDGED | SERVICE_NO_SCHEDULED_DOWNTIME | SERVICE_CHECKS_ENABLED, services_critical_active_acknowledged);
 		}
 		if (services_critical_passive_acknowledged > 0) {
 			if (problem_found == TRUE) printf("<br>");
 			else problem_found = TRUE;
-			printf("<a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d&nostatusheader'>%d Passive</a>\n", STATUS_CGI, SERVICE_CRITICAL, HOST_UP | HOST_PENDING, SERVICE_STATE_ACKNOWLEDGED | SERVICE_NO_SCHEDULED_DOWNTIME | SERVICE_CHECKS_DISABLED | SERVICE_PASSIVE_CHECKS_ENABLED, services_critical_passive_acknowledged);
+			printf("<a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d'>%d Passive</a>\n", STATUS_CGI, SERVICE_CRITICAL, HOST_UP | HOST_PENDING, SERVICE_STATE_ACKNOWLEDGED | SERVICE_NO_SCHEDULED_DOWNTIME | SERVICE_CHECKS_DISABLED | SERVICE_PASSIVE_CHECKS_ENABLED, services_critical_passive_acknowledged);
 		}
 		if (services_critical_disabled_acknowledged > 0) {
 			if (problem_found == TRUE) printf("<br>");
 			else problem_found = TRUE;
-			printf("<a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d&nostatusheader'>%d Disabled</a>\n", STATUS_CGI, SERVICE_CRITICAL, HOST_UP | HOST_PENDING, SERVICE_STATE_ACKNOWLEDGED | SERVICE_NO_SCHEDULED_DOWNTIME | SERVICE_CHECKS_DISABLED | SERVICE_PASSIVE_CHECKS_DISABLED, services_critical_disabled_acknowledged);
+			printf("<a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d'>%d Disabled</a>\n", STATUS_CGI, SERVICE_CRITICAL, HOST_UP | HOST_PENDING, SERVICE_STATE_ACKNOWLEDGED | SERVICE_NO_SCHEDULED_DOWNTIME | SERVICE_CHECKS_DISABLED | SERVICE_PASSIVE_CHECKS_DISABLED, services_critical_disabled_acknowledged);
 		}
 		printf("</td></tr>\n");
 	}
@@ -2235,47 +2291,47 @@ void display_tac_overview(void) {
 	if (services_critical_scheduled > 0) {
 
 		problem_found = FALSE;
-		printf("<tr><td width=100%% class='serviceUnimportantProblem'><a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d&nostatusheader'>Scheduled Downtime</a><br>\n", STATUS_CGI, SERVICE_CRITICAL, HOST_UP | HOST_PENDING, SERVICE_SCHEDULED_DOWNTIME);
+		printf("<tr><td width=100%% class='serviceUnimportantProblem'><a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d'>Scheduled Downtime</a><br>\n", STATUS_CGI, SERVICE_CRITICAL, HOST_UP | HOST_PENDING, SERVICE_SCHEDULED_DOWNTIME);
 
 		if (services_critical_active_scheduled > 0) {
 			problem_found = TRUE;
-			printf("<a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d&nostatusheader'>%d Active</a>\n", STATUS_CGI, SERVICE_CRITICAL, HOST_UP | HOST_PENDING, SERVICE_SCHEDULED_DOWNTIME | SERVICE_CHECKS_ENABLED, services_critical_active_scheduled);
+			printf("<a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d'>%d Active</a>\n", STATUS_CGI, SERVICE_CRITICAL, HOST_UP | HOST_PENDING, SERVICE_SCHEDULED_DOWNTIME | SERVICE_CHECKS_ENABLED, services_critical_active_scheduled);
 		}
 		if (services_critical_passive_scheduled > 0) {
 			if (problem_found == TRUE) printf("<br>");
 			else problem_found = TRUE;
-			printf("<a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d&nostatusheader'>%d Passive</a>\n", STATUS_CGI, SERVICE_CRITICAL, HOST_UP | HOST_PENDING, SERVICE_SCHEDULED_DOWNTIME | SERVICE_CHECKS_DISABLED | SERVICE_PASSIVE_CHECKS_ENABLED, services_critical_passive_scheduled);
+			printf("<a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d'>%d Passive</a>\n", STATUS_CGI, SERVICE_CRITICAL, HOST_UP | HOST_PENDING, SERVICE_SCHEDULED_DOWNTIME | SERVICE_CHECKS_DISABLED | SERVICE_PASSIVE_CHECKS_ENABLED, services_critical_passive_scheduled);
 		}
 		if (services_critical_disabled_scheduled > 0) {
 			if (problem_found == TRUE) printf("<br>");
 			else problem_found = TRUE;
-			printf("<a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d&nostatusheader'>%d Disabled</a>\n", STATUS_CGI, SERVICE_CRITICAL, HOST_UP | HOST_PENDING, SERVICE_SCHEDULED_DOWNTIME | SERVICE_CHECKS_DISABLED | SERVICE_PASSIVE_CHECKS_DISABLED, services_critical_disabled_scheduled);
+			printf("<a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d'>%d Disabled</a>\n", STATUS_CGI, SERVICE_CRITICAL, HOST_UP | HOST_PENDING, SERVICE_SCHEDULED_DOWNTIME | SERVICE_CHECKS_DISABLED | SERVICE_PASSIVE_CHECKS_DISABLED, services_critical_disabled_scheduled);
 		}
 		printf("</td></tr>\n");
 	}
 
 	if (services_critical_unacknowledged_host_down + services_critical_acknowledged_host_down + services_critical_disabled_host_down > 0) {
 
-		printf("<tr><td width=100%% class='serviceUnimportantProblem'><a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&nostatusheader'>on Problem Hosts</a><br>\n", STATUS_CGI, SERVICE_CRITICAL, HOST_DOWN | HOST_UNREACHABLE);
+		printf("<tr><td width=100%% class='serviceUnimportantProblem'><a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d'>on Problem Hosts</a><br>\n", STATUS_CGI, SERVICE_CRITICAL, HOST_DOWN | HOST_UNREACHABLE);
 
 		if (services_critical_unacknowledged_host_down > 0) {
 
 			problem_found = FALSE;
-			printf("<div class='tac_break'></div><a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d&nostatusheader'>Unacknowledged</a><br>\n", STATUS_CGI, SERVICE_CRITICAL, HOST_DOWN | HOST_UNREACHABLE, SERVICE_NO_SCHEDULED_DOWNTIME | SERVICE_STATE_UNACKNOWLEDGED);
+			printf("<div class='tac_break'></div><a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d'>Unacknowledged</a><br>\n", STATUS_CGI, SERVICE_CRITICAL, HOST_DOWN | HOST_UNREACHABLE, SERVICE_NO_SCHEDULED_DOWNTIME | SERVICE_STATE_UNACKNOWLEDGED);
 
 			if (services_critical_active_unacknowledged_host_down > 0) {
 				problem_found = TRUE;
-				printf("<a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d&nostatusheader'>%d Active</a>\n", STATUS_CGI, SERVICE_CRITICAL, HOST_DOWN | HOST_UNREACHABLE, SERVICE_NO_SCHEDULED_DOWNTIME | SERVICE_STATE_UNACKNOWLEDGED | SERVICE_CHECKS_ENABLED, services_critical_active_unacknowledged_host_down);
+				printf("<a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d'>%d Active</a>\n", STATUS_CGI, SERVICE_CRITICAL, HOST_DOWN | HOST_UNREACHABLE, SERVICE_NO_SCHEDULED_DOWNTIME | SERVICE_STATE_UNACKNOWLEDGED | SERVICE_CHECKS_ENABLED, services_critical_active_unacknowledged_host_down);
 			}
 			if (services_critical_passive_unacknowledged_host_down > 0) {
 				if (problem_found == TRUE) printf("<br>");
 				else problem_found = TRUE;
-				printf("<a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d&nostatusheader'>%d Passive</a>\n", STATUS_CGI, SERVICE_CRITICAL, HOST_DOWN | HOST_UNREACHABLE, SERVICE_NO_SCHEDULED_DOWNTIME | SERVICE_STATE_UNACKNOWLEDGED | SERVICE_CHECKS_DISABLED | SERVICE_PASSIVE_CHECKS_ENABLED, services_critical_passive_unacknowledged_host_down);
+				printf("<a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d'>%d Passive</a>\n", STATUS_CGI, SERVICE_CRITICAL, HOST_DOWN | HOST_UNREACHABLE, SERVICE_NO_SCHEDULED_DOWNTIME | SERVICE_STATE_UNACKNOWLEDGED | SERVICE_CHECKS_DISABLED | SERVICE_PASSIVE_CHECKS_ENABLED, services_critical_passive_unacknowledged_host_down);
 			}
 			if (services_critical_disabled_unacknowledged_host_down > 0) {
 				if (problem_found == TRUE) printf("<br>");
 				else problem_found = TRUE;
-				printf("<a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d&nostatusheader'>%d Disabled</a>\n", STATUS_CGI, SERVICE_CRITICAL, HOST_DOWN | HOST_UNREACHABLE, SERVICE_NO_SCHEDULED_DOWNTIME | SERVICE_STATE_UNACKNOWLEDGED | SERVICE_CHECKS_DISABLED | SERVICE_PASSIVE_CHECKS_DISABLED, services_critical_disabled_unacknowledged_host_down);
+				printf("<a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d'>%d Disabled</a>\n", STATUS_CGI, SERVICE_CRITICAL, HOST_DOWN | HOST_UNREACHABLE, SERVICE_NO_SCHEDULED_DOWNTIME | SERVICE_STATE_UNACKNOWLEDGED | SERVICE_CHECKS_DISABLED | SERVICE_PASSIVE_CHECKS_DISABLED, services_critical_disabled_unacknowledged_host_down);
 			}
 		}
 
@@ -2283,22 +2339,22 @@ void display_tac_overview(void) {
 
 			if (problem_found == TRUE) printf("<br>");
 			else problem_found = TRUE;
-			printf("<div class='tac_break'></div><a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d&nostatusheader'>Acknowledged</a><br>\n", STATUS_CGI, SERVICE_CRITICAL, HOST_DOWN | HOST_UNREACHABLE, SERVICE_NO_SCHEDULED_DOWNTIME | SERVICE_STATE_ACKNOWLEDGED);
+			printf("<div class='tac_break'></div><a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d'>Acknowledged</a><br>\n", STATUS_CGI, SERVICE_CRITICAL, HOST_DOWN | HOST_UNREACHABLE, SERVICE_NO_SCHEDULED_DOWNTIME | SERVICE_STATE_ACKNOWLEDGED);
 			problem_found = FALSE;
 
 			if (services_critical_active_acknowledged_host_down > 0) {
 				problem_found = TRUE;
-				printf("<a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d&nostatusheader'>%d Active</a>\n", STATUS_CGI, SERVICE_CRITICAL, HOST_DOWN | HOST_UNREACHABLE, SERVICE_STATE_ACKNOWLEDGED | SERVICE_NO_SCHEDULED_DOWNTIME | SERVICE_CHECKS_ENABLED, services_critical_active_acknowledged_host_down);
+				printf("<a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d'>%d Active</a>\n", STATUS_CGI, SERVICE_CRITICAL, HOST_DOWN | HOST_UNREACHABLE, SERVICE_STATE_ACKNOWLEDGED | SERVICE_NO_SCHEDULED_DOWNTIME | SERVICE_CHECKS_ENABLED, services_critical_active_acknowledged_host_down);
 			}
 			if (services_critical_passive_acknowledged_host_down > 0) {
 				if (problem_found == TRUE) printf("<br>");
 				else problem_found = TRUE;
-				printf("<a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d&nostatusheader'>%d Passive</a>\n", STATUS_CGI, SERVICE_CRITICAL, HOST_DOWN | HOST_UNREACHABLE, SERVICE_STATE_ACKNOWLEDGED | SERVICE_NO_SCHEDULED_DOWNTIME | SERVICE_CHECKS_DISABLED | SERVICE_PASSIVE_CHECKS_ENABLED, services_critical_passive_acknowledged_host_down);
+				printf("<a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d'>%d Passive</a>\n", STATUS_CGI, SERVICE_CRITICAL, HOST_DOWN | HOST_UNREACHABLE, SERVICE_STATE_ACKNOWLEDGED | SERVICE_NO_SCHEDULED_DOWNTIME | SERVICE_CHECKS_DISABLED | SERVICE_PASSIVE_CHECKS_ENABLED, services_critical_passive_acknowledged_host_down);
 			}
 			if (services_critical_disabled_acknowledged_host_down > 0) {
 				if (problem_found == TRUE) printf("<br>");
 				else problem_found = TRUE;
-				printf("<a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d&nostatusheader'>%d Disabled</a>\n", STATUS_CGI, SERVICE_CRITICAL, HOST_DOWN | HOST_UNREACHABLE, SERVICE_STATE_ACKNOWLEDGED | SERVICE_NO_SCHEDULED_DOWNTIME | SERVICE_CHECKS_DISABLED | SERVICE_PASSIVE_CHECKS_DISABLED, services_critical_disabled_acknowledged_host_down);
+				printf("<a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d'>%d Disabled</a>\n", STATUS_CGI, SERVICE_CRITICAL, HOST_DOWN | HOST_UNREACHABLE, SERVICE_STATE_ACKNOWLEDGED | SERVICE_NO_SCHEDULED_DOWNTIME | SERVICE_CHECKS_DISABLED | SERVICE_PASSIVE_CHECKS_DISABLED, services_critical_disabled_acknowledged_host_down);
 			}
 		}
 
@@ -2306,22 +2362,22 @@ void display_tac_overview(void) {
 
 			if (problem_found == TRUE) printf("<br>");
 			else problem_found = TRUE;
-			printf("<div class='tac_break'></div><a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d&nostatusheader'>Scheduled Downtime</a><br>\n", STATUS_CGI, SERVICE_CRITICAL, HOST_DOWN | HOST_UNREACHABLE, SERVICE_SCHEDULED_DOWNTIME);
+			printf("<div class='tac_break'></div><a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d'>Scheduled Downtime</a><br>\n", STATUS_CGI, SERVICE_CRITICAL, HOST_DOWN | HOST_UNREACHABLE, SERVICE_SCHEDULED_DOWNTIME);
 			problem_found = FALSE;
 
 			if (services_critical_active_scheduled_host_down > 0) {
 				problem_found = TRUE;
-				printf("<a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d&nostatusheader'>%d Active</a>\n", STATUS_CGI, SERVICE_CRITICAL, HOST_DOWN | HOST_UNREACHABLE, SERVICE_SCHEDULED_DOWNTIME | SERVICE_CHECKS_ENABLED, services_critical_active_scheduled_host_down);
+				printf("<a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d'>%d Active</a>\n", STATUS_CGI, SERVICE_CRITICAL, HOST_DOWN | HOST_UNREACHABLE, SERVICE_SCHEDULED_DOWNTIME | SERVICE_CHECKS_ENABLED, services_critical_active_scheduled_host_down);
 			}
 			if (services_critical_passive_scheduled_host_down > 0) {
 				if (problem_found == TRUE) printf("<br>");
 				else problem_found = TRUE;
-				printf("<a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d&nostatusheader'>%d Passive</a>\n", STATUS_CGI, SERVICE_CRITICAL, HOST_DOWN | HOST_UNREACHABLE, SERVICE_SCHEDULED_DOWNTIME | SERVICE_CHECKS_DISABLED | SERVICE_PASSIVE_CHECKS_ENABLED, services_critical_passive_scheduled_host_down);
+				printf("<a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d'>%d Passive</a>\n", STATUS_CGI, SERVICE_CRITICAL, HOST_DOWN | HOST_UNREACHABLE, SERVICE_SCHEDULED_DOWNTIME | SERVICE_CHECKS_DISABLED | SERVICE_PASSIVE_CHECKS_ENABLED, services_critical_passive_scheduled_host_down);
 			}
 			if (services_critical_disabled_scheduled_host_down > 0) {
 				if (problem_found == TRUE) printf("<br>");
 				else problem_found = TRUE;
-				printf("<a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d&nostatusheader'>%d Disabled</a>\n", STATUS_CGI, SERVICE_CRITICAL, HOST_DOWN | HOST_UNREACHABLE, SERVICE_SCHEDULED_DOWNTIME | SERVICE_CHECKS_DISABLED | SERVICE_PASSIVE_CHECKS_DISABLED, services_critical_disabled_scheduled_host_down);
+				printf("<a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d'>%d Disabled</a>\n", STATUS_CGI, SERVICE_CRITICAL, HOST_DOWN | HOST_UNREACHABLE, SERVICE_SCHEDULED_DOWNTIME | SERVICE_CHECKS_DISABLED | SERVICE_PASSIVE_CHECKS_DISABLED, services_critical_disabled_scheduled_host_down);
 			}
 		}
 		printf("</td></tr>\n");
@@ -2348,41 +2404,41 @@ void display_tac_overview(void) {
 	if (services_warning_active_unacknowledged + services_warning_passive_unacknowledged > 0) {
 
 		problem_found = FALSE;
-		printf("<tr><td width=100%% class='serviceImportantProblem'><a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d&nostatusheader'>Unhandled Problems</a><br>\n", STATUS_CGI, SERVICE_WARNING, HOST_UP | HOST_PENDING, SERVICE_NO_SCHEDULED_DOWNTIME | SERVICE_STATE_UNACKNOWLEDGED | SERVICE_NOT_ALL_CHECKS_DISABLED);
+		printf("<tr><td width=100%% class='serviceImportantProblem'><a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d'>Unhandled Problems</a><br>\n", STATUS_CGI, SERVICE_WARNING, HOST_UP | HOST_PENDING, SERVICE_NO_SCHEDULED_DOWNTIME | SERVICE_STATE_UNACKNOWLEDGED | SERVICE_NOT_ALL_CHECKS_DISABLED);
 
 		if (services_warning_active_unacknowledged > 0) {
 			problem_found = TRUE;
-			printf("<a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d&nostatusheader'>%d Active</a>\n", STATUS_CGI, SERVICE_WARNING, HOST_UP | HOST_PENDING, SERVICE_NO_SCHEDULED_DOWNTIME | SERVICE_STATE_UNACKNOWLEDGED | SERVICE_CHECKS_ENABLED, services_warning_active_unacknowledged);
+			printf("<a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d'>%d Active</a>\n", STATUS_CGI, SERVICE_WARNING, HOST_UP | HOST_PENDING, SERVICE_NO_SCHEDULED_DOWNTIME | SERVICE_STATE_UNACKNOWLEDGED | SERVICE_CHECKS_ENABLED, services_warning_active_unacknowledged);
 		}
 		if (services_warning_passive_unacknowledged > 0) {
 			if (problem_found == TRUE) printf("<br>");
 			else problem_found = TRUE;
-			printf("<a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d&nostatusheader'>%d Passive</a>\n", STATUS_CGI, SERVICE_WARNING, HOST_UP | HOST_PENDING, SERVICE_NO_SCHEDULED_DOWNTIME | SERVICE_STATE_UNACKNOWLEDGED | SERVICE_CHECKS_DISABLED | SERVICE_PASSIVE_CHECKS_ENABLED, services_warning_passive_unacknowledged);
+			printf("<a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d'>%d Passive</a>\n", STATUS_CGI, SERVICE_WARNING, HOST_UP | HOST_PENDING, SERVICE_NO_SCHEDULED_DOWNTIME | SERVICE_STATE_UNACKNOWLEDGED | SERVICE_CHECKS_DISABLED | SERVICE_PASSIVE_CHECKS_ENABLED, services_warning_passive_unacknowledged);
 		}
 		printf("</td></tr>\n");
 	}
 
 	if (services_warning_disabled_unacknowledged > 0)
-		printf("<tr><td width=100%% class='serviceUnimportantProblem'><a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d&nostatusheader'>Unacknowledged<br>%d Disabled</a></td></tr>\n", STATUS_CGI, SERVICE_WARNING, HOST_UP | HOST_PENDING, SERVICE_NO_SCHEDULED_DOWNTIME | SERVICE_STATE_UNACKNOWLEDGED | SERVICE_CHECKS_DISABLED | SERVICE_PASSIVE_CHECKS_DISABLED, services_warning_disabled_unacknowledged);
+		printf("<tr><td width=100%% class='serviceUnimportantProblem'><a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d'>Unacknowledged<br>%d Disabled</a></td></tr>\n", STATUS_CGI, SERVICE_WARNING, HOST_UP | HOST_PENDING, SERVICE_NO_SCHEDULED_DOWNTIME | SERVICE_STATE_UNACKNOWLEDGED | SERVICE_CHECKS_DISABLED | SERVICE_PASSIVE_CHECKS_DISABLED, services_warning_disabled_unacknowledged);
 
 	if (services_warning_acknowledged > 0) {
 
 		problem_found = FALSE;
-		printf("<tr><td width=100%% class='serviceUnimportantProblem'><a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d&nostatusheader'>Acknowledged</a><br>\n", STATUS_CGI, SERVICE_WARNING, HOST_UP | HOST_PENDING, SERVICE_STATE_ACKNOWLEDGED | SERVICE_NO_SCHEDULED_DOWNTIME);
+		printf("<tr><td width=100%% class='serviceUnimportantProblem'><a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d'>Acknowledged</a><br>\n", STATUS_CGI, SERVICE_WARNING, HOST_UP | HOST_PENDING, SERVICE_STATE_ACKNOWLEDGED | SERVICE_NO_SCHEDULED_DOWNTIME);
 
 		if (services_warning_active_acknowledged > 0) {
 			problem_found = TRUE;
-			printf("<a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d&nostatusheader'>%d Active</a>\n", STATUS_CGI, SERVICE_WARNING, HOST_UP | HOST_PENDING, SERVICE_STATE_ACKNOWLEDGED | SERVICE_NO_SCHEDULED_DOWNTIME | SERVICE_CHECKS_ENABLED, services_warning_active_acknowledged);
+			printf("<a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d'>%d Active</a>\n", STATUS_CGI, SERVICE_WARNING, HOST_UP | HOST_PENDING, SERVICE_STATE_ACKNOWLEDGED | SERVICE_NO_SCHEDULED_DOWNTIME | SERVICE_CHECKS_ENABLED, services_warning_active_acknowledged);
 		}
 		if (services_warning_passive_acknowledged > 0) {
 			if (problem_found == TRUE) printf("<br>");
 			else problem_found = TRUE;
-			printf("<a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d&nostatusheader'>%d Passive</a>\n", STATUS_CGI, SERVICE_WARNING, HOST_UP | HOST_PENDING, SERVICE_STATE_ACKNOWLEDGED | SERVICE_NO_SCHEDULED_DOWNTIME | SERVICE_CHECKS_DISABLED | SERVICE_PASSIVE_CHECKS_ENABLED, services_warning_passive_acknowledged);
+			printf("<a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d'>%d Passive</a>\n", STATUS_CGI, SERVICE_WARNING, HOST_UP | HOST_PENDING, SERVICE_STATE_ACKNOWLEDGED | SERVICE_NO_SCHEDULED_DOWNTIME | SERVICE_CHECKS_DISABLED | SERVICE_PASSIVE_CHECKS_ENABLED, services_warning_passive_acknowledged);
 		}
 		if (services_warning_disabled_acknowledged > 0) {
 			if (problem_found == TRUE) printf("<br>");
 			else problem_found = TRUE;
-			printf("<a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d&nostatusheader'>%d Disabled</a>\n", STATUS_CGI, SERVICE_WARNING, HOST_UP | HOST_PENDING, SERVICE_STATE_ACKNOWLEDGED | SERVICE_NO_SCHEDULED_DOWNTIME | SERVICE_CHECKS_DISABLED | SERVICE_PASSIVE_CHECKS_DISABLED, services_warning_disabled_acknowledged);
+			printf("<a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d'>%d Disabled</a>\n", STATUS_CGI, SERVICE_WARNING, HOST_UP | HOST_PENDING, SERVICE_STATE_ACKNOWLEDGED | SERVICE_NO_SCHEDULED_DOWNTIME | SERVICE_CHECKS_DISABLED | SERVICE_PASSIVE_CHECKS_DISABLED, services_warning_disabled_acknowledged);
 		}
 		printf("</td></tr>\n");
 	}
@@ -2390,47 +2446,47 @@ void display_tac_overview(void) {
 	if (services_warning_scheduled > 0) {
 
 		problem_found = FALSE;
-		printf("<tr><td width=100%% class='serviceUnimportantProblem'><a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d&nostatusheader'>Scheduled Downtime</a><br>\n", STATUS_CGI, SERVICE_WARNING, HOST_UP | HOST_PENDING, SERVICE_SCHEDULED_DOWNTIME);
+		printf("<tr><td width=100%% class='serviceUnimportantProblem'><a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d'>Scheduled Downtime</a><br>\n", STATUS_CGI, SERVICE_WARNING, HOST_UP | HOST_PENDING, SERVICE_SCHEDULED_DOWNTIME);
 
 		if (services_warning_active_scheduled > 0) {
 			problem_found = TRUE;
-			printf("<a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d&nostatusheader'>%d Active</a>\n", STATUS_CGI, SERVICE_WARNING, HOST_UP | HOST_PENDING, SERVICE_SCHEDULED_DOWNTIME | SERVICE_CHECKS_ENABLED, services_warning_active_scheduled);
+			printf("<a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d'>%d Active</a>\n", STATUS_CGI, SERVICE_WARNING, HOST_UP | HOST_PENDING, SERVICE_SCHEDULED_DOWNTIME | SERVICE_CHECKS_ENABLED, services_warning_active_scheduled);
 		}
 		if (services_warning_passive_scheduled > 0) {
 			if (problem_found == TRUE) printf("<br>");
 			else problem_found = TRUE;
-			printf("<a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d&nostatusheader'>%d Passive</a>\n", STATUS_CGI, SERVICE_WARNING, HOST_UP | HOST_PENDING, SERVICE_SCHEDULED_DOWNTIME | SERVICE_CHECKS_DISABLED | SERVICE_PASSIVE_CHECKS_ENABLED, services_warning_passive_scheduled);
+			printf("<a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d'>%d Passive</a>\n", STATUS_CGI, SERVICE_WARNING, HOST_UP | HOST_PENDING, SERVICE_SCHEDULED_DOWNTIME | SERVICE_CHECKS_DISABLED | SERVICE_PASSIVE_CHECKS_ENABLED, services_warning_passive_scheduled);
 		}
 		if (services_warning_disabled_scheduled > 0) {
 			if (problem_found == TRUE) printf("<br>");
 			else problem_found = TRUE;
-			printf("<a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d&nostatusheader'>%d Disabled</a>\n", STATUS_CGI, SERVICE_WARNING, HOST_UP | HOST_PENDING, SERVICE_SCHEDULED_DOWNTIME | SERVICE_CHECKS_DISABLED | SERVICE_PASSIVE_CHECKS_DISABLED, services_warning_disabled_scheduled);
+			printf("<a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d'>%d Disabled</a>\n", STATUS_CGI, SERVICE_WARNING, HOST_UP | HOST_PENDING, SERVICE_SCHEDULED_DOWNTIME | SERVICE_CHECKS_DISABLED | SERVICE_PASSIVE_CHECKS_DISABLED, services_warning_disabled_scheduled);
 		}
 		printf("</td></tr>\n");
 	}
 
 	if (services_warning_unacknowledged_host_down + services_warning_acknowledged_host_down + services_warning_disabled_host_down > 0) {
 
-		printf("<tr><td width=100%% class='serviceUnimportantProblem'><a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&nostatusheader'>on Problem Hosts</a><br>\n", STATUS_CGI, SERVICE_WARNING, HOST_DOWN | HOST_UNREACHABLE);
+		printf("<tr><td width=100%% class='serviceUnimportantProblem'><a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d'>on Problem Hosts</a><br>\n", STATUS_CGI, SERVICE_WARNING, HOST_DOWN | HOST_UNREACHABLE);
 
 		if (services_warning_unacknowledged_host_down > 0) {
 
 			problem_found = FALSE;
-			printf("<div class='tac_break'></div><a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d&nostatusheader'>Unacknowledged</a><br>\n", STATUS_CGI, SERVICE_WARNING, HOST_DOWN | HOST_UNREACHABLE, SERVICE_NO_SCHEDULED_DOWNTIME | SERVICE_STATE_UNACKNOWLEDGED);
+			printf("<div class='tac_break'></div><a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d'>Unacknowledged</a><br>\n", STATUS_CGI, SERVICE_WARNING, HOST_DOWN | HOST_UNREACHABLE, SERVICE_NO_SCHEDULED_DOWNTIME | SERVICE_STATE_UNACKNOWLEDGED);
 
 			if (services_warning_active_unacknowledged_host_down > 0) {
 				problem_found = TRUE;
-				printf("<a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d&nostatusheader'>%d Active</a>\n", STATUS_CGI, SERVICE_WARNING, HOST_DOWN | HOST_UNREACHABLE, SERVICE_NO_SCHEDULED_DOWNTIME | SERVICE_STATE_UNACKNOWLEDGED | SERVICE_CHECKS_ENABLED, services_warning_active_unacknowledged_host_down);
+				printf("<a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d'>%d Active</a>\n", STATUS_CGI, SERVICE_WARNING, HOST_DOWN | HOST_UNREACHABLE, SERVICE_NO_SCHEDULED_DOWNTIME | SERVICE_STATE_UNACKNOWLEDGED | SERVICE_CHECKS_ENABLED, services_warning_active_unacknowledged_host_down);
 			}
 			if (services_warning_passive_unacknowledged_host_down > 0) {
 				if (problem_found == TRUE) printf("<br>");
 				else problem_found = TRUE;
-				printf("<a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d&nostatusheader'>%d Passive</a>\n", STATUS_CGI, SERVICE_WARNING, HOST_DOWN | HOST_UNREACHABLE, SERVICE_NO_SCHEDULED_DOWNTIME | SERVICE_STATE_UNACKNOWLEDGED | SERVICE_CHECKS_DISABLED | SERVICE_PASSIVE_CHECKS_ENABLED, services_warning_passive_unacknowledged_host_down);
+				printf("<a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d'>%d Passive</a>\n", STATUS_CGI, SERVICE_WARNING, HOST_DOWN | HOST_UNREACHABLE, SERVICE_NO_SCHEDULED_DOWNTIME | SERVICE_STATE_UNACKNOWLEDGED | SERVICE_CHECKS_DISABLED | SERVICE_PASSIVE_CHECKS_ENABLED, services_warning_passive_unacknowledged_host_down);
 			}
 			if (services_warning_disabled_unacknowledged_host_down > 0) {
 				if (problem_found == TRUE) printf("<br>");
 				else problem_found = TRUE;
-				printf("<a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d&nostatusheader'>%d Disabled</a>\n", STATUS_CGI, SERVICE_WARNING, HOST_DOWN | HOST_UNREACHABLE, SERVICE_NO_SCHEDULED_DOWNTIME | SERVICE_STATE_UNACKNOWLEDGED | SERVICE_CHECKS_DISABLED | SERVICE_PASSIVE_CHECKS_DISABLED, services_warning_disabled_unacknowledged_host_down);
+				printf("<a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d'>%d Disabled</a>\n", STATUS_CGI, SERVICE_WARNING, HOST_DOWN | HOST_UNREACHABLE, SERVICE_NO_SCHEDULED_DOWNTIME | SERVICE_STATE_UNACKNOWLEDGED | SERVICE_CHECKS_DISABLED | SERVICE_PASSIVE_CHECKS_DISABLED, services_warning_disabled_unacknowledged_host_down);
 			}
 		}
 
@@ -2438,22 +2494,22 @@ void display_tac_overview(void) {
 
 			if (problem_found == TRUE) printf("<br>");
 			else problem_found = TRUE;
-			printf("<div class='tac_break'></div><a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d&nostatusheader'>Acknowledged</a><br>\n", STATUS_CGI, SERVICE_WARNING, HOST_DOWN | HOST_UNREACHABLE, SERVICE_NO_SCHEDULED_DOWNTIME | SERVICE_STATE_ACKNOWLEDGED);
+			printf("<div class='tac_break'></div><a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d'>Acknowledged</a><br>\n", STATUS_CGI, SERVICE_WARNING, HOST_DOWN | HOST_UNREACHABLE, SERVICE_NO_SCHEDULED_DOWNTIME | SERVICE_STATE_ACKNOWLEDGED);
 			problem_found = FALSE;
 
 			if (services_warning_active_acknowledged_host_down > 0) {
 				problem_found = TRUE;
-				printf("<a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d&nostatusheader'>%d Active</a>\n", STATUS_CGI, SERVICE_WARNING, HOST_DOWN | HOST_UNREACHABLE, SERVICE_STATE_ACKNOWLEDGED | SERVICE_NO_SCHEDULED_DOWNTIME | SERVICE_CHECKS_ENABLED, services_warning_active_acknowledged_host_down);
+				printf("<a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d'>%d Active</a>\n", STATUS_CGI, SERVICE_WARNING, HOST_DOWN | HOST_UNREACHABLE, SERVICE_STATE_ACKNOWLEDGED | SERVICE_NO_SCHEDULED_DOWNTIME | SERVICE_CHECKS_ENABLED, services_warning_active_acknowledged_host_down);
 			}
 			if (services_warning_passive_acknowledged_host_down > 0) {
 				if (problem_found == TRUE) printf("<br>");
 				else problem_found = TRUE;
-				printf("<a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d&nostatusheader'>%d Passive</a>\n", STATUS_CGI, SERVICE_WARNING, HOST_DOWN | HOST_UNREACHABLE, SERVICE_STATE_ACKNOWLEDGED | SERVICE_NO_SCHEDULED_DOWNTIME | SERVICE_CHECKS_DISABLED | SERVICE_PASSIVE_CHECKS_ENABLED, services_warning_passive_acknowledged_host_down);
+				printf("<a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d'>%d Passive</a>\n", STATUS_CGI, SERVICE_WARNING, HOST_DOWN | HOST_UNREACHABLE, SERVICE_STATE_ACKNOWLEDGED | SERVICE_NO_SCHEDULED_DOWNTIME | SERVICE_CHECKS_DISABLED | SERVICE_PASSIVE_CHECKS_ENABLED, services_warning_passive_acknowledged_host_down);
 			}
 			if (services_warning_disabled_acknowledged_host_down > 0) {
 				if (problem_found == TRUE) printf("<br>");
 				else problem_found = TRUE;
-				printf("<a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d&nostatusheader'>%d Disabled</a>\n", STATUS_CGI, SERVICE_WARNING, HOST_DOWN | HOST_UNREACHABLE, SERVICE_STATE_ACKNOWLEDGED | SERVICE_NO_SCHEDULED_DOWNTIME | SERVICE_CHECKS_DISABLED | SERVICE_PASSIVE_CHECKS_DISABLED, services_warning_disabled_acknowledged_host_down);
+				printf("<a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d'>%d Disabled</a>\n", STATUS_CGI, SERVICE_WARNING, HOST_DOWN | HOST_UNREACHABLE, SERVICE_STATE_ACKNOWLEDGED | SERVICE_NO_SCHEDULED_DOWNTIME | SERVICE_CHECKS_DISABLED | SERVICE_PASSIVE_CHECKS_DISABLED, services_warning_disabled_acknowledged_host_down);
 			}
 		}
 
@@ -2461,22 +2517,22 @@ void display_tac_overview(void) {
 
 			if (problem_found == TRUE) printf("<br>");
 			else problem_found = TRUE;
-			printf("<div class='tac_break'></div><a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d&nostatusheader'>Scheduled Downtime</a><br>\n", STATUS_CGI, SERVICE_WARNING, HOST_DOWN | HOST_UNREACHABLE, SERVICE_SCHEDULED_DOWNTIME);
+			printf("<div class='tac_break'></div><a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d'>Scheduled Downtime</a><br>\n", STATUS_CGI, SERVICE_WARNING, HOST_DOWN | HOST_UNREACHABLE, SERVICE_SCHEDULED_DOWNTIME);
 			problem_found = FALSE;
 
 			if (services_warning_active_scheduled_host_down > 0) {
 				problem_found = TRUE;
-				printf("<a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d&nostatusheader'>%d Active</a>\n", STATUS_CGI, SERVICE_WARNING, HOST_DOWN | HOST_UNREACHABLE, SERVICE_SCHEDULED_DOWNTIME | SERVICE_CHECKS_ENABLED, services_warning_active_scheduled_host_down);
+				printf("<a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d'>%d Active</a>\n", STATUS_CGI, SERVICE_WARNING, HOST_DOWN | HOST_UNREACHABLE, SERVICE_SCHEDULED_DOWNTIME | SERVICE_CHECKS_ENABLED, services_warning_active_scheduled_host_down);
 			}
 			if (services_warning_passive_scheduled_host_down > 0) {
 				if (problem_found == TRUE) printf("<br>");
 				else problem_found = TRUE;
-				printf("<a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d&nostatusheader'>%d Passive</a>\n", STATUS_CGI, SERVICE_WARNING, HOST_DOWN | HOST_UNREACHABLE, SERVICE_SCHEDULED_DOWNTIME | SERVICE_CHECKS_DISABLED | SERVICE_PASSIVE_CHECKS_ENABLED, services_warning_passive_scheduled_host_down);
+				printf("<a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d'>%d Passive</a>\n", STATUS_CGI, SERVICE_WARNING, HOST_DOWN | HOST_UNREACHABLE, SERVICE_SCHEDULED_DOWNTIME | SERVICE_CHECKS_DISABLED | SERVICE_PASSIVE_CHECKS_ENABLED, services_warning_passive_scheduled_host_down);
 			}
 			if (services_warning_disabled_scheduled_host_down > 0) {
 				if (problem_found == TRUE) printf("<br>");
 				else problem_found = TRUE;
-				printf("<a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d&nostatusheader'>%d Disabled</a>\n", STATUS_CGI, SERVICE_WARNING, HOST_DOWN | HOST_UNREACHABLE, SERVICE_SCHEDULED_DOWNTIME | SERVICE_CHECKS_DISABLED | SERVICE_PASSIVE_CHECKS_DISABLED, services_warning_disabled_scheduled_host_down);
+				printf("<a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d'>%d Disabled</a>\n", STATUS_CGI, SERVICE_WARNING, HOST_DOWN | HOST_UNREACHABLE, SERVICE_SCHEDULED_DOWNTIME | SERVICE_CHECKS_DISABLED | SERVICE_PASSIVE_CHECKS_DISABLED, services_warning_disabled_scheduled_host_down);
 			}
 		}
 		printf("</td></tr>\n");
@@ -2503,41 +2559,41 @@ void display_tac_overview(void) {
 	if (services_unknown_active_unacknowledged + services_unknown_passive_unacknowledged > 0) {
 
 		problem_found = FALSE;
-		printf("<tr><td width=100%% class='serviceImportantProblem'><a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d&nostatusheader'>Unhandled Problems</a><br>\n", STATUS_CGI, SERVICE_UNKNOWN, HOST_UP | HOST_PENDING, SERVICE_NO_SCHEDULED_DOWNTIME | SERVICE_STATE_UNACKNOWLEDGED | SERVICE_NOT_ALL_CHECKS_DISABLED);
+		printf("<tr><td width=100%% class='serviceImportantProblem'><a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d'>Unhandled Problems</a><br>\n", STATUS_CGI, SERVICE_UNKNOWN, HOST_UP | HOST_PENDING, SERVICE_NO_SCHEDULED_DOWNTIME | SERVICE_STATE_UNACKNOWLEDGED | SERVICE_NOT_ALL_CHECKS_DISABLED);
 
 		if (services_unknown_active_unacknowledged > 0) {
 			problem_found = TRUE;
-			printf("<a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d&nostatusheader'>%d Active</a>\n", STATUS_CGI, SERVICE_UNKNOWN, HOST_UP | HOST_PENDING, SERVICE_NO_SCHEDULED_DOWNTIME | SERVICE_STATE_UNACKNOWLEDGED | SERVICE_CHECKS_ENABLED, services_unknown_active_unacknowledged);
+			printf("<a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d'>%d Active</a>\n", STATUS_CGI, SERVICE_UNKNOWN, HOST_UP | HOST_PENDING, SERVICE_NO_SCHEDULED_DOWNTIME | SERVICE_STATE_UNACKNOWLEDGED | SERVICE_CHECKS_ENABLED, services_unknown_active_unacknowledged);
 		}
 		if (services_unknown_passive_unacknowledged > 0) {
 			if (problem_found == TRUE) printf("<br>");
 			else problem_found = TRUE;
-			printf("<a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d&nostatusheader'>%d Passive</a>\n", STATUS_CGI, SERVICE_UNKNOWN, HOST_UP | HOST_PENDING, SERVICE_NO_SCHEDULED_DOWNTIME | SERVICE_STATE_UNACKNOWLEDGED | SERVICE_CHECKS_DISABLED | SERVICE_PASSIVE_CHECKS_ENABLED, services_unknown_passive_unacknowledged);
+			printf("<a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d'>%d Passive</a>\n", STATUS_CGI, SERVICE_UNKNOWN, HOST_UP | HOST_PENDING, SERVICE_NO_SCHEDULED_DOWNTIME | SERVICE_STATE_UNACKNOWLEDGED | SERVICE_CHECKS_DISABLED | SERVICE_PASSIVE_CHECKS_ENABLED, services_unknown_passive_unacknowledged);
 		}
 		printf("</td></tr>\n");
 	}
 
 	if (services_unknown_disabled_unacknowledged > 0)
-		printf("<tr><td width=100%% class='serviceUnimportantProblem'><a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d&nostatusheader'>Unacknowledged<br>%d Disabled</a></td></tr>\n", STATUS_CGI, SERVICE_UNKNOWN, HOST_UP | HOST_PENDING, SERVICE_NO_SCHEDULED_DOWNTIME | SERVICE_STATE_UNACKNOWLEDGED | SERVICE_CHECKS_DISABLED | SERVICE_PASSIVE_CHECKS_DISABLED, services_unknown_disabled_unacknowledged);
+		printf("<tr><td width=100%% class='serviceUnimportantProblem'><a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d'>Unacknowledged<br>%d Disabled</a></td></tr>\n", STATUS_CGI, SERVICE_UNKNOWN, HOST_UP | HOST_PENDING, SERVICE_NO_SCHEDULED_DOWNTIME | SERVICE_STATE_UNACKNOWLEDGED | SERVICE_CHECKS_DISABLED | SERVICE_PASSIVE_CHECKS_DISABLED, services_unknown_disabled_unacknowledged);
 
 	if (services_unknown_acknowledged > 0) {
 
 		problem_found = FALSE;
-		printf("<tr><td width=100%% class='serviceUnimportantProblem'><a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d&nostatusheader'>Acknowledged</a><br>\n", STATUS_CGI, SERVICE_UNKNOWN, HOST_UP | HOST_PENDING, SERVICE_STATE_ACKNOWLEDGED | SERVICE_NO_SCHEDULED_DOWNTIME);
+		printf("<tr><td width=100%% class='serviceUnimportantProblem'><a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d'>Acknowledged</a><br>\n", STATUS_CGI, SERVICE_UNKNOWN, HOST_UP | HOST_PENDING, SERVICE_STATE_ACKNOWLEDGED | SERVICE_NO_SCHEDULED_DOWNTIME);
 
 		if (services_unknown_active_acknowledged > 0) {
 			problem_found = TRUE;
-			printf("<a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d&nostatusheader'>%d Active</a>\n", STATUS_CGI, SERVICE_UNKNOWN, HOST_UP | HOST_PENDING, SERVICE_STATE_ACKNOWLEDGED | SERVICE_NO_SCHEDULED_DOWNTIME | SERVICE_CHECKS_ENABLED, services_unknown_active_acknowledged);
+			printf("<a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d'>%d Active</a>\n", STATUS_CGI, SERVICE_UNKNOWN, HOST_UP | HOST_PENDING, SERVICE_STATE_ACKNOWLEDGED | SERVICE_NO_SCHEDULED_DOWNTIME | SERVICE_CHECKS_ENABLED, services_unknown_active_acknowledged);
 		}
 		if (services_unknown_passive_acknowledged > 0) {
 			if (problem_found == TRUE) printf("<br>");
 			else problem_found = TRUE;
-			printf("<a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d&nostatusheader'>%d Passive</a>\n", STATUS_CGI, SERVICE_UNKNOWN, HOST_UP | HOST_PENDING, SERVICE_STATE_ACKNOWLEDGED | SERVICE_NO_SCHEDULED_DOWNTIME | SERVICE_CHECKS_DISABLED | SERVICE_PASSIVE_CHECKS_ENABLED, services_unknown_passive_acknowledged);
+			printf("<a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d'>%d Passive</a>\n", STATUS_CGI, SERVICE_UNKNOWN, HOST_UP | HOST_PENDING, SERVICE_STATE_ACKNOWLEDGED | SERVICE_NO_SCHEDULED_DOWNTIME | SERVICE_CHECKS_DISABLED | SERVICE_PASSIVE_CHECKS_ENABLED, services_unknown_passive_acknowledged);
 		}
 		if (services_unknown_disabled_acknowledged > 0) {
 			if (problem_found == TRUE) printf("<br>");
 			else problem_found = TRUE;
-			printf("<a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d&nostatusheader'>%d Disabled</a>\n", STATUS_CGI, SERVICE_UNKNOWN, HOST_UP | HOST_PENDING, SERVICE_STATE_ACKNOWLEDGED | SERVICE_NO_SCHEDULED_DOWNTIME | SERVICE_CHECKS_DISABLED | SERVICE_PASSIVE_CHECKS_DISABLED, services_unknown_disabled_acknowledged);
+			printf("<a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d'>%d Disabled</a>\n", STATUS_CGI, SERVICE_UNKNOWN, HOST_UP | HOST_PENDING, SERVICE_STATE_ACKNOWLEDGED | SERVICE_NO_SCHEDULED_DOWNTIME | SERVICE_CHECKS_DISABLED | SERVICE_PASSIVE_CHECKS_DISABLED, services_unknown_disabled_acknowledged);
 		}
 		printf("</td></tr>\n");
 	}
@@ -2545,47 +2601,47 @@ void display_tac_overview(void) {
 	if (services_unknown_scheduled > 0) {
 
 		problem_found = FALSE;
-		printf("<tr><td width=100%% class='serviceUnimportantProblem'><a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d&nostatusheader'>Scheduled Downtime</a><br>\n", STATUS_CGI, SERVICE_UNKNOWN, HOST_UP | HOST_PENDING, SERVICE_SCHEDULED_DOWNTIME);
+		printf("<tr><td width=100%% class='serviceUnimportantProblem'><a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d'>Scheduled Downtime</a><br>\n", STATUS_CGI, SERVICE_UNKNOWN, HOST_UP | HOST_PENDING, SERVICE_SCHEDULED_DOWNTIME);
 
 		if (services_unknown_active_scheduled > 0) {
 			problem_found = TRUE;
-			printf("<a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d&nostatusheader'>%d Active</a>\n", STATUS_CGI, SERVICE_UNKNOWN, HOST_UP | HOST_PENDING, SERVICE_SCHEDULED_DOWNTIME | SERVICE_CHECKS_ENABLED, services_unknown_active_scheduled);
+			printf("<a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d'>%d Active</a>\n", STATUS_CGI, SERVICE_UNKNOWN, HOST_UP | HOST_PENDING, SERVICE_SCHEDULED_DOWNTIME | SERVICE_CHECKS_ENABLED, services_unknown_active_scheduled);
 		}
 		if (services_unknown_passive_scheduled > 0) {
 			if (problem_found == TRUE) printf("<br>");
 			else problem_found = TRUE;
-			printf("<a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d&nostatusheader'>%d Passive</a>\n", STATUS_CGI, SERVICE_UNKNOWN, HOST_UP | HOST_PENDING, SERVICE_SCHEDULED_DOWNTIME | SERVICE_CHECKS_DISABLED | SERVICE_PASSIVE_CHECKS_ENABLED, services_unknown_passive_scheduled);
+			printf("<a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d'>%d Passive</a>\n", STATUS_CGI, SERVICE_UNKNOWN, HOST_UP | HOST_PENDING, SERVICE_SCHEDULED_DOWNTIME | SERVICE_CHECKS_DISABLED | SERVICE_PASSIVE_CHECKS_ENABLED, services_unknown_passive_scheduled);
 		}
 		if (services_unknown_disabled_scheduled > 0) {
 			if (problem_found == TRUE) printf("<br>");
 			else problem_found = TRUE;
-			printf("<a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d&nostatusheader'>%d Disabled</a>\n", STATUS_CGI, SERVICE_UNKNOWN, HOST_UP | HOST_PENDING, SERVICE_SCHEDULED_DOWNTIME | SERVICE_CHECKS_DISABLED | SERVICE_PASSIVE_CHECKS_DISABLED, services_unknown_disabled_scheduled);
+			printf("<a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d'>%d Disabled</a>\n", STATUS_CGI, SERVICE_UNKNOWN, HOST_UP | HOST_PENDING, SERVICE_SCHEDULED_DOWNTIME | SERVICE_CHECKS_DISABLED | SERVICE_PASSIVE_CHECKS_DISABLED, services_unknown_disabled_scheduled);
 		}
 		printf("</td></tr>\n");
 	}
 
 	if (services_unknown_unacknowledged_host_down + services_unknown_acknowledged_host_down + services_unknown_disabled_host_down > 0) {
 
-		printf("<tr><td width=100%% class='serviceUnimportantProblem'><a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&nostatusheader'>on Problem Hosts</a><br>\n", STATUS_CGI, SERVICE_UNKNOWN, HOST_DOWN | HOST_UNREACHABLE);
+		printf("<tr><td width=100%% class='serviceUnimportantProblem'><a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d'>on Problem Hosts</a><br>\n", STATUS_CGI, SERVICE_UNKNOWN, HOST_DOWN | HOST_UNREACHABLE);
 
 		if (services_unknown_unacknowledged_host_down > 0) {
 
 			problem_found = FALSE;
-			printf("<div class='tac_break'></div><a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d&nostatusheader'>Unacknowledged</a><br>\n", STATUS_CGI, SERVICE_UNKNOWN, HOST_DOWN | HOST_UNREACHABLE, SERVICE_NO_SCHEDULED_DOWNTIME | SERVICE_STATE_UNACKNOWLEDGED);
+			printf("<div class='tac_break'></div><a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d'>Unacknowledged</a><br>\n", STATUS_CGI, SERVICE_UNKNOWN, HOST_DOWN | HOST_UNREACHABLE, SERVICE_NO_SCHEDULED_DOWNTIME | SERVICE_STATE_UNACKNOWLEDGED);
 
 			if (services_unknown_active_unacknowledged_host_down > 0) {
 				problem_found = TRUE;
-				printf("<a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d&nostatusheader'>%d Active</a>\n", STATUS_CGI, SERVICE_UNKNOWN, HOST_DOWN | HOST_UNREACHABLE, SERVICE_NO_SCHEDULED_DOWNTIME | SERVICE_STATE_UNACKNOWLEDGED | SERVICE_CHECKS_ENABLED, services_unknown_active_unacknowledged_host_down);
+				printf("<a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d'>%d Active</a>\n", STATUS_CGI, SERVICE_UNKNOWN, HOST_DOWN | HOST_UNREACHABLE, SERVICE_NO_SCHEDULED_DOWNTIME | SERVICE_STATE_UNACKNOWLEDGED | SERVICE_CHECKS_ENABLED, services_unknown_active_unacknowledged_host_down);
 			}
 			if (services_unknown_passive_unacknowledged_host_down > 0) {
 				if (problem_found == TRUE) printf("<br>");
 				else problem_found = TRUE;
-				printf("<a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d&nostatusheader'>%d Passive</a>\n", STATUS_CGI, SERVICE_UNKNOWN, HOST_DOWN | HOST_UNREACHABLE, SERVICE_NO_SCHEDULED_DOWNTIME | SERVICE_STATE_UNACKNOWLEDGED | SERVICE_CHECKS_DISABLED | SERVICE_PASSIVE_CHECKS_ENABLED, services_unknown_passive_unacknowledged_host_down);
+				printf("<a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d'>%d Passive</a>\n", STATUS_CGI, SERVICE_UNKNOWN, HOST_DOWN | HOST_UNREACHABLE, SERVICE_NO_SCHEDULED_DOWNTIME | SERVICE_STATE_UNACKNOWLEDGED | SERVICE_CHECKS_DISABLED | SERVICE_PASSIVE_CHECKS_ENABLED, services_unknown_passive_unacknowledged_host_down);
 			}
 			if (services_unknown_disabled_unacknowledged_host_down > 0) {
 				if (problem_found == TRUE) printf("<br>");
 				else problem_found = TRUE;
-				printf("<a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d&nostatusheader'>%d Disabled</a>\n", STATUS_CGI, SERVICE_UNKNOWN, HOST_DOWN | HOST_UNREACHABLE, SERVICE_NO_SCHEDULED_DOWNTIME | SERVICE_STATE_UNACKNOWLEDGED | SERVICE_CHECKS_DISABLED | SERVICE_PASSIVE_CHECKS_DISABLED, services_unknown_disabled_unacknowledged_host_down);
+				printf("<a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d'>%d Disabled</a>\n", STATUS_CGI, SERVICE_UNKNOWN, HOST_DOWN | HOST_UNREACHABLE, SERVICE_NO_SCHEDULED_DOWNTIME | SERVICE_STATE_UNACKNOWLEDGED | SERVICE_CHECKS_DISABLED | SERVICE_PASSIVE_CHECKS_DISABLED, services_unknown_disabled_unacknowledged_host_down);
 			}
 		}
 
@@ -2593,22 +2649,22 @@ void display_tac_overview(void) {
 
 			if (problem_found == TRUE) printf("<br>");
 			else problem_found = TRUE;
-			printf("<div class='tac_break'></div><a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d&nostatusheader'>Acknowledged</a><br>\n", STATUS_CGI, SERVICE_UNKNOWN, HOST_DOWN | HOST_UNREACHABLE, SERVICE_NO_SCHEDULED_DOWNTIME | SERVICE_STATE_ACKNOWLEDGED);
+			printf("<div class='tac_break'></div><a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d'>Acknowledged</a><br>\n", STATUS_CGI, SERVICE_UNKNOWN, HOST_DOWN | HOST_UNREACHABLE, SERVICE_NO_SCHEDULED_DOWNTIME | SERVICE_STATE_ACKNOWLEDGED);
 			problem_found = FALSE;
 
 			if (services_unknown_active_acknowledged_host_down > 0) {
 				problem_found = TRUE;
-				printf("<a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d&nostatusheader'>%d Active</a>\n", STATUS_CGI, SERVICE_UNKNOWN, HOST_DOWN | HOST_UNREACHABLE, SERVICE_STATE_ACKNOWLEDGED | SERVICE_NO_SCHEDULED_DOWNTIME | SERVICE_CHECKS_ENABLED, services_unknown_active_acknowledged_host_down);
+				printf("<a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d'>%d Active</a>\n", STATUS_CGI, SERVICE_UNKNOWN, HOST_DOWN | HOST_UNREACHABLE, SERVICE_STATE_ACKNOWLEDGED | SERVICE_NO_SCHEDULED_DOWNTIME | SERVICE_CHECKS_ENABLED, services_unknown_active_acknowledged_host_down);
 			}
 			if (services_unknown_passive_acknowledged_host_down > 0) {
 				if (problem_found == TRUE) printf("<br>");
 				else problem_found = TRUE;
-				printf("<a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d&nostatusheader'>%d Passive</a>\n", STATUS_CGI, SERVICE_UNKNOWN, HOST_DOWN | HOST_UNREACHABLE, SERVICE_STATE_ACKNOWLEDGED | SERVICE_NO_SCHEDULED_DOWNTIME | SERVICE_CHECKS_DISABLED | SERVICE_PASSIVE_CHECKS_ENABLED, services_unknown_passive_acknowledged_host_down);
+				printf("<a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d'>%d Passive</a>\n", STATUS_CGI, SERVICE_UNKNOWN, HOST_DOWN | HOST_UNREACHABLE, SERVICE_STATE_ACKNOWLEDGED | SERVICE_NO_SCHEDULED_DOWNTIME | SERVICE_CHECKS_DISABLED | SERVICE_PASSIVE_CHECKS_ENABLED, services_unknown_passive_acknowledged_host_down);
 			}
 			if (services_unknown_disabled_acknowledged_host_down > 0) {
 				if (problem_found == TRUE) printf("<br>");
 				else problem_found = TRUE;
-				printf("<a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d&nostatusheader'>%d Disabled</a>\n", STATUS_CGI, SERVICE_UNKNOWN, HOST_DOWN | HOST_UNREACHABLE, SERVICE_STATE_ACKNOWLEDGED | SERVICE_NO_SCHEDULED_DOWNTIME | SERVICE_CHECKS_DISABLED | SERVICE_PASSIVE_CHECKS_DISABLED, services_unknown_disabled_acknowledged_host_down);
+				printf("<a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d'>%d Disabled</a>\n", STATUS_CGI, SERVICE_UNKNOWN, HOST_DOWN | HOST_UNREACHABLE, SERVICE_STATE_ACKNOWLEDGED | SERVICE_NO_SCHEDULED_DOWNTIME | SERVICE_CHECKS_DISABLED | SERVICE_PASSIVE_CHECKS_DISABLED, services_unknown_disabled_acknowledged_host_down);
 			}
 		}
 
@@ -2616,22 +2672,22 @@ void display_tac_overview(void) {
 
 			if (problem_found == TRUE) printf("<br>");
 			else problem_found = TRUE;
-			printf("<div class='tac_break'></div><a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d&nostatusheader'>Scheduled Downtime</a><br>\n", STATUS_CGI, SERVICE_UNKNOWN, HOST_DOWN | HOST_UNREACHABLE, SERVICE_SCHEDULED_DOWNTIME);
+			printf("<div class='tac_break'></div><a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d'>Scheduled Downtime</a><br>\n", STATUS_CGI, SERVICE_UNKNOWN, HOST_DOWN | HOST_UNREACHABLE, SERVICE_SCHEDULED_DOWNTIME);
 			problem_found = FALSE;
 
 			if (services_unknown_active_scheduled_host_down > 0) {
 				problem_found = TRUE;
-				printf("<a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d&nostatusheader'>%d Active</a>\n", STATUS_CGI, SERVICE_UNKNOWN, HOST_DOWN | HOST_UNREACHABLE, SERVICE_SCHEDULED_DOWNTIME | SERVICE_CHECKS_ENABLED, services_unknown_active_scheduled_host_down);
+				printf("<a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d'>%d Active</a>\n", STATUS_CGI, SERVICE_UNKNOWN, HOST_DOWN | HOST_UNREACHABLE, SERVICE_SCHEDULED_DOWNTIME | SERVICE_CHECKS_ENABLED, services_unknown_active_scheduled_host_down);
 			}
 			if (services_unknown_passive_scheduled_host_down > 0) {
 				if (problem_found == TRUE) printf("<br>");
 				else problem_found = TRUE;
-				printf("<a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d&nostatusheader'>%d Passive</a>\n", STATUS_CGI, SERVICE_UNKNOWN, HOST_DOWN | HOST_UNREACHABLE, SERVICE_SCHEDULED_DOWNTIME | SERVICE_CHECKS_DISABLED | SERVICE_PASSIVE_CHECKS_ENABLED, services_unknown_passive_scheduled_host_down);
+				printf("<a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d'>%d Passive</a>\n", STATUS_CGI, SERVICE_UNKNOWN, HOST_DOWN | HOST_UNREACHABLE, SERVICE_SCHEDULED_DOWNTIME | SERVICE_CHECKS_DISABLED | SERVICE_PASSIVE_CHECKS_ENABLED, services_unknown_passive_scheduled_host_down);
 			}
 			if (services_unknown_disabled_scheduled_host_down > 0) {
 				if (problem_found == TRUE) printf("<br>");
 				else problem_found = TRUE;
-				printf("<a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d&nostatusheader'>%d Disabled</a>\n", STATUS_CGI, SERVICE_UNKNOWN, HOST_DOWN | HOST_UNREACHABLE, SERVICE_SCHEDULED_DOWNTIME | SERVICE_CHECKS_DISABLED | SERVICE_PASSIVE_CHECKS_DISABLED, services_unknown_disabled_scheduled_host_down);
+				printf("<a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d'>%d Disabled</a>\n", STATUS_CGI, SERVICE_UNKNOWN, HOST_DOWN | HOST_UNREACHABLE, SERVICE_SCHEDULED_DOWNTIME | SERVICE_CHECKS_DISABLED | SERVICE_PASSIVE_CHECKS_DISABLED, services_unknown_disabled_scheduled_host_down);
 			}
 		}
 		printf("</td></tr>\n");
@@ -2657,9 +2713,9 @@ void display_tac_overview(void) {
 	printf("<table border=0 width=100%%>\n");
 
 	if (services_ok_disabled > 0)
-		printf("<tr><td width=100%% class='serviceUnimportantProblem'><a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d&nostatusheader'>%d Disabled</a></td></tr>\n", STATUS_CGI, SERVICE_OK, HOST_UP | HOST_PENDING, SERVICE_CHECKS_DISABLED | SERVICE_PASSIVE_CHECKS_DISABLED, services_ok_disabled);
+		printf("<tr><td width=100%% class='serviceUnimportantProblem'><a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d'>%d Disabled</a></td></tr>\n", STATUS_CGI, SERVICE_OK, HOST_UP | HOST_PENDING, SERVICE_CHECKS_DISABLED | SERVICE_PASSIVE_CHECKS_DISABLED, services_ok_disabled);
 	if (services_ok_disabled_host_down > 0)
-		printf("<tr><td width=100%% class='serviceUnimportantProblem'><a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d&nostatusheader'>%d Disabled on Problem Hosts</a></td></tr>\n", STATUS_CGI, SERVICE_OK, HOST_DOWN | HOST_UNREACHABLE, SERVICE_CHECKS_DISABLED | SERVICE_PASSIVE_CHECKS_DISABLED, services_ok_disabled_host_down);
+		printf("<tr><td width=100%% class='serviceUnimportantProblem'><a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d'>%d Disabled on Problem Hosts</a></td></tr>\n", STATUS_CGI, SERVICE_OK, HOST_DOWN | HOST_UNREACHABLE, SERVICE_CHECKS_DISABLED | SERVICE_PASSIVE_CHECKS_DISABLED, services_ok_disabled_host_down);
 
 
 	printf("</table>\n");
@@ -2681,9 +2737,9 @@ void display_tac_overview(void) {
 	printf("<table border=0 width=100%%>\n");
 
 	if (services_pending_disabled > 0)
-		printf("<tr><td width=100%% class='serviceUnimportantProblem'><a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d&nostatusheader'>%d Disabled</a></td></tr>\n", STATUS_CGI, SERVICE_PENDING, HOST_UP | HOST_PENDING, SERVICE_CHECKS_DISABLED | SERVICE_PASSIVE_CHECKS_DISABLED, services_pending_disabled);
+		printf("<tr><td width=100%% class='serviceUnimportantProblem'><a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d'>%d Disabled</a></td></tr>\n", STATUS_CGI, SERVICE_PENDING, HOST_UP | HOST_PENDING, SERVICE_CHECKS_DISABLED | SERVICE_PASSIVE_CHECKS_DISABLED, services_pending_disabled);
 	if (services_pending_disabled_host_down > 0)
-		printf("<tr><td width=100%% class='serviceUnimportantProblem'><a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d&nostatusheader'>%d Disabled on Problem Hosts</a></td></tr>\n", STATUS_CGI, SERVICE_PENDING, HOST_DOWN | HOST_UNREACHABLE, SERVICE_CHECKS_DISABLED | SERVICE_PASSIVE_CHECKS_DISABLED, services_pending_disabled_host_down);
+		printf("<tr><td width=100%% class='serviceUnimportantProblem'><a href='%s?host=all&type=detail&servicestatustypes=%d&hoststatustypes=%d&serviceprops=%d'>%d Disabled on Problem Hosts</a></td></tr>\n", STATUS_CGI, SERVICE_PENDING, HOST_DOWN | HOST_UNREACHABLE, SERVICE_CHECKS_DISABLED | SERVICE_PASSIVE_CHECKS_DISABLED, services_pending_disabled_host_down);
 
 	printf("</table>\n");
 	printf("</td>\n");
@@ -2732,12 +2788,12 @@ void display_tac_overview(void) {
 		printf("<table border=0 width=100%%>\n");
 
 		if (total_active_service_checks > 0)
-			printf("<tr><td width=100%% class='ItemActiveServiceChecks'><a href='%s?host=all&type=detail&serviceprops=%d&nostatusheader'>%d Enabled</a></td></tr>\n", STATUS_CGI, SERVICE_CHECKS_ENABLED, total_active_service_checks);
+			printf("<tr><td width=100%% class='ItemActiveServiceChecks'><a href='%s?host=all&type=detail&serviceprops=%d'>%d Enabled</a></td></tr>\n", STATUS_CGI, SERVICE_CHECKS_ENABLED, total_active_service_checks);
 		else
 			printf("<tr><td width=100%% class='ItemActiveServiceChecks'>No Active Checks</td></tr>\n");
 
 		if (total_active_service_checks_with_passive_disabled > 0)
-			printf("<tr><td width=100%% class='ItemActiveServiceChecksWithPassiveDisabled'><a href='%s?host=all&type=detail&serviceprops=%d&nostatusheader'>%d with Passive Disabled</a></td></tr>\n", STATUS_CGI, SERVICE_CHECKS_ENABLED | SERVICE_PASSIVE_CHECKS_DISABLED, total_active_service_checks_with_passive_disabled);
+			printf("<tr><td width=100%% class='ItemActiveServiceChecksWithPassiveDisabled'><a href='%s?host=all&type=detail&serviceprops=%d'>%d with Passive Disabled</a></td></tr>\n", STATUS_CGI, SERVICE_CHECKS_ENABLED | SERVICE_PASSIVE_CHECKS_DISABLED, total_active_service_checks_with_passive_disabled);
 
 		printf("</table>\n");
 		printf("</td>\n");
@@ -2759,12 +2815,12 @@ void display_tac_overview(void) {
 		printf("<table border=0 width=100%%>\n");
 
 		if (total_passive_service_checks > 0)
-			printf("<tr><td width=100%% class='ItemPassiveServiceChecks'><a href='%s?host=all&type=detail&serviceprops=%d&nostatusheader'>%d Enabled</a></td></tr>\n", STATUS_CGI, SERVICE_CHECKS_DISABLED | SERVICE_PASSIVE_CHECKS_ENABLED, total_passive_service_checks);
+			printf("<tr><td width=100%% class='ItemPassiveServiceChecks'><a href='%s?host=all&type=detail&serviceprops=%d'>%d Enabled</a></td></tr>\n", STATUS_CGI, SERVICE_CHECKS_DISABLED | SERVICE_PASSIVE_CHECKS_ENABLED, total_passive_service_checks);
 		else
 			printf("<tr><td width=100%% class='ItemPassiveServiceChecks'>No Passive Checks</td></tr>\n");
 
 		if (total_disabled_service_checks > 0)
-			printf("<tr><td width=100%% class='ItemDisabledServiceChecks'><a href='%s?host=all&type=detail&serviceprops=%d&nostatusheader'>%d Disabled</a></td></tr>\n", STATUS_CGI, SERVICE_CHECKS_DISABLED | SERVICE_PASSIVE_CHECKS_DISABLED, total_disabled_service_checks);
+			printf("<tr><td width=100%% class='ItemDisabledServiceChecks'><a href='%s?host=all&type=detail&serviceprops=%d'>%d Disabled</a></td></tr>\n", STATUS_CGI, SERVICE_CHECKS_DISABLED | SERVICE_PASSIVE_CHECKS_DISABLED, total_disabled_service_checks);
 
 		printf("</table>\n");
 		printf("</td>\n");
@@ -2786,12 +2842,12 @@ void display_tac_overview(void) {
 		printf("<table border=0 width=100%%>\n");
 
 		if (total_active_host_checks > 0)
-			printf("<tr><td width=100%% class='ItemActiveHostChecks'><a href='%s?hostgroup=all&style=hostdetail&hostprops=%d&nostatusheader'>%d Enabled</a></td></tr>\n", STATUS_CGI, HOST_CHECKS_ENABLED, total_active_host_checks);
+			printf("<tr><td width=100%% class='ItemActiveHostChecks'><a href='%s?host=all&style=hostdetail&hostprops=%d'>%d Enabled</a></td></tr>\n", STATUS_CGI, HOST_CHECKS_ENABLED, total_active_host_checks);
 		else
 			printf("<tr><td width=100%% class='ItemActiveHostChecks'>No Active Checks</td></tr>\n");
 
 		if (total_active_host_checks_with_passive_disabled > 0)
-			printf("<tr><td width=100%% class='ItemActiveHostChecksWithPassiveDisabled'><a href='%s?hostgroup=all&style=hostdetail&hostprops=%d&nostatusheader'>%d with Passive Disabled</a></td></tr>\n", STATUS_CGI, HOST_CHECKS_ENABLED | HOST_PASSIVE_CHECKS_DISABLED, total_active_host_checks_with_passive_disabled);
+			printf("<tr><td width=100%% class='ItemActiveHostChecksWithPassiveDisabled'><a href='%s?host=all&style=hostdetail&hostprops=%d'>%d with Passive Disabled</a></td></tr>\n", STATUS_CGI, HOST_CHECKS_ENABLED | HOST_PASSIVE_CHECKS_DISABLED, total_active_host_checks_with_passive_disabled);
 
 		printf("</table>\n");
 		printf("</td>\n");
@@ -2812,12 +2868,12 @@ void display_tac_overview(void) {
 		printf("<table border=0 width=100%%>\n");
 
 		if (total_passive_host_checks > 0)
-			printf("<tr><td width=100%% class='ItemPassiveHostChecks'><a href='%s?hostgroup=all&style=hostdetail&hostprops=%d&nostatusheader'>%d Enabled</a></td></tr>\n", STATUS_CGI, HOST_CHECKS_DISABLED | HOST_PASSIVE_CHECKS_ENABLED, total_passive_host_checks);
+			printf("<tr><td width=100%% class='ItemPassiveHostChecks'><a href='%s?host=all&style=hostdetail&hostprops=%d'>%d Enabled</a></td></tr>\n", STATUS_CGI, HOST_CHECKS_DISABLED | HOST_PASSIVE_CHECKS_ENABLED, total_passive_host_checks);
 		else
 			printf("<tr><td width=100%% class='ItemPassiveHostChecks'>No Passive Checks</td></tr>\n");
 
 		if (total_disabled_host_checks > 0)
-			printf("<tr><td width=100%% class='ItemDisabledHostChecks'><a href='%s?hostgroup=all&style=hostdetail&hostprops=%d&nostatusheader'>%d Disabled</a></td></tr>\n", STATUS_CGI, HOST_PASSIVE_CHECKS_DISABLED | HOST_CHECKS_DISABLED, total_disabled_host_checks);
+			printf("<tr><td width=100%% class='ItemDisabledHostChecks'><a href='%s?host=all&style=hostdetail&hostprops=%d'>%d Disabled</a></td></tr>\n", STATUS_CGI, HOST_PASSIVE_CHECKS_DISABLED | HOST_CHECKS_DISABLED, total_disabled_host_checks);
 
 		printf("</table>\n");
 		printf("</td>\n");
@@ -2862,22 +2918,22 @@ void display_tac_overview(void) {
 		printf("<table border=0 width=100%%>\n");
 
 		if (flap_disabled_services > 0)
-			printf("<tr><td width=100%% class='featureItemDisabledServiceFlapDetection'><a href='%s?host=all&type=detail&serviceprops=%d&nostatusheader'>%d Service%s Disabled</a></td></tr>\n", STATUS_CGI, SERVICE_FLAP_DETECTION_DISABLED, flap_disabled_services, (flap_disabled_services == 1) ? "" : "s");
+			printf("<tr><td width=100%% class='featureItemDisabledServiceFlapDetection'><a href='%s?host=all&type=detail&serviceprops=%d'>%d Service%s Disabled</a></td></tr>\n", STATUS_CGI, SERVICE_FLAP_DETECTION_DISABLED, flap_disabled_services, (flap_disabled_services == 1) ? "" : "s");
 		else
 			printf("<tr><td width=100%% class='featureItemEnabledServiceFlapDetection'>All Services Enabled</td></tr>\n");
 
 		if (flapping_services > 0)
-			printf("<tr><td width=100%% class='featureItemServicesFlapping'><a href='%s?host=all&type=detail&serviceprops=%d&nostatusheader'>%d Service%s Flapping</a></td></tr>\n", STATUS_CGI, SERVICE_IS_FLAPPING, flapping_services, (flapping_services == 1) ? "" : "s");
+			printf("<tr><td width=100%% class='featureItemServicesFlapping'><a href='%s?host=all&type=detail&serviceprops=%d'>%d Service%s Flapping</a></td></tr>\n", STATUS_CGI, SERVICE_IS_FLAPPING, flapping_services, (flapping_services == 1) ? "" : "s");
 		else
 			printf("<tr><td width=100%% class='featureItemServicesNotFlapping'>No Services Flapping</td></tr>\n");
 
 		if (flap_disabled_hosts > 0)
-			printf("<tr><td width=100%% class='featureItemDisabledHostFlapDetection'><a href='%s?hostgroup=all&style=hostdetail&hostprops=%d&nostatusheader'>%d Host%s Disabled</a></td></tr>\n", STATUS_CGI, HOST_FLAP_DETECTION_DISABLED, flap_disabled_hosts, (flap_disabled_hosts == 1) ? "" : "s");
+			printf("<tr><td width=100%% class='featureItemDisabledHostFlapDetection'><a href='%s?host=all&style=hostdetail&hostprops=%d'>%d Host%s Disabled</a></td></tr>\n", STATUS_CGI, HOST_FLAP_DETECTION_DISABLED, flap_disabled_hosts, (flap_disabled_hosts == 1) ? "" : "s");
 		else
 			printf("<tr><td width=100%% class='featureItemEnabledHostFlapDetection'>All Hosts Enabled</td></tr>\n");
 
 		if (flapping_hosts > 0)
-			printf("<tr><td width=100%% class='featureItemHostsFlapping'><a href='%s?hostgroup=all&style=hostdetail&hostprops=%d&nostatusheader'>%d Host%s Flapping</a></td></tr>\n", STATUS_CGI, HOST_IS_FLAPPING, flapping_hosts, (flapping_hosts == 1) ? "" : "s");
+			printf("<tr><td width=100%% class='featureItemHostsFlapping'><a href='%s?host=all&style=hostdetail&hostprops=%d'>%d Host%s Flapping</a></td></tr>\n", STATUS_CGI, HOST_IS_FLAPPING, flapping_hosts, (flapping_hosts == 1) ? "" : "s");
 		else
 			printf("<tr><td width=100%% class='featureItemHostsNotFlapping'>No Hosts Flapping</td></tr>\n");
 
@@ -2900,12 +2956,12 @@ void display_tac_overview(void) {
 		printf("<table border=0 width=100%%>\n");
 
 		if (notification_disabled_services > 0)
-			printf("<tr><td width=100%% class='featureItemDisabledServiceNotifications'><a href='%s?host=all&type=detail&serviceprops=%d&nostatusheader'>%d Service%s Disabled</a></td></tr>\n", STATUS_CGI, SERVICE_NOTIFICATIONS_DISABLED, notification_disabled_services, (notification_disabled_services == 1) ? "" : "s");
+			printf("<tr><td width=100%% class='featureItemDisabledServiceNotifications'><a href='%s?host=all&type=detail&serviceprops=%d'>%d Service%s Disabled</a></td></tr>\n", STATUS_CGI, SERVICE_NOTIFICATIONS_DISABLED, notification_disabled_services, (notification_disabled_services == 1) ? "" : "s");
 		else
 			printf("<tr><td width=100%% class='featureItemEnabledServiceNotifications'>All Services Enabled</td></tr>\n");
 
 		if (notification_disabled_hosts > 0)
-			printf("<tr><td width=100%% class='featureItemDisabledHostNotifications'><a href='%s?hostgroup=all&style=hostdetail&hostprops=%d&nostatusheader'>%d Host%s Disabled</a></td></tr>\n", STATUS_CGI, HOST_NOTIFICATIONS_DISABLED, notification_disabled_hosts, (notification_disabled_hosts == 1) ? "" : "s");
+			printf("<tr><td width=100%% class='featureItemDisabledHostNotifications'><a href='%s?host=all&style=hostdetail&hostprops=%d'>%d Host%s Disabled</a></td></tr>\n", STATUS_CGI, HOST_NOTIFICATIONS_DISABLED, notification_disabled_hosts, (notification_disabled_hosts == 1) ? "" : "s");
 		else
 			printf("<tr><td width=100%% class='featureItemEnabledHostNotifications'>All Hosts Enabled</td></tr>\n");
 
@@ -2929,12 +2985,12 @@ void display_tac_overview(void) {
 		printf("<table border=0 width=100%%>\n");
 
 		if (event_handler_disabled_services > 0)
-			printf("<tr><td width=100%% class='featureItemDisabledServiceHandlers'><a href='%s?host=all&type=detail&serviceprops=%d&nostatusheader'>%d Service%s Disabled</a></td></tr>\n", STATUS_CGI, SERVICE_EVENT_HANDLER_DISABLED, event_handler_disabled_services, (event_handler_disabled_services == 1) ? "" : "s");
+			printf("<tr><td width=100%% class='featureItemDisabledServiceHandlers'><a href='%s?host=all&type=detail&serviceprops=%d'>%d Service%s Disabled</a></td></tr>\n", STATUS_CGI, SERVICE_EVENT_HANDLER_DISABLED, event_handler_disabled_services, (event_handler_disabled_services == 1) ? "" : "s");
 		else
 			printf("<tr><td width=100%% class='featureItemEnabledServiceHandlers'>All Services Enabled</td></tr>\n");
 
 		if (event_handler_disabled_hosts > 0)
-			printf("<tr><td width=100%% class='featureItemDisabledHostHandlers'><a href='%s?hostgroup=all&style=hostdetail&hostprops=%d&nostatusheader'>%d Host%s Disabled</a></td></tr>\n", STATUS_CGI, HOST_EVENT_HANDLER_DISABLED, event_handler_disabled_hosts, (event_handler_disabled_hosts == 1) ? "" : "s");
+			printf("<tr><td width=100%% class='featureItemDisabledHostHandlers'><a href='%s?host=all&style=hostdetail&hostprops=%d'>%d Host%s Disabled</a></td></tr>\n", STATUS_CGI, HOST_EVENT_HANDLER_DISABLED, event_handler_disabled_hosts, (event_handler_disabled_hosts == 1) ? "" : "s");
 		else
 			printf("<tr><td width=100%% class='featureItemEnabledHostHandlers'>All Hosts Enabled</td></tr>\n");
 

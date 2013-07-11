@@ -3,7 +3,7 @@
  * STATUSDATA.C - External status data for Icinga CGIs
  *
  * Copyright (c) 2000-2008 Ethan Galstad (egalstad@nagios.org)
- * Copyright (c) 2009-2011 Icinga Development Team (http://www.icinga.org)
+ * Copyright (c) 2009-2013 Icinga Development Team (http://www.icinga.org)
  *
  * License:
  *
@@ -18,7 +18,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  *****************************************************************************/
 
@@ -212,15 +212,12 @@ int update_contact_status(contact *cntct, int aggregated_dump) {
 
 
 /* reads in all status data */
-int read_status_data(char *config_file, int options) {
+int read_status_data(char *main_config_file, int options) {
 	int result = OK;
 
 	/**** IMPLEMENTATION-SPECIFIC CALLS ****/
 #ifdef USE_XSDDEFAULT
-	result = xsddefault_read_status_data(config_file, options);
-#endif
-#ifdef USE_XSDDB
-	result = xsddb_read_status_data(config_file, options);
+	result = xsddefault_read_status_data(main_config_file, options);
 #endif
 
 	return result;

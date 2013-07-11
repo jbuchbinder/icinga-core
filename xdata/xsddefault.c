@@ -3,8 +3,8 @@
  * XSDDEFAULT.C - Default external status data input routines for Icinga
  *
  * Copyright (c) 1999-2009 Ethan Galstad (egalstad@nagios.org)
- * Copyright (c) 2009-2011 Nagios Core Development Team and Community Contributors
- * Copyright (c) 2009-2011 Icinga Development Team (http://www.icinga.org)
+ * Copyright (c) 2009-2013 Nagios Core Development Team and Community Contributors
+ * Copyright (c) 2009-2013 Icinga Development Team (http://www.icinga.org)
  *
  * License:
  *
@@ -19,7 +19,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  *****************************************************************************/
 
@@ -62,6 +62,7 @@ time_t last_command_check;
 time_t last_log_rotation;
 time_t status_file_creation_time;
 int enable_notifications;
+time_t disable_notifications_expire_time;
 int execute_service_checks;
 int accept_passive_service_checks;
 int execute_host_checks;
@@ -91,6 +92,7 @@ extern int daemon_mode;
 extern time_t last_command_check;
 extern time_t last_log_rotation;
 extern int enable_notifications;
+extern time_t disable_notifications_expire_time;
 extern int execute_service_checks;
 extern int accept_passive_service_checks;
 extern int execute_host_checks;
@@ -149,11 +151,7 @@ char *xsddefault_temp_file = NULL;
 int xsddefault_grab_config_info(char *config_file) {
 	char *input = NULL;
 	mmapfile *thefile;
-#ifdef NSCGI
-	char *input2 = NULL;
-	mmapfile *thefile2;
-	char *temp_buffer;
-#else
+#ifdef NSCORE
 	icinga_macros *mac;
 #endif
 
@@ -180,47 +178,8 @@ int xsddefault_grab_config_info(char *config_file) {
 		if (input[0] == '#' || input[0] == '\x0')
 			continue;
 
-#ifdef NSCGI
-		/* CGI needs to find and read contents of main config file, since it was passed the name of the CGI config file */
-		if (strstr(input, "main_config_file") == input) {
-
-			temp_buffer = strtok(input, "=");
-			temp_buffer = strtok(NULL, "\n");
-			if (temp_buffer == NULL)
-				continue;
-
-			if ((thefile2 = mmap_fopen(temp_buffer)) == NULL)
-				continue;
-
-			/* read in all lines from the main config file */
-			while (1) {
-
-				/* free memory */
-				my_free(input2);
-
-				/* read the next line */
-				if ((input2 = mmap_fgets_multiline(thefile2)) == NULL)
-					break;
-
-				strip(input2);
-
-				/* skip blank lines and comments */
-				if (input2[0] == '#' || input2[0] == '\x0')
-					continue;
-
-				xsddefault_grab_config_directives(input2);
-			}
-
-			/* free memory and close the file */
-			my_free(input2);
-			mmap_fclose(thefile2);
-		}
-#endif
-
-#ifdef NSCORE
 		/* core reads variables directly from the main config file */
 		xsddefault_grab_config_directives(input);
-#endif
 	}
 
 	/* free memory and close the file */
@@ -355,6 +314,10 @@ int xsddefault_save_status_data(void) {
 
 	log_debug_info(DEBUGL_FUNCTIONS, 0, "save_status_data()\n");
 
+	/* if this is set to /dev/null, skip it */
+	if (!xsddefault_status_log || !strcmp(xsddefault_status_log, "/dev/null"))
+		return OK;
+
 	/* open a safe temp file for output */
 	if (xsddefault_temp_file == NULL)
 		return ERROR;
@@ -367,7 +330,7 @@ int xsddefault_save_status_data(void) {
 	if ((fd = mkstemp(temp_file)) == -1) {
 
 		/* log an error */
-		logit(NSLOG_RUNTIME_ERROR, TRUE, "Error: Unable to create temp file for writing status data: %s\n", strerror(errno));
+		logit(NSLOG_RUNTIME_ERROR, TRUE, "Error: Unable to create temp file '%s' for writing status data: %s\n", temp_file, strerror(errno));
 
 		/* free memory */
 		my_free(temp_file);
@@ -429,6 +392,7 @@ int xsddefault_save_status_data(void) {
 	fprintf(fp, "\tlast_command_check=%lu\n", last_command_check);
 	fprintf(fp, "\tlast_log_rotation=%lu\n", last_log_rotation);
 	fprintf(fp, "\tenable_notifications=%d\n", enable_notifications);
+	fprintf(fp, "\tdisable_notifications_expire_time=%lu\n", disable_notifications_expire_time);
 	fprintf(fp, "\tactive_service_checks_enabled=%d\n", execute_service_checks);
 	fprintf(fp, "\tpassive_service_checks_enabled=%d\n", accept_passive_service_checks);
 	fprintf(fp, "\tactive_host_checks_enabled=%d\n", execute_host_checks);
@@ -518,10 +482,10 @@ int xsddefault_save_status_data(void) {
 		fprintf(fp, "\tnext_notification=%lu\n", temp_host->next_host_notification);
 		fprintf(fp, "\tno_more_notifications=%d\n", temp_host->no_more_notifications);
 		fprintf(fp, "\tcurrent_notification_number=%d\n", temp_host->current_notification_number);
-#ifdef USE_ST_BASED_ESCAL_RANGES
+		/* state based escalation ranges */
 		fprintf(fp, "\tcurrent_down_notification_number=%d\n", temp_host->current_down_notification_number);
 		fprintf(fp, "\tcurrent_unreachable_notification_number=%d\n", temp_host->current_unreachable_notification_number);
-#endif
+
 		fprintf(fp, "\tcurrent_notification_id=%lu\n", temp_host->current_notification_id);
 		fprintf(fp, "\tnotifications_enabled=%d\n", temp_host->notifications_enabled);
 		fprintf(fp, "\tproblem_has_been_acknowledged=%d\n", temp_host->problem_has_been_acknowledged);
@@ -594,11 +558,11 @@ int xsddefault_save_status_data(void) {
 		fprintf(fp, "\tnext_check=%lu\n", temp_service->next_check);
 		fprintf(fp, "\tcheck_options=%d\n", temp_service->check_options);
 		fprintf(fp, "\tcurrent_notification_number=%d\n", temp_service->current_notification_number);
-#ifdef USE_ST_BASED_ESCAL_RANGES
+		/* state based escalation ranges */
 		fprintf(fp, "\tcurrent_warning_notification_number=%d\n", temp_service->current_warning_notification_number);
 		fprintf(fp, "\tcurrent_critical_notification_number=%d\n", temp_service->current_critical_notification_number);
 		fprintf(fp, "\tcurrent_unknown_notification_number=%d\n", temp_service->current_unknown_notification_number);
-#endif
+
 		fprintf(fp, "\tcurrent_notification_id=%lu\n", temp_service->current_notification_id);
 		fprintf(fp, "\tlast_notification=%lu\n", temp_service->last_notification);
 		fprintf(fp, "\tnext_notification=%lu\n", temp_service->next_notification);
@@ -698,6 +662,7 @@ int xsddefault_save_status_data(void) {
 		fprintf(fp, "\tis_in_effect=%d\n", temp_downtime->is_in_effect);
 		fprintf(fp, "\tauthor=%s\n", temp_downtime->author);
 		fprintf(fp, "\tcomment=%s\n", temp_downtime->comment);
+		fprintf(fp, "\ttrigger_time=%lu\n", temp_downtime->trigger_time);
 		fprintf(fp, "\t}\n\n");
 	}
 
@@ -708,11 +673,11 @@ int xsddefault_save_status_data(void) {
 	/* flush the file to disk */
 	fflush(fp);
 
-	/* close the temp file */
-	result = fclose(fp);
-
 	/* fsync the file so that it is completely written out before moving it */
 	fsync(fd);
+
+	/* close the temp file */
+	result = fclose(fp);
 
 	/* save/close was successful */
 	if (result == 0) {
@@ -789,6 +754,7 @@ int xsddefault_read_status_data(char *config_file, int options) {
 	unsigned long duration = 0L;
 	int x = 0;
 	int is_in_effect = FALSE;
+	time_t trigger_time = 0L;
 
 
 	/* initialize some vars */
@@ -871,11 +837,13 @@ int xsddefault_read_status_data(char *config_file, int options) {
 				break;
 
 			case XSDDEFAULT_HOSTSTATUS_DATA:
+				temp_hoststatus->added = 0;
 				add_host_status(temp_hoststatus);
 				temp_hoststatus = NULL;
 				break;
 
 			case XSDDEFAULT_SERVICESTATUS_DATA:
+				temp_servicestatus->added = 0;
 				add_service_status(temp_servicestatus);
 				temp_servicestatus = NULL;
 				break;
@@ -912,9 +880,9 @@ int xsddefault_read_status_data(char *config_file, int options) {
 
 				/* add the downtime */
 				if (data_type == XSDDEFAULT_HOSTDOWNTIME_DATA)
-					add_host_downtime(host_name, entry_time, author, comment_data, start_time, end_time, fixed, triggered_by, duration, downtime_id, is_in_effect);
+					add_host_downtime(host_name, entry_time, author, comment_data, start_time, end_time, fixed, triggered_by, duration, downtime_id, is_in_effect, trigger_time);
 				else
-					add_service_downtime(host_name, service_description, entry_time, author, comment_data, start_time, end_time, fixed, triggered_by, duration, downtime_id, is_in_effect);
+					add_service_downtime(host_name, service_description, entry_time, author, comment_data, start_time, end_time, fixed, triggered_by, duration, downtime_id, is_in_effect, trigger_time);
 
 				/* free temp memory */
 				my_free(host_name);
@@ -971,6 +939,8 @@ int xsddefault_read_status_data(char *config_file, int options) {
 					last_log_rotation = strtoul(val, NULL, 10);
 				else if (!strcmp(var, "enable_notifications"))
 					enable_notifications = (atoi(val) > 0) ? TRUE : FALSE;
+				else if (!strcmp(var, "disable_notifications_expire_time"))
+					disable_notifications_expire_time = strtoul(val, NULL, 10);
 				else if (!strcmp(var, "active_service_checks_enabled"))
 					execute_service_checks = (atoi(val) > 0) ? TRUE : FALSE;
 				else if (!strcmp(var, "passive_service_checks_enabled"))
@@ -1119,12 +1089,12 @@ int xsddefault_read_status_data(char *config_file, int options) {
 						temp_hoststatus->no_more_notifications = (atoi(val) > 0) ? TRUE : FALSE;
 					else if (!strcmp(var, "current_notification_number"))
 						temp_hoststatus->current_notification_number = atoi(val);
-#ifdef USE_ST_BASED_ESCAL_RANGES
+					/* state based escalation ranges */
 					else if (!strcmp(var, "current_down_notification_number"))
 						temp_hoststatus->current_down_notification_number = atoi(val);
 					else if (!strcmp(var, "current_unreachable_notification_number"))
 						temp_hoststatus->current_unreachable_notification_number = atoi(val);
-#endif
+
 					else if (!strcmp(var, "notifications_enabled"))
 						temp_hoststatus->notifications_enabled = (atoi(val) > 0) ? TRUE : FALSE;
 					else if (!strcmp(var, "problem_has_been_acknowledged"))
@@ -1155,6 +1125,8 @@ int xsddefault_read_status_data(char *config_file, int options) {
 						temp_hoststatus->percent_state_change = strtod(val, NULL);
 					else if (!strcmp(var, "scheduled_downtime_depth"))
 						temp_hoststatus->scheduled_downtime_depth = atoi(val);
+					else if (!strcmp(var, "modified_attributes"))
+						temp_hoststatus->modified_attributes = strtoul(val, NULL, 10);
 					/*
 					else if(!strcmp(var,"state_history")){
 						temp_ptr=val;
@@ -1221,14 +1193,14 @@ int xsddefault_read_status_data(char *config_file, int options) {
 						temp_servicestatus->check_options = atoi(val);
 					else if (!strcmp(var, "current_notification_number"))
 						temp_servicestatus->current_notification_number = atoi(val);
-#ifdef USE_ST_BASED_ESCAL_RANGES
+					/* state based escalation ranges */
 					else if (!strcmp(var, "current_warning_notification_number"))
 						temp_servicestatus->current_warning_notification_number = atoi(val);
 					else if (!strcmp(var, "current_critical_notification_number"))
 						temp_servicestatus->current_critical_notification_number = atoi(val);
 					else if (!strcmp(var, "current_unknown_notification_number"))
 						temp_servicestatus->current_unknown_notification_number = atoi(val);
-#endif
+
 					else if (!strcmp(var, "last_notification"))
 						temp_servicestatus->last_notification = strtoul(val, NULL, 10);
 					else if (!strcmp(var, "next_notification"))
@@ -1265,6 +1237,8 @@ int xsddefault_read_status_data(char *config_file, int options) {
 						temp_servicestatus->percent_state_change = strtod(val, NULL);
 					else if (!strcmp(var, "scheduled_downtime_depth"))
 						temp_servicestatus->scheduled_downtime_depth = atoi(val);
+					else if (!strcmp(var, "modified_attributes"))
+						temp_servicestatus->modified_attributes = strtoul(val, NULL, 10);
 					/*
 					else if(!strcmp(var,"state_history")){
 						temp_ptr=val;
@@ -1332,6 +1306,8 @@ int xsddefault_read_status_data(char *config_file, int options) {
 					author = (char *)strdup(val);
 				else if (!strcmp(var, "comment"))
 					comment_data = (char *)strdup(val);
+				else if (!strcmp(var, "trigger_time"))
+					trigger_time = strtoul(val, NULL, 10);
 				break;
 
 			default:

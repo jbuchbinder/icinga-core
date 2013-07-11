@@ -9,9 +9,10 @@ SRC_INCLUDE=../include
 
 prefix=@prefix@
 exec_prefix=@exec_prefix@
-LOGDIR=@localstatedir@
+LOGDIR=@LOGDIR@
 CFGDIR=@sysconfdir@
 BINDIR=@bindir@
+LIBDIR=@libdir@
 LIBEXECDIR=@libexecdir@
 CGIDIR=@sbindir@
 INSTALL=@INSTALL@
@@ -41,6 +42,7 @@ THREADLIBS=@THREADLIBS@
 
 # asprintf for Solaris friends ;) 
 SNPRINTF_O_IDO=@SNPRINTF_O_IDO@
+SNPRINTF_C=../../../common/snprintf.c
 
 
 COMMON_INC=$(CORE_INCLUDE)/config.h $(SRC_INCLUDE)/common.h $(SRC_INCLUDE)/io.h $(SRC_INCLUDE)/protoapi.h $(SRC_INCLUDE)/utils.h $(SRC_INCLUDE)/sla.h $(SRC_INCLUDE)/logging.h
@@ -56,7 +58,7 @@ IDO_OBJS=db.o
 CP=@CP@
 
 
-all: file2sock log2ido ido2db idomod.o sockdebug
+all: file2sock log2ido ido2db idomod.so sockdebug
 
 file2sock: file2sock.c $(COMMON_INC) $(COMMON_OBJS)
 	$(CC) $(CFLAGS) -o $@ file2sock.c $(COMMON_OBJS) $(LDFLAGS) $(LIBS) $(MATHLIBS) $(SOCKETLIBS) $(OTHERLIBS)
@@ -67,17 +69,17 @@ log2ido: log2ido.c $(COMMON_INC) $(COMMON_OBJS)
 ido2db: ido2db.c $(IDO_INC) $(IDO_OBJS) $(COMMON_INC) $(COMMON_OBJS) $(IDO2DB_OBJS)
 	$(CC) $(CFLAGS) $(DBCFLAGS) -o ido2db ido2db.c $(IDO2DB_OBJS) $(COMMON_OBJS) $(IDO_OBJS) $(LDFLAGS) $(DBLDFLAGS) $(LIBS) $(SOCKETLIBS) $(DBLIBS) $(THREADLIBS) $(MATHLIBS) $(OTHERLIBS)
 
-idomod.o: idomod.c $(COMMON_INC) $(COMMON_OBJS)
-	$(CC) $(MOD_CFLAGS) $(CFLAGS) -o idomod.o idomod.c $(COMMON_OBJS) $(MOD_LDFLAGS) $(LDFLAGS) $(LIBS) $(SOCKETLIBS) $(OTHERLIBS)
+idomod.so: idomod.c $(COMMON_INC) $(COMMON_OBJS)
+	$(CC) $(MOD_CFLAGS) $(CFLAGS) -o idomod.so idomod.c $(COMMON_OBJS) $(MOD_LDFLAGS) $(LDFLAGS) $(LIBS) $(SOCKETLIBS) $(OTHERLIBS)
 
 sockdebug: sockdebug.c $(COMMON_INC) $(COMMON_OBJS)
 	$(CC) $(CFLAGS) -o $@ sockdebug.c $(COMMON_OBJS) $(LDFLAGS) $(LIBS) $(MATHLIBS) $(SOCKETLIBS) $(OTHERLIBS)
 
 io.o: io.c $(SRC_INCLUDE)/io.h
-	$(CC) $(MOD_CFLAGS) $(CFLAGS) -c -o $@ io.c
+	$(CC) $(MOD_CFLAGS) $(CFLAGS) -c -o $@ io.c $(MOD_LDFLAGS)
 
 utils.o: utils.c $(SRC_INCLUDE)/utils.h
-	$(CC) $(MOD_CFLAGS) $(CFLAGS) -c -o $@ utils.c
+	$(CC) $(MOD_CFLAGS) $(CFLAGS) -c -o $@ utils.c $(MOD_LDFLAGS)
 
 db.o: db.c $(SRC_INCLUDE)/db.h
 	$(CC) $(CFLAGS) -c -o $@ db.c
@@ -94,8 +96,11 @@ sla.o: sla.c $(COMMON_INC)
 logging.o: logging.c $(COMMON_INC)
 	$(CC) $(CFLAGS) -c -o $@ logging.c
 
+snprintf.o: $(SNPRINTF_C) $(CORE_INCLUDE)/snprintf.h
+	$(CC) $(MOD_CFLAGS) $(CFLAGS) -c -o $@ $(SNPRINTF_C) $(MOD_LDFLAGS)
+
 clean:
-	rm -f core file2sock log2ido ido2db sockdebug *.o
+	rm -f core file2sock log2ido ido2db sockdebug *.o *.so
 	rm -f *~ */*~
 
 distclean: clean
@@ -104,8 +109,12 @@ distclean: clean
 devclean: distclean
 
 install:
+	@echo "Going to uninstall old idomod.o in $(DESTDIR)$(BINDIR)/idomod.o ..."
+	rm -f $(DESTDIR)$(BINDIR)/idomod.o
+	@echo "Resuming with install..."
 	$(INSTALL) -m 775 $(INSTALL_OPTS) -d $(DESTDIR)$(BINDIR)
-	$(INSTALL) -m 774 $(INSTALL_OPTS) ido2db $(DESTDIR)$(BINDIR)
-	$(INSTALL) -m 774 $(INSTALL_OPTS) log2ido $(DESTDIR)$(BINDIR)
-	$(INSTALL) -m 774 $(INSTALL_OPTS) idomod.o $(DESTDIR)$(BINDIR)
+	$(INSTALL) -m 775 $(INSTALL_OPTS) -d $(DESTDIR)$(LIBDIR)
+	$(INSTALL) -m 755 $(INSTALL_OPTS) ido2db $(DESTDIR)$(BINDIR)
+	$(INSTALL) -m 755 $(INSTALL_OPTS) log2ido $(DESTDIR)$(BINDIR)
+	$(INSTALL) -m 755 $(INSTALL_OPTS) idomod.so $(DESTDIR)$(LIBDIR)
 

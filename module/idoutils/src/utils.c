@@ -2,7 +2,7 @@
  * UTILS.C - IDO Utils
  *
  * Copyright (c) 2005-2008 Ethan Galstad
- * Copyright (c) 2009-2011 Icinga Development Team (http://www.icinga.org)
+ * Copyright (c) 2009-2013 Icinga Development Team (http://www.icinga.org)
  *
  **************************************************************/
 
@@ -103,6 +103,7 @@ int my_rename(char *source, char *dest) {
 	int source_fd = -1;
 	int dest_fd = -1;
 	int bytes_read = 0;
+	int dummy = 0;
 
 
 	/* make sure we have something */
@@ -125,7 +126,7 @@ int my_rename(char *source, char *dest) {
 				if ((source_fd = open(source, O_RDONLY, 0644)) > 0) {
 
 					while ((bytes_read = read(source_fd, buffer, sizeof(buffer))) > 0)
-						write(dest_fd, buffer, bytes_read);
+						dummy = write(dest_fd, buffer, bytes_read);
 
 					close(source_fd);
 					close(dest_fd);

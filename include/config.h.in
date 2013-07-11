@@ -3,8 +3,8 @@
  * Icinga Config Header File
  *
  * Copyright (c) 1999-2009 Ethan Galstad (egalstad@nagios.org)
- * Copyright (c) 2009-2011 Nagios Core Development Team and Community Contributors
- * Copyright (c) 2009-2011 Icinga Development Team (http://www.icinga.org)
+ * Copyright (c) 2009-2013 Nagios Core Development Team and Community Contributors
+ * Copyright (c) 2009-2013 Icinga Development Team (http://www.icinga.org)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -17,7 +17,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  ************************************************************************/
 
 
@@ -75,8 +75,6 @@
 /***** CGI COMPILE OPTIONS *****/
 /* should we compile and use the statusmap CGI? */
 #undef USE_STATUSMAP
-/* should we compile and use the statuswrl CGI? */
-#undef USE_STATUSWRL
 /* should we compile and use the trends CGI? */
 #undef USE_TRENDS
 /* should we compile and use the histogram CGI? */
@@ -266,6 +264,11 @@
 #include <sys/socket.h>
 #endif
 
+#undef HAVE_SYS_SELECT_H
+#ifdef HAVE_SYS_SELECT_H
+#include <sys/select.h>
+#endif
+
 #undef HAVE_SOCKET
 #ifdef HAVE_SOCKET_H
 #include <socket.h>
@@ -360,9 +363,6 @@
 # define WIFEXITED(stat_val) (((stat_val) & 255) == 0)
 #endif
 
-/* define to use state based escalation ranges */
-#undef USE_ST_BASED_ESCAL_RANGES
-
 /* Define to 1 if you have the <dbi/dbi.h> header file. */
 #undef HAVE_DBI_DBI_H
 #undef USE_LIBDBI
@@ -378,4 +378,15 @@
 #define HAVE_ORACLE 1
 #endif
 
+/* Environment Prefix */
+#undef USE_NAGIOS_ENV
+#ifdef USE_NAGIOS_ENV
+#define ENV_PREFIX	"NAGIOS_"
+#else
+#define ENV_PREFIX	"ICINGA_"
+#endif
+
+/*snprintf workaround*/
+#undef SNPRINTF_BROKEN
+#include "snprintf.h"
 #endif

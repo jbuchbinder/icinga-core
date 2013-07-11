@@ -2,7 +2,7 @@
  *
  * IDO2DB.H - IDO2DB Include File
  * Copyright (c) 2005-2007 Ethan Galstad
- * Copyright (c) 2009-2011 Icinga Development Team (http://www.icinga.org)
+ * Copyright (c) 2009-2013 Icinga Development Team (http://www.icinga.org)
  *
  ************************************************************************/
 
@@ -57,6 +57,7 @@
 #define IDO2DB_MAX_MBUF_ITEMS                           14
 
 #define IDO2DB_MAX_BUFLEN				16384
+#define IDO2DB_MYSQL_MAX_TEXT_LEN		32768
 
 
 /***************** structures *****************/
@@ -164,6 +165,7 @@ typedef struct ido2db_dbconninfo_struct{
 	/* update */
 	OCI_Statement* oci_statement_objects_update_inactive;
 	OCI_Statement* oci_statement_objects_update_active;
+	OCI_Statement* oci_statement_object_enable_disable;
 	OCI_Statement* oci_statement_programstatus_update;
 	OCI_Statement* oci_statement_timedevents_update;
 	OCI_Statement* oci_statement_comment_history_update;
@@ -175,7 +177,6 @@ typedef struct ido2db_dbconninfo_struct{
 	/* select */
 	OCI_Statement* oci_statement_logentries_select;
 	OCI_Statement* oci_statement_instances_select;
-	OCI_Statement* oci_statement_sequence_select;
 
 	/* delete */
 	OCI_Statement* oci_statement_timedeventqueue_delete;
@@ -231,6 +232,10 @@ typedef struct ido2db_dbconninfo_struct{
 	ido2db_dbobject **object_hashlist;
         }ido2db_dbconninfo;
 
+typedef struct ido2db_txbuf_struct{
+	unsigned long *ids_to_activate;
+	int ids_to_activate_count;
+	}ido2db_txbuf;
 
 typedef struct ido2db_input_data_info_struct{
 	int protocol_version;
@@ -244,6 +249,7 @@ typedef struct ido2db_input_data_info_struct{
 	char *connect_type;
 	int current_input_section;
 	int current_input_data;
+	int tables_cleared;
 	/* ToDo change *_processed  to unsigned long long */
 	unsigned long bytes_processed;
 	unsigned long lines_processed;
@@ -254,9 +260,21 @@ typedef struct ido2db_input_data_info_struct{
 	char **buffered_input;
 	ido2db_mbuf mbuf[IDO2DB_MAX_MBUF_ITEMS];
 	ido2db_dbconninfo dbinfo;
+	ido2db_txbuf txbuf;
         }ido2db_idi;
 
+typedef struct ido2db_proxy_struct {
+	pthread_mutex_t mutex;
+	size_t size_left;
+	size_t size_right;
+	int refs;
+	}ido2db_proxy;
 
+typedef struct ido2db_proxy_args_struct{
+	int fd_left;
+	int fd_right;
+	ido2db_proxy *proxy;
+	}ido2db_proxy_args;
 
 /*************** DB server types ***************/
 #define IDO2DB_DBSERVER_NONE                            0
@@ -351,6 +369,8 @@ typedef struct ido2db_input_data_info_struct{
 #define IDO2DB_INPUT_DATA_HOSTEXTINFODEFINITION         73
 #define IDO2DB_INPUT_DATA_SERVICEEXTINFODEFINITION      74
 
+#define IDO2DB_INPUT_DATA_ENABLEOBJECT		        100
+#define IDO2DB_INPUT_DATA_DISABLEOBJECT			101
 
 /************* types of config data ************/
 #define IDO2DB_CONFIGTYPE_ORIGINAL                      0
@@ -420,7 +440,7 @@ int ido2db_free_connection_memory(ido2db_idi *);
 
 /* client connection */
 int ido2db_wait_for_connections(void);
-int ido2db_handle_client_connection(int);
+int ido2db_handle_client_connection(int, ido2db_proxy *);
 int ido2db_idi_init(ido2db_idi *);
 int ido2db_check_for_client_input(ido2db_idi *);
 int ido2db_handle_client_input(ido2db_idi *,char *);

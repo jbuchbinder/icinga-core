@@ -3,8 +3,8 @@
  * CHECKS.C - Service and host check functions for Icinga
  *
  * Copyright (c) 1999-2010 Ethan Galstad (egalstad@nagios.org)
- * Copyright (c) 2009-2011 Nagios Core Development Team and Community Contributors
- * Copyright (c) 2009-2011 Icinga Development Team (http://www.icinga.org)
+ * Copyright (c) 2009-2013 Nagios Core Development Team and Community Contributors
+ * Copyright (c) 2009-2013 Icinga Development Team (http://www.icinga.org)
  *
  * License:
  *
@@ -19,7 +19,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  *****************************************************************************/
 
@@ -367,6 +367,7 @@ int reap_check_results(void) {
 		time(&current_time);
 		if ((int)(current_time - reaper_start_time) > max_check_reaper_time) {
 			log_debug_info(DEBUGL_CHECKS, 0, "Breaking out of check result reaper: max reaper time exceeded\n");
+			logit(NSLOG_RUNTIME_WARNING, TRUE, "Warning: Breaking out of check result reaper: max reaper time (%d) exceeded. Reaped %d results, but more checkresults to process. Perhaps check core performance tuning tips?\n", max_check_reaper_time, reaped_checks);
 			break;
 		}
 
@@ -404,6 +405,13 @@ int run_scheduled_service_check(service *svc, int check_options, double latency)
 	log_debug_info(DEBUGL_FUNCTIONS, 0, "run_scheduled_service_check() start\n");
 	log_debug_info(DEBUGL_CHECKS, 0, "Attempting to run scheduled check of service '%s' on host '%s': check options=%d, latency=%lf\n", svc->description, svc->host_name, check_options, latency);
 
+	/*
+	 * reset the next_check_event so we know it's
+	 * no longer in the scheduling queue
+	 * and can't conflict
+	 */
+	svc->next_check_event = NULL;
+	
 	/* attempt to run the check */
 	result = run_async_service_check(svc, check_options, latency, TRUE, TRUE, &time_is_valid, &preferred_time);
 
@@ -502,6 +510,7 @@ int run_async_service_check(service *svc, int check_options, double latency, int
 	char *temp_buffer = NULL;
 	char *args3 = NULL;
 	SV *plugin_hndlr_cr = NULL; /* perl.h holds typedef struct */
+	STRLEN n_a;
 	int count;
 	int use_epn = FALSE;
 #ifdef aTHX
@@ -535,6 +544,12 @@ int run_async_service_check(service *svc, int check_options, double latency, int
 
 	/* send data to event broker */
 	neb_result = broker_service_check(NEBTYPE_SERVICECHECK_ASYNC_PRECHECK, NEBFLAG_NONE, NEBATTR_NONE, svc, SERVICE_CHECK_ACTIVE, start_time, end_time, svc->service_check_command, svc->latency, 0.0, 0, FALSE, 0, NULL, NULL);
+
+    if (neb_result == NEBERROR_CALLBACKCANCEL || neb_result == NEBERROR_CALLBACKOVERRIDE) {
+        log_debug_info(DEBUGL_CHECKS, 0, "Check of service '%s' on host '%s' was %s by a module\n",
+                svc->description, svc->host_name,
+                neb_result == NEBERROR_CALLBACKCANCEL ? "cancelled" : "overridden");
+    }
 
 	/* neb module wants to cancel the service check - the check will be rescheduled for a later time by the scheduling logic */
 	if (neb_result == NEBERROR_CALLBACKCANCEL) {
@@ -580,18 +595,36 @@ int run_async_service_check(service *svc, int check_options, double latency, int
 
 	/* process any macros contained in the argument */
 	process_macros_r(&mac, raw_command, &processed_command, 0);
+
+	my_free(raw_command);
+
 	if (processed_command == NULL) {
 		clear_volatile_macros_r(&mac);
 		log_debug_info(DEBUGL_CHECKS, 0, "Processed check command for service '%s' on host '%s' was NULL - aborting.\n", svc->description, svc->host_name);
 		if (preferred_time)
 			*preferred_time += (svc->check_interval * interval_length);
 		svc->latency = old_latency;
-		my_free(raw_command);
 		return ERROR;
 	}
 
 	/* get the command start time */
 	gettimeofday(&start_time, NULL);
+
+#ifdef USE_EVENT_BROKER
+	/* send data to event broker */
+	neb_result = broker_service_check(NEBTYPE_SERVICECHECK_INITIATE, NEBFLAG_NONE, NEBATTR_NONE, svc, SERVICE_CHECK_ACTIVE, start_time, end_time, svc->service_check_command, svc->latency, 0.0, service_check_timeout, FALSE, 0, processed_command, NULL);
+
+	my_free(svc->processed_command);
+	svc->processed_command = strdup(processed_command);
+
+	/* neb module wants to override the service check - perhaps it will check the service itself */
+	if (neb_result == NEBERROR_CALLBACKOVERRIDE) {
+		clear_volatile_macros_r(&mac);
+		svc->latency = old_latency;
+		my_free(processed_command);
+		return OK;
+	}
+#endif
 
 	/* increment number of service checks that are currently running... */
 	currently_running_service_checks++;
@@ -611,23 +644,6 @@ int run_async_service_check(service *svc, int check_options, double latency, int
 	check_result_info.exited_ok = TRUE;
 	check_result_info.return_code = STATE_OK;
 	check_result_info.output = NULL;
-
-#ifdef USE_EVENT_BROKER
-	/* send data to event broker */
-	neb_result = broker_service_check(NEBTYPE_SERVICECHECK_INITIATE, NEBFLAG_NONE, NEBATTR_NONE, svc, SERVICE_CHECK_ACTIVE, start_time, end_time, svc->service_check_command, svc->latency, 0.0, service_check_timeout, FALSE, 0, processed_command, NULL);
-
-	my_free(svc->processed_command);
-	svc->processed_command = strdup(processed_command);
-
-	/* neb module wants to override the service check - perhaps it will check the service itself */
-	if (neb_result == NEBERROR_CALLBACKOVERRIDE) {
-		clear_volatile_macros_r(&mac);
-		svc->latency = old_latency;
-		my_free(processed_command);
-		my_free(raw_command);
-		return OK;
-	}
-#endif
 
 	/* open a temp file for storing check output */
 	old_umask = umask(new_umask);
@@ -1240,7 +1256,7 @@ int handle_async_service_check_result(service *temp_service, check_result *queue
 		temp_service->current_attempt = temp_service->current_attempt + 1;
 
 
-	log_debug_info(DEBUGL_CHECKS, 2, "ST: %s  CA: %d  MA: %d  CS: %d  LS: %d  LHS: %d\n", (temp_service->state_type == SOFT_STATE) ? "SOFT" : "HARD", temp_service->current_attempt, temp_service->max_attempts, temp_service->current_state, temp_service->last_state, temp_service->last_hard_state);
+	log_debug_info(DEBUGL_CHECKS, 2, "SERVICE: ST (state_type): %s  CA (current_attempt): %d  MA (max_attempt): %d  CS (current_state): %d  LS (last_state): %d  LHS (last_hard_state): %d\n", (temp_service->state_type == SOFT_STATE) ? "SOFT" : "HARD", temp_service->current_attempt, temp_service->max_attempts, temp_service->current_state, temp_service->last_state, temp_service->last_hard_state);
 
 	/* check for a state change (either soft or hard) */
 	if (temp_service->current_state != temp_service->last_state) {
@@ -1435,11 +1451,11 @@ int handle_async_service_check_result(service *temp_service, check_result *queue
 		temp_service->last_notification = (time_t)0;
 		temp_service->next_notification = (time_t)0;
 		temp_service->current_notification_number = 0;
-#ifdef USE_ST_BASED_ESCAL_RANGES
+		/* state based escalation ranges */
 		temp_service->current_warning_notification_number = 0;
 		temp_service->current_critical_notification_number = 0;
 		temp_service->current_unknown_notification_number = 0;
-#endif
+
 		temp_service->problem_has_been_acknowledged = FALSE;
 		temp_service->acknowledgement_type = ACKNOWLEDGEMENT_NONE;
 		temp_service->notified_on_unknown = FALSE;
@@ -1680,13 +1696,13 @@ int handle_async_service_check_result(service *temp_service, check_result *queue
 			check_for_host_flapping(temp_host, TRUE, FALSE, TRUE);
 			flapping_check_done = TRUE;
 
-#ifdef USE_ST_BASED_ESCAL_RANGES
+			/* state based escalation ranges */
 			if (hard_state_change == TRUE) {
 				temp_service->current_warning_notification_number = 0;
 				temp_service->current_critical_notification_number = 0;
 				temp_service->current_unknown_notification_number = 0;
 			}
-#endif
+
 			/* (re)send notifications out about this service problem if the host is up (and was at last check also) and the dependencies were okay... */
 			service_notification(temp_service, NOTIFICATION_NORMAL, NULL, NULL, NOTIFICATION_OPTION_NONE);
 
@@ -1858,7 +1874,6 @@ int handle_async_service_check_result(service *temp_service, check_result *queue
 void schedule_service_check(service *svc, time_t check_time, int options) {
 	timed_event *temp_event = NULL;
 	timed_event *new_event = NULL;
-	int found = FALSE;
 	int use_original_event = TRUE;
 
 	log_debug_info(DEBUGL_FUNCTIONS, 0, "schedule_service_check()\n");
@@ -1874,37 +1889,20 @@ void schedule_service_check(service *svc, time_t check_time, int options) {
 		return;
 	}
 
-	/* allocate memory for a new event item */
-	new_event = (timed_event *)malloc(sizeof(timed_event));
-	if (new_event == NULL) {
-
-		logit(NSLOG_RUNTIME_WARNING, TRUE, "Warning: Could not reschedule check of service '%s' on host '%s'!\n", svc->description, svc->host_name);
-
-		return;
-	}
-
 	/* default is to use the new event */
 	use_original_event = FALSE;
-	found = FALSE;
 
-#ifdef PERFORMANCE_INCREASE_BUT_VERY_BAD_IDEA_INDEED
-	/* WARNING! 1/19/07 on-demand async service checks will end up causing mutliple scheduled checks of a service to appear in the queue if the code below is skipped */
-	/* if(use_large_installation_tweaks==FALSE)... skip code below */
-#endif
+	/* fetch possible saved next check event */
+	temp_event = (timed_event *)svc->next_check_event;
 
-	/* see if there are any other scheduled checks of this service in the queue */
-	for (temp_event = event_list_low; temp_event != NULL; temp_event = temp_event->next) {
+	/*
+	 * if the service already has a check scheduled
+	 * we need to decide wether the original or the
+	 * new event will be used
+	 */
+	if (temp_event != NULL) {
 
-		if (temp_event->event_type == EVENT_SERVICE_CHECK && svc == (service *)temp_event->event_data) {
-			found = TRUE;
-			break;
-		}
-	}
-
-	/* we found another service check event for this service in the queue - what should we do? */
-	if (found == TRUE && temp_event != NULL) {
-
-		log_debug_info(DEBUGL_CHECKS, 2, "Found another service check event for this service @ %s", ctime(&temp_event->run_time));
+		log_debug_info(DEBUGL_CHECKS, 2, "Found another service check event for service '%s' on host '%s' @ %s", svc->description, svc->host_name, ctime(&temp_event->run_time));
 
 		/* use the originally scheduled check unless we decide otherwise */
 		use_original_event = TRUE;
@@ -1939,29 +1937,38 @@ void schedule_service_check(service *svc, time_t check_time, int options) {
 				log_debug_info(DEBUGL_CHECKS, 2, "New service check event occurs after the existing event, so we'll ignore it.\n");
 			}
 		}
+	}
 
-		/* the originally queued event won the battle, so keep it */
-		if (use_original_event == TRUE) {
-			my_free(new_event);
+
+	/*
+	 * we can't use the original event,
+	 * so schedule a new event
+	 */
+	if (use_original_event == FALSE) {
+
+		log_debug_info(DEBUGL_CHECKS, 2, "Scheduling new service check event for '%s' on host '%s' @ %s", svc->description, svc->host_name, ctime(&check_time));
+
+		/* allocate memory for a new event item */
+		new_event = (timed_event *)malloc(sizeof(timed_event));
+
+		if (new_event == NULL) {
+			logit(NSLOG_RUNTIME_WARNING, TRUE, "Warning: Could not reschedule check of service '%s' on host '%s'!\n", svc->description, svc->host_name);
+			return;
 		}
 
-		/* else we're using the new event, so remove the old one */
-		else {
+		/* make sure we kill off the old event */
+		if (temp_event) {
+			log_debug_info(DEBUGL_CHECKS, 2, "Removing service check event for service '%s' on host '%s' @ %s", svc->description, svc->host_name, ctime(&temp_event->run_time));
 			remove_event(temp_event, &event_list_low, &event_list_low_tail);
 			my_free(temp_event);
 		}
-	}
 
-	/* save check options for retention purposes */
-	svc->check_options = options;
-
-	/* schedule a new event */
-	if (use_original_event == FALSE) {
-
-		log_debug_info(DEBUGL_CHECKS, 2, "Scheduling new service check event.\n");
-
-		/* set the next service check time */
+		/* set the next service check event and time */
+		svc->next_check_event = new_event;
 		svc->next_check = check_time;
+
+		/* save check options for retention purposes */
+		svc->check_options = options;
 
 		/* place the new event in the event queue */
 		new_event->event_type = EVENT_SERVICE_CHECK;
@@ -1983,6 +1990,9 @@ void schedule_service_check(service *svc, time_t check_time, int options) {
 
 		log_debug_info(DEBUGL_CHECKS, 2, "Keeping original service check event (ignoring the new one).\n");
 	}
+
+	/* update next_check time for service */
+	update_service_status(svc, FALSE);
 
 	return;
 }
@@ -2139,9 +2149,12 @@ void check_for_orphaned_services(void) {
 		if (expected_time < current_time) {
 
 			/* log a warning */
-			logit(NSLOG_RUNTIME_WARNING, TRUE, "Warning: The check of service '%s' on host '%s' looks like it was orphaned (results never came back).  I'm scheduling an immediate check of the service...\n", temp_service->description, temp_service->host_name);
+			logit(NSLOG_RUNTIME_WARNING, TRUE, "Warning: The check of service '%s' on host '%s' looks like it was orphaned (results never came back; last_check=%s; next_check=%s).  I'm scheduling an immediate check of the service...\n", temp_service->description, temp_service->host_name, ctime(&temp_service->last_check), ctime(&temp_service->next_check));
 
 			log_debug_info(DEBUGL_CHECKS, 1, "Service '%s' on host '%s' was orphaned, so we're scheduling an immediate check...\n", temp_service->description, temp_service->host_name);
+            log_debug_info(DEBUGL_CHECKS, 1, "  next_check=%lu (%s); last_check=%lu (%s);\n",
+                    temp_service->next_check, ctime(&temp_service->next_check),
+                    temp_service->last_check, ctime(&temp_service->last_check));
 
 			/* decrement the number of running service checks */
 			if (currently_running_service_checks > 0)
@@ -2286,7 +2299,7 @@ int is_service_result_fresh(service *temp_service, time_t current_time, int log_
 	else
 		expiration_time = (time_t)(temp_service->last_check + freshness_threshold);
 
-	log_debug_info(DEBUGL_CHECKS, 2, "HBC: %d, PS: %lu, ES: %lu, LC: %lu, CT: %lu, ET: %lu\n", temp_service->has_been_checked, (unsigned long)program_start, (unsigned long)event_start, (unsigned long)temp_service->last_check, (unsigned long)current_time, (unsigned long)expiration_time);
+	log_debug_info(DEBUGL_CHECKS, 2, "SERVICE: HBC (has_been_checked): %d, PS (program_start): %lu, ES (event_start): %lu, LC (last_check): %lu, CT (current_time): %lu, ET (expiration_time): %lu\n", temp_service->has_been_checked, (unsigned long)program_start, (unsigned long)event_start, (unsigned long)temp_service->last_check, (unsigned long)current_time, (unsigned long)expiration_time);
 
 	/* the results for the last check of this service are stale */
 	if (expiration_time < current_time) {
@@ -2343,7 +2356,6 @@ int perform_scheduled_host_check(host *hst, int check_options, double latency) {
 void schedule_host_check(host *hst, time_t check_time, int options) {
 	timed_event *temp_event = NULL;
 	timed_event *new_event = NULL;
-	int found = FALSE;
 	int use_original_event = TRUE;
 
 
@@ -2360,35 +2372,20 @@ void schedule_host_check(host *hst, time_t check_time, int options) {
 		return;
 	}
 
-	/* allocate memory for a new event item */
-	if ((new_event = (timed_event *)malloc(sizeof(timed_event))) == NULL) {
-
-		logit(NSLOG_RUNTIME_WARNING, TRUE, "Warning: Could not reschedule check of host '%s'!\n", hst->name);
-
-		return;
-	}
-
 	/* default is to use the new event */
 	use_original_event = FALSE;
-	found = FALSE;
 
-#ifdef PERFORMANCE_INCREASE_BUT_VERY_BAD_IDEA_INDEED
-	/* WARNING! 1/19/07 on-demand async host checks will end up causing mutliple scheduled checks of a host to appear in the queue if the code below is skipped */
-	/* if(use_large_installation_tweaks==FALSE)... skip code below */
-#endif
+        /* fetch possible saved next check event */
+	temp_event = (timed_event *)hst->next_check_event;
 
-	/* see if there are any other scheduled checks of this host in the queue */
-	for (temp_event = event_list_low; temp_event != NULL; temp_event = temp_event->next) {
-		if (temp_event->event_type == EVENT_HOST_CHECK && hst == (host *)temp_event->event_data) {
-			found = TRUE;
-			break;
-		}
-	}
+	/*
+	 * if the service already has a check scheduled
+	 * we need to decide wether the original or the
+	 * new event will be used
+	 */
+	if (temp_event != NULL) {
 
-	/* we found another host check event for this host in the queue - what should we do? */
-	if (found == TRUE && temp_event != NULL) {
-
-		log_debug_info(DEBUGL_CHECKS, 2, "Found another host check event for this host @ %s", ctime(&temp_event->run_time));
+		log_debug_info(DEBUGL_CHECKS, 2, "Found another host check event for host '%s' @ %s", hst->name, ctime(&temp_event->run_time));
 
 		/* use the originally scheduled check unless we decide otherwise */
 		use_original_event = TRUE;
@@ -2423,29 +2420,34 @@ void schedule_host_check(host *hst, time_t check_time, int options) {
 				log_debug_info(DEBUGL_CHECKS, 2, "New host check event occurs after the existing event, so we'll ignore it.\n");
 			}
 		}
+	}
 
-		/* the originally queued event won the battle, so keep it */
-		if (use_original_event == TRUE) {
-			my_free(new_event);
+	/*
+	 * we can't use the original event,
+	 * so schedule a new event
+	 */
+	if (use_original_event == FALSE) {
+
+		log_debug_info(DEBUGL_CHECKS, 2, "Scheduling new host check event for '%s' @ %s", hst->name, ctime(&check_time));
+
+		/* allocate memory for a new event item */
+		if((new_event = (timed_event *)malloc(sizeof(timed_event))) == NULL) {
+			logit(NSLOG_RUNTIME_WARNING, TRUE, "Warning: Could not reschedule check of host '%s'!\n", hst->name);
+			return;
 		}
 
-		/* else use the new event, so remove the old */
-		else {
+		if (temp_event) {
+			log_debug_info(DEBUGL_CHECKS, 2, "Removing host check event for host '%s' @ %s", hst->name, ctime(&temp_event->run_time));
 			remove_event(temp_event, &event_list_low, &event_list_low_tail);
 			my_free(temp_event);
 		}
-	}
 
-	/* save check options for retention purposes */
-	hst->check_options = options;
-
-	/* use the new event */
-	if (use_original_event == FALSE) {
-
-		log_debug_info(DEBUGL_CHECKS, 2, "Scheduling new host check event.\n");
-
-		/* set the next host check time */
+		/* set the next host check event and time */
+		hst->next_check_event = new_event;
 		hst->next_check = check_time;
+
+		/* save check options for retention purposes */
+		hst->check_options = options;
 
 		/* place the new event in the event queue */
 		new_event->event_type = EVENT_HOST_CHECK;
@@ -2467,6 +2469,9 @@ void schedule_host_check(host *hst, time_t check_time, int options) {
 
 		log_debug_info(DEBUGL_CHECKS, 2, "Keeping original host check event (ignoring the new one).\n");
 	}
+
+	/* update next_check time for host */
+	update_host_status(hst, FALSE);
 
 	return;
 }
@@ -2689,7 +2694,7 @@ int is_host_result_fresh(host *temp_host, time_t current_time, int log_this) {
 	else
 		expiration_time = (time_t)(temp_host->last_check + freshness_threshold);
 
-	log_debug_info(DEBUGL_CHECKS, 2, "HBC: %d, PS: %lu, ES: %lu, LC: %lu, CT: %lu, ET: %lu\n", temp_host->has_been_checked, (unsigned long)program_start, (unsigned long)event_start, (unsigned long)temp_host->last_check, (unsigned long)current_time, (unsigned long)expiration_time);
+	log_debug_info(DEBUGL_CHECKS, 2, "HOST: HBC (has_been_checked): %d, PS (program_start): %lu, ES (event_start): %lu, LC (last_check): %lu, CT (current_time): %lu, ET (expiration_time): %lu\n", temp_host->has_been_checked, (unsigned long)program_start, (unsigned long)event_start, (unsigned long)temp_host->last_check, (unsigned long)current_time, (unsigned long)expiration_time);
 
 	/* the results for the last check of this host are stale */
 	if (expiration_time < current_time) {
@@ -2897,14 +2902,20 @@ int execute_sync_host_check_3x(host *hst) {
 	/* send data to event broker */
 	neb_result = broker_host_check(NEBTYPE_HOSTCHECK_SYNC_PRECHECK, NEBFLAG_NONE, NEBATTR_NONE, hst, HOST_CHECK_ACTIVE, hst->current_state, hst->state_type, start_time, end_time, hst->host_check_command, hst->latency, 0.0, host_check_timeout, FALSE, 0, NULL, NULL, NULL, NULL, NULL);
 
-	/* neb module wants to cancel the host check - return the current state of the host */
-	if (neb_result == NEBERROR_CALLBACKCANCEL)
+	/*
+     * neb module wants to cancel/override the host check
+     * then return the current state of the host
+     * NOTE: if a module does this, it must check the status of the host
+     * and populate the data structures BEFORE it returns from the callback!
+     */
+	if (neb_result == NEBERROR_CALLBACKCANCEL || neb_result == NEBERROR_CALLBACKOVERRIDE) {
+        log_debug_info(DEBUGL_CHECKS, 0, "Check of host '%s' was %s by a module. Returning %d\n",
+                hst->name,
+                neb_result == NEBERROR_CALLBACKCANCEL ? "cancelled" : "overridden",
+                hst->current_state);
 		return hst->current_state;
+    }
 
-	/* neb module wants to override the host check - perhaps it will check the host itself */
-	/* NOTE: if a module does this, it must check the status of the host and populate the data structures BEFORE it returns from the callback! */
-	if (neb_result == NEBERROR_CALLBACKOVERRIDE)
-		return hst->current_state;
 #endif
 
 	/* grab the host macros */
@@ -2927,6 +2938,7 @@ int execute_sync_host_check_3x(host *hst) {
 	/* process any macros contained in the argument */
 	process_macros_r(&mac, raw_command, &processed_command, 0);
 	if (processed_command == NULL) {
+		my_free(raw_command);
 		clear_volatile_macros_r(&mac);
 		return ERROR;
 	}
@@ -2943,6 +2955,7 @@ int execute_sync_host_check_3x(host *hst) {
 
 	log_debug_info(DEBUGL_COMMANDS, 1, "Raw host check command: %s\n", raw_command);
 	log_debug_info(DEBUGL_COMMANDS, 0, "Processed host check ommand: %s\n", processed_command);
+	my_free(raw_command);
 
 	/* clear plugin output and performance data buffers */
 	my_free(hst->plugin_output);
@@ -2974,7 +2987,6 @@ int execute_sync_host_check_3x(host *hst) {
 
 	/* free memory */
 	my_free(temp_plugin_output);
-	my_free(raw_command);
 	my_free(processed_command);
 
 	/* a NULL host check command means we should assume the host is UP */
@@ -3037,6 +3049,13 @@ int run_scheduled_host_check_3x(host *hst, int check_options, double latency) {
 
 	log_debug_info(DEBUGL_CHECKS, 0, "Attempting to run scheduled check of host '%s': check options=%d, latency=%lf\n", hst->name, check_options, latency);
 
+	/*
+	 * reset the next_check_event so we know it's
+	 * no longer in the scheduling queue
+	 * and can't conflict
+	 */
+	hst->next_check_event = NULL;
+	
 	/* attempt to run the check */
 	result = run_async_host_check_3x(hst, check_options, latency, TRUE, TRUE, &time_is_valid, &preferred_time);
 
@@ -3189,6 +3208,9 @@ int run_async_host_check_3x(host *hst, int check_options, double latency, int sc
 
 	/* process any macros contained in the argument */
 	process_macros_r(&mac, raw_command, &processed_command, 0);
+
+	my_free(raw_command);
+
 	if (processed_command == NULL) {
 		clear_volatile_macros_r(&mac);
 		log_debug_info(DEBUGL_CHECKS, 0, "Processed check command for host '%s' was NULL - aborting.\n", hst->name);
@@ -3200,11 +3222,6 @@ int run_async_host_check_3x(host *hst, int check_options, double latency, int sc
 
 	/* get the command start time */
 	gettimeofday(&start_time, NULL);
-
-	/* set check time for on-demand checks, so they're not incorrectly detected as being orphaned - Luke Ross 5/16/08 */
-	/* NOTE: 06/23/08 EG not sure if there will be side effects to this or not.... */
-	if (scheduled_check == FALSE)
-		hst->next_check = start_time.tv_sec;
 
 	/* increment number of host checks that are currently running... */
 	currently_running_host_checks++;
@@ -4376,10 +4393,10 @@ int handle_host_state(host *hst) {
 		/* notify contacts about the recovery or problem if its a "hard" state */
 		if (hst->state_type == HARD_STATE) {
 
-#ifdef USE_ST_BASED_ESCAL_RANGES
+			/* state based escalation ranges */
 			hst->current_down_notification_number = 0;
 			hst->current_unreachable_notification_number = 0;
-#endif
+
 			host_notification(hst, NOTIFICATION_NORMAL, NULL, NULL, NOTIFICATION_OPTION_NONE);
 		}
 

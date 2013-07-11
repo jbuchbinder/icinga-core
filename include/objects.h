@@ -3,8 +3,8 @@
  * OBJECTS.H - Header file for object addition/search functions
  *
  * Copyright (c) 1999-2009 Ethan Galstad (egalstad@nagios.org)
- * Copyright (c) 2009-2011 Nagios Core Development Team and Community Contributors
- * Copyright (c) 2009-2011 Icinga Development Team (http://www.icinga.org)
+ * Copyright (c) 2009-2013 Nagios Core Development Team and Community Contributors
+ * Copyright (c) 2009-2013 Icinga Development Team (http://www.icinga.org)
  *
  * License:
  *
@@ -19,7 +19,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  *****************************************************************************/
 
@@ -34,6 +34,15 @@
   extern "C" {
 #endif
 
+/*************** HASH COMPARISON HELPERS **************/
+
+extern int hc_compare(const char *field1, unsigned long hash1,
+		      const char *field2, unsigned long hash2);
+
+#define DECLARE_HASH(field)		unsigned long field ## _hash
+#define FILL_HASH(field)		field ## _hash = sdbm(field)
+#define CMP_HASH(field1, field2)	hc_compare(field1, field1 ## _hash, field2, field2 ## _hash)
+#define COPY_HASH(field1, field2)	field2 ## _hash = field1 ## _hash
 
 
 /*************** CURRENT OBJECT REVISION **************/
@@ -249,6 +258,8 @@ typedef struct servicesmember_struct{
 	service *service_ptr;
 #endif
 	struct servicesmember_struct *next;
+	DECLARE_HASH(host_name);
+	DECLARE_HASH(service_description);
         }servicesmember;
 
 
@@ -259,6 +270,7 @@ typedef struct hostsmember_struct{
 	host    *host_ptr;
 #endif
 	struct hostsmember_struct *next;
+	DECLARE_HASH(host_name);
         }hostsmember;
 
 
@@ -373,10 +385,6 @@ struct host_struct{
 	int     notified_on_down;
 	int     notified_on_unreachable;
 	int     current_notification_number;
-#ifdef USE_ST_BASED_ESCAL_RANGES
-	int     current_down_notification_number;
-	int     current_unreachable_notification_number;
-#endif
 	int     no_more_notifications;
 	unsigned long current_notification_id;
 	int     check_flapping_recovery_notification;
@@ -401,7 +409,11 @@ struct host_struct{
 	objectlist *hostgroups_ptr;
 #endif
 	struct  host_struct *next;
-	struct  host_struct *nexthash;
+	/* recycle this currently unused attribute
+		struct  host_struct *nexthash;
+	 * see #2182 for more info
+	 */
+	void *next_check_event;
 	/* 2011-02-07 MF: added for keeping the command for NEB callback
 	   PROCESSED state on host|service checks  */
 	char	*processed_command;
@@ -409,6 +421,11 @@ struct host_struct{
 	   $HOSTADDRESS6$ macro  */
 	char    *address6;
 	time_t	acknowledgement_end_time;
+#ifdef NSCORE
+	int     current_down_notification_number;
+	int     current_unreachable_notification_number;
+#endif
+	DECLARE_HASH(name);
         };
 
 
@@ -515,11 +532,6 @@ struct service_struct{
 	int     notified_on_warning;
 	int     notified_on_critical;
 	int     current_notification_number;
-#ifdef USE_ST_BASED_ESCAL_RANGES
-	int     current_warning_notification_number;
-	int     current_critical_notification_number;
-	int     current_unknown_notification_number;
-#endif
 	unsigned long current_notification_id;
 	double  latency;
 	double  execution_time;
@@ -544,11 +556,22 @@ struct service_struct{
 	objectlist *servicegroups_ptr;
 #endif
 	struct service_struct *next;
-	struct service_struct *nexthash;
+	/* recycle this currently unused attribute
+		struct service_struct *nexthash;
+	 * see #2182 for more info
+	 */
+	 void *next_check_event;
 	/* 2011-02-07 MF: added for keeping the command for NEB callback
 	   PROCESSED state on host|service checks  */
 	char	*processed_command;
 	time_t	acknowledgement_end_time;
+#ifdef NSCORE
+	int     current_warning_notification_number;
+	int     current_critical_notification_number;
+	int     current_unknown_notification_number;
+#endif
+	DECLARE_HASH(host_name);
+	DECLARE_HASH(description);
 	};
 
 /* ESCALATION CONDITION STRUCTURE 
@@ -586,14 +609,6 @@ typedef struct serviceescalation_struct{
 	char    *description;
 	int     first_notification;
 	int     last_notification;
-#ifdef USE_ST_BASED_ESCAL_RANGES
-	int     first_warning_notification;
-	int     last_warning_notification;
-	int     first_critical_notification;
-	int     last_critical_notification;
-	int     first_unknown_notification;
-	int     last_unknown_notification;
-#endif
 	double  notification_interval;
 	char    *escalation_period;
 	int     escalate_on_recovery;
@@ -609,6 +624,16 @@ typedef struct serviceescalation_struct{
 #endif
 	struct  serviceescalation_struct *next;
 	struct  serviceescalation_struct *nexthash;
+        /*
+         * we'll use compiler tricks again, putting this at the end,
+         * invisible, in order to stay compatible with neb modules
+         */
+	int     first_warning_notification;
+	int     last_warning_notification;
+	int     first_critical_notification;
+	int     last_critical_notification;
+	int     first_unknown_notification;
+	int     last_unknown_notification;
         }serviceescalation;
 
 
@@ -644,12 +669,6 @@ typedef struct hostescalation_struct{
 	char    *host_name;
 	int     first_notification;
 	int     last_notification;
-#ifdef USE_ST_BASED_ESCAL_RANGES
-	int     first_down_notification;
-	int     last_down_notification;
-	int     first_unreachable_notification;
-	int     last_unreachable_notification;
-#endif
 	double  notification_interval;
 	char    *escalation_period;
 	int     escalate_on_recovery;
@@ -664,6 +683,14 @@ typedef struct hostescalation_struct{
 #endif
 	struct  hostescalation_struct *next;
 	struct  hostescalation_struct *nexthash;
+        /*
+         * we'll use compiler tricks again, putting this at the end,
+         * invisible, in order to stay compatible with neb modules
+         */
+	int     first_down_notification;
+	int     last_down_notification;
+	int     first_unreachable_notification;
+	int     last_unreachable_notification;
         }hostescalation;
 
 
@@ -746,21 +773,13 @@ command *add_command(char *,char *);									/* adds a command definition */
 service *add_service(char *,char *,char *,char *,int,int,int,int,double,double,double,double,char *,int,int,int,int,int,int,int,int,char *,int,char *,int,int,double,double,int,int,int,int,int,int,int,int,int,int,char *,int,int,char *,char *,char *,char *,char *,int,int,int);	/* adds a service definition */
 contactgroupsmember *add_contactgroup_to_service(service *,char *);					/* adds a contact group to a service definition */
 contactsmember *add_contact_to_service(service *,char *);                                               /* adds a contact to a host definition */
-#ifndef USE_ST_BASED_ESCAL_RANGES
-serviceescalation *add_serviceescalation(char *,char *,int,int,double,char *,int,int,int,int);          /* adds a service escalation definition */
-#else
 serviceescalation *add_serviceescalation(char *,char *,int,int,int,int,int,int,int,int,double,char *,int,int,int,int);  /* adds a service escalation definition */
-#endif
 contactgroupsmember *add_contactgroup_to_serviceescalation(serviceescalation *,char *);                 /* adds a contact group to a service escalation definition */
 contactsmember *add_contact_to_serviceescalation(serviceescalation *,char *);                           /* adds a contact to a service escalation definition */
 customvariablesmember *add_custom_variable_to_service(service *,char *,char *);                         /* adds a custom variable to a service definition */
 servicedependency *add_service_dependency(char *,char *,char *,char *,int,int,int,int,int,int,int,char *);     /* adds a service dependency definition */
 hostdependency *add_host_dependency(char *,char *,int,int,int,int,int,int,char *);                             /* adds a host dependency definition */
-#ifndef USE_ST_BASED_ESCAL_RANGES
-hostescalation *add_hostescalation(char *,int,int,double,char *,int,int,int);                           /* adds a host escalation definition */
-#else 
 hostescalation *add_hostescalation(char *,int,int,int,int,int,int,double,char *,int,int,int);                           /* adds a host escalation definition */
-#endif
 contactsmember *add_contact_to_hostescalation(hostescalation *,char *);                                 /* adds a contact to a host escalation definition */
 contactgroupsmember *add_contactgroup_to_hostescalation(hostescalation *,char *);                       /* adds a contact group to a host escalation definition */
 
@@ -859,9 +878,6 @@ int check_for_circular_hostdependency_path(hostdependency *,hostdependency *,int
 
 /**** Object Cleanup Functions ****/
 int free_object_data(void);                             /* frees all allocated memory for the object definitions */
-
-
-
 
 #ifdef __cplusplus
   }

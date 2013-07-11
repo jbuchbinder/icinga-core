@@ -1,76 +1,135 @@
 <html>
 <head>
-<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
-<title>Informationen zu den CGI-Parametern</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<title>6.2. Informationen zu den CGI-Parametern</title>
+<link rel="stylesheet" href="../stylesheets/icinga-docs.css" type="text/css">
 <meta name="generator" content="DocBook XSL Stylesheets V1.75.1">
 <meta name="keywords" content="Supervision, Icinga, Nagios, Linux">
-<link rel="home" href="index.html" title="Icinga Version 1.6 Dokumentation">
-<link rel="up" href="ch06.html" title="Kapitel 6. Die Benutzeroberflächen">
-<link rel="prev" href="cgis.html" title="Icinga Classic UI: Informationen über die CGIs">
-<link rel="next" href="cgicmd.html" title="Ausführen von CGIs auf der Kommandzeile">
+<link rel="home" href="index.html" title="Icinga Version 1.9 Dokumentation">
+<link rel="up" href="ch06.html" title="Kapitel 6. Die BenutzeroberflÃ¤chen">
+<link rel="prev" href="cgis.html" title="6.1. Icinga Classic UI: Informationen Ã¼ber die CGIs">
+<link rel="next" href="cgicmd.html" title="6.3. AusfÃ¼hren von CGIs auf der Kommandozeile">
+<script src="../js/jquery-min.js" type="text/javascript"></script><script src="../js/icinga-docs.js" type="text/javascript"></script>
 </head>
 <body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
 <CENTER><IMG src="../images/logofullsize.png" border="0" alt="Icinga" title="Icinga"></CENTER>
 <div class="navheader">
 <table width="100%" summary="Navigation header">
-<tr><th colspan="3" align="center">Informationen zu den CGI-Parametern</th></tr>
+<tr><th colspan="3" align="center">6.2. Informationen zu den CGI-Parametern</th></tr>
 <tr>
 <td width="20%" align="left">
-<a accesskey="p" href="cgis.html">Zurück</a> </td>
-<th width="60%" align="center">Kapitel 6. Die Benutzeroberflächen</th>
-<td width="20%" align="right"> <a accesskey="n" href="cgicmd.html">Weiter</a>
+<a accesskey="p" href="cgis.html">ZurÃ¼ck</a>Â </td>
+<th width="60%" align="center">Kapitel 6. Die BenutzeroberflÃ¤chen</th>
+<td width="20%" align="right">Â <a accesskey="n" href="cgicmd.html">Weiter</a>
 </td>
 </tr>
 </table>
 <hr>
 </div>
-<div class="section" title="Informationen zu den CGI-Parametern">
+<div class="section" title="6.2. Informationen zu den CGI-Parametern">
 <div class="titlepage"><div><div><h2 class="title" style="clear: both">
-<a name="cgiparams"></a>Informationen zu den CGI-Parametern</h2></div></div></div>
+<a name="cgiparams"></a>6.2. Informationen zu den CGI-Parametern</h2></div></div></div>
+<div class="toc"><dl>
+<dt><span class="section">6.2.1. <a href="cgiparams.html#introduction">EinfÃ¼hrung</a></span></dt>
+<dt><span class="section">6.2.2. <a href="cgiparams.html#executecmdline">Executing CGIs on the command line</a></span></dt>
+<dt><span class="section">6.2.3. <a href="cgiparams.html#propsstatustypes">Properties / Statustypes</a></span></dt>
+<dt><span class="section">6.2.4. <a href="cgiparams.html#matrixparamscgis">Matrix Parameter / CGIs</a></span></dt>
+<dt><span class="section">6.2.5. <a href="cgiparams.html#cgiparams_expl">Einzelheiten zu den Parametern</a></span></dt>
+<dt><span class="section">6.2.6. <a href="cgiparams.html#cgiparams_abbrev">AbkÃ¼rzungen, CGIs, Verweise</a></span></dt>
+<dt><span class="section">6.2.7. <a href="cgiparams.html#cgiparams-filter">Host und Service Filter Properties</a></span></dt>
+<dt><span class="section">6.2.8. <a href="cgiparams.html#cgiparams-statustypes">Host und Service Statustypen</a></span></dt>
+</dl></div>
   
 
-  <p><span class="bold"><strong>Einführung</strong></span></p>
+  <div class="section" title="6.2.1. EinfÃ¼hrung">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="introduction"></a>6.2.1. EinfÃ¼hrung</h3></div></div></div>
+    
 
-  <p>Das Menü auf der linken Seite des klassischen Web-Interface enthält Eintrage, die einen schnellen Zugriff auf die Informationen
-  bieten, die die meisten Leute benötigen. Sie können diese Parameter ändern oder auch andere Optionen wählen. Einige CGIs benötigen einen
-  Objekttyp ("host", "hostgroup", "service" oder "servicegroup"), oftmals gefolgt von einer oder mehreren Optionen. Der beste Weg ist es,
-  einen Blick auf die existierenden URLs zu werden und sie Ihren Bedürfnissen anzupassen.</p>
+    <p>Das MenÃ¼ auf der linken Seite des klassischen Web-Interface enthÃ¤lt Eintrage, die einen schnellen Zugriff auf die Informationen
+    bieten, die die meisten Leute benÃ¶tigen. Sie kÃ¶nnen diese Parameter Ã¤ndern oder auch andere Optionen wÃ¤hlen. Einige CGIs benÃ¶tigen einen
+    Objekttyp ("host", "hostgroup", "service" oder "servicegroup"), oftmals gefolgt von einer oder mehreren Optionen. Der beste Weg ist es,
+    einen Blick auf die existierenden URLs zu werden und sie Ihren BedÃ¼rfnissen anzupassen.</p>
 
-  <p>Nachfolgend finden Sie eine Tabelle mit den Parametern und den CGIs, die sie anbieten. Die Namen der CGIs sind abgekürzt (damit die
-  Tabelle nicht so breit wird). Eine Erklärung der Abkürzungen zusammen mit einem Hinweis auf den Source-Code finden Sie <a class="link" href="cgiparams.html#cgiparams_abbrev">hier</a>.</p>
+    <p>Nachfolgend finden Sie eine Tabelle mit den Parametern und den CGIs, die sie anbieten. Die Namen der CGIs sind abgekÃ¼rzt (damit
+    die Tabelle nicht so breit wird). Eine ErklÃ¤rung der AbkÃ¼rzungen zusammen mit einem Hinweis auf den Source-Code finden Sie <a class="link" href="cgiparams.html#cgiparams_abbrev" title="6.2.6. AbkÃ¼rzungen, CGIs, Verweise">hier</a>.</p>
 
-  <p>Nach dieser Tabelle folgt eine Erklärung der Parameter (in Bearbeitung).</p>
+    <p>Nach dieser Tabelle folgt eine ErklÃ¤rung der Parameter (in Bearbeitung).</p>
+  </div>
 
-  <p><span class="bold"><strong>Properties / Statustypes</strong></span></p>
+  <div class="section" title="6.2.2. Executing CGIs on the command line">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="executecmdline"></a>6.2.2. Executing CGIs on the command line</h3></div></div></div>
+    
 
-  <p>Sie können <code class="filename">status.cgi</code> benutzen, um Objekte mit einem oder mehreren "Statustypen" (hoststatustype /
-  servicestatustype) und mit bestimmten Eigenschaften (hostprops / serviceprops) anzuzeigen. Jeder Statustyp / jede Eigenschaft wird durch
-  eine Zahl identifiziert (die <a class="link" href="cgiparams.html#cgiparams-filter">hier</a> und <a class="link" href="cgiparams.html#cgiparams-statustypes">hier</a> am Ende
-  des Abschnitts zu finden sind). Bitte addieren Sie die entsprechenden Zahlen und setzen die resultierende Summe jeweils bei der Option
-  ein.</p>
+    <p>Anstelle ihres Browsers kÃ¶nnen sie die CGIs auch auf der Kommandozeile ausfÃ¼hren, und deren Ergebnisse mit anderen Tools
+    verarbeiten. Um einen ersten Eindruck zu erhalten, wechseln Sie in den Ordner mit den *.cgi Dateien (z.B.
+    <code class="filename">/usr/local/icinga/sbin</code>), setzen Sie einige Umgebungsvariablen und fÃ¼hren Sie eines der CGIs aus. </p>
+<pre class="screen"> $&gt; export REMOTE_USER=icingaadmin   # or choose the appropriate user
+ $&gt; export REQUEST_METHOD='GET'      # if you enter queries
+ $&gt; export QUERY_STRING='host=all'   # see the tables below
 
-  <p>Das Beispiel zeigt alle Services im nicht-OK-Zustand, die weder in einer Ausfallzeit (downtime) sind noch bestätigt (acknowledged)
-  wurden:</p>
+ $&gt; ./status.cgi</pre>
+<p> AbhÃ¤ngig von der Anzahl von Hosts wird diese viele HTML Zeilen liefern. FÃ¼r die meisten Leute ist es schwierig,
+    dazwischen die Informationen herauszulesen, also sollten Sie"&amp;csvoutput" oder "&amp;jsonoutput" zum QUERY_STRING mit anderen
+    Argumenten hinzufÃ¼gen.</p>
 
-  <pre class="screen"> http://localhost/icinga/cgi-bin/status.cgi?host=all&amp;servicestatustypes=29&amp;serviceprops=10</pre>
+    <p>Setzen Sie QUERY_STRING wie erforderlich und fÃ¼hren Sie das CGI aus.</p>
 
-  <p>"29" enthält auch "PENDING" Services (die seit dem Start noch nicht geprüft wurden).</p>
+    <p>Falls Sie eine Umgebungsvariable vergessen haben, werden Sie folgende Zeilen sehen: </p>
+<pre class="screen"> $&gt; ./status.cgi
+ getcgivars(): Unsupported REQUEST_METHOD -&gt; ''
 
-  <div class="note" title="Anmerkung" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note">
+ I'm guessing you're trying to execute the CGI from a command line.
+ In order to do that, you need to set the REQUEST_METHOD environment
+ variable to either "GET", "HEAD", or "POST". When using the
+ GET and HEAD methods, arguments can be passed to the CGI
+ by setting the "QUERY_STRING" environment variable. If you're
+ using the POST method, data is read from standard input. Also of
+ note: if you've enabled authentication in the CGIs, you must set the
+ "REMOTE_USER" environment variable to be the name of the user you're
+ "authenticated" as.</pre>
+
+    <p>Mehr Beispiele finden Sie <a class="link" href="cgicmd.html" title="6.3. AusfÃ¼hren von CGIs auf der Kommandozeile">here</a>.</p>
+  </div>
+
+  <div class="section" title="6.2.3. Properties / Statustypes">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="propsstatustypes"></a>6.2.3. Properties / Statustypes</h3></div></div></div>
+    
+
+    <p>Sie kÃ¶nnen <code class="filename">status.cgi</code> benutzen, um Objekte mit einem oder mehreren "Statustypen" (hoststatustype /
+    servicestatustype) und mit bestimmten Eigenschaften (hostprops / serviceprops) anzuzeigen. Jeder Statustyp / jede Eigenschaft wird durch
+    eine Zahl identifiziert (die <a class="link" href="cgiparams.html#cgiparams-filter" title="6.2.7. Host und Service Filter Properties">hier</a> und <a class="link" href="cgiparams.html#cgiparams-statustypes" title="6.2.8. Host und Service Statustypen">hier</a> am Ende
+    des Abschnitts zu finden sind). Bitte addieren Sie die entsprechenden Zahlen und setzen die resultierende Summe jeweils bei der Option
+    ein.</p>
+
+    <p>Das Beispiel zeigt alle Services im nicht-OK-Zustand, die weder in einer Ausfallzeit (downtime) sind noch bestÃ¤tigt (acknowledged)
+    wurden:</p>
+
+    <pre class="screen"> http://localhost/icinga/cgi-bin/status.cgi?host=all&amp;servicestatustypes=29&amp;serviceprops=10</pre>
+
+    <p>"29" enthÃ¤lt auch "PENDING" Services (die seit dem Start noch nicht geprÃ¼ft wurden).</p>
+
+    <div class="note" title="Anmerkung" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note">
 <tr>
 <td rowspan="2" align="center" valign="top" width="25"><img alt="[Anmerkung]" src="../images/note.png"></td>
 <th align="left">Anmerkung</th>
 </tr>
 <tr><td align="left" valign="top">
-    <p>Bitte beachten Sie, dass "properties" nur die Objekte anzeigt, die ALLE Bedingungen gleichzeitig erfüllen, während bei
-    "statustypes" nur EINE Bedingung erfüllt sein muss (kann).</p>
-  </td></tr>
+      <p>Bitte beachten Sie, dass "properties" nur die Objekte anzeigt, die ALLE Bedingungen gleichzeitig erfÃ¼llen, wÃ¤hrend bei
+      "statustypes" nur EINE Bedingung erfÃ¼llt sein muss (kann).</p>
+    </td></tr>
 </table></div>
+  </div>
 
-  <p><span class="bold"><strong>Matrix Parameter / CGIs</strong></span></p>
+  <div class="section" title="6.2.4. Matrix Parameter / CGIs">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="matrixparamscgis"></a>6.2.4. Matrix Parameter / CGIs</h3></div></div></div>
+    
 
-  <div class="informaltable">
-    <table border="1">
+    <div class="informaltable">
+      <table border="1">
 <colgroup>
 <col>
 <col>
@@ -109,423 +168,423 @@
 <tr>
 <td>
 <a name="cgiparams-ahas"></a>ahas</td>
-<td> </td>
+<td>Â </td>
 <td>X</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 </tr>
 <tr>
 <td>
 <a name="cgiparams-alerttypes"></a>alerttypes</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 <td>X</td>
-<td> </td>
-<td> </td>
-</tr>
-<tr>
-<td>
-<a name="cgiparams-archive"></a>archive</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td>X</td>
-<td>X</td>
-<td> </td>
-<td>X</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
 </tr>
 <tr>
 <td>
 <a name="cgiparams-assumeinitialstates"></a>assumeinitialstates</td>
 <td>X</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 <td>X</td>
 </tr>
 <tr>
 <td>
 <a name="cgiparams-assumestateretention"></a>assumestateretention</td>
 <td>X</td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 <td>X</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 <td>X</td>
 </tr>
 <tr>
 <td>
 <a name="cgiparams-assumestatesduringnotrunning"></a>assumestatesduringnotrunning</td>
 <td>X</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 <td>X</td>
+</tr>
+<tr>
+<td>
+<a name="cgiparams-attr"></a>attr [4]</td>
+<td>Â </td>
+<td>X</td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 </tr>
 <tr>
 <td>
 <a name="cgiparams-backtrack"></a>backtrack</td>
 <td>X</td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 <td>X</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 <td>X</td>
 </tr>
 <tr>
 <td>
 <a name="cgiparams-breakdown"></a>breakdown</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 <td>X</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 </tr>
 <tr>
 <td>
 <a name="cgiparams-broadcast_notification"></a>broadcast_notification</td>
-<td> </td>
+<td>Â </td>
 <td>X</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 </tr>
 <tr>
 <td>
 <a name="cgiparams-childoptions"></a>childoptions</td>
-<td> </td>
+<td>Â </td>
 <td>X</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 </tr>
 <tr>
 <td>
 <a name="cgiparams-cmd_mod"></a>cmd_mod</td>
-<td> </td>
+<td>Â </td>
 <td>X</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 </tr>
 <tr>
 <td>
 <a name="cgiparams-cmd_typ"></a>cmd_typ</td>
-<td> </td>
+<td>Â </td>
 <td>X</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 </tr>
 <tr>
 <td>
 <a name="cgiparams-columns"></a>columns</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 <td>X</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 </tr>
 <tr>
 <td>
 <a name="cgiparams-com_author"></a>com_author</td>
-<td> </td>
+<td>Â </td>
 <td>X</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 </tr>
 <tr>
 <td>
 <a name="cgiparams-com_data"></a>com_data</td>
-<td> </td>
+<td>Â </td>
 <td>X</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 </tr>
 <tr>
 <td>
 <a name="cgiparams-com_id"></a>com_id</td>
-<td> </td>
+<td>Â </td>
 <td>X</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 </tr>
 <tr>
 <td>
 <a name="cgiparams-contact"></a>contact</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 <td>X</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 </tr>
 <tr>
 <td>
 <a name="cgiparams-createimage"></a>createimage</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 <td>X</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td>X</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td>X</td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 </tr>
 <tr>
 <td>
 <a name="cgiparams-csvoutput"></a>csvoutput</td>
 <td>X</td>
+<td>Â </td>
+<td>[2]</td>
+<td>[2]</td>
+<td>Â </td>
+<td>Â </td>
 <td>[2]</td>
 <td>[2]</td>
 <td>[2]</td>
 <td>[2]</td>
+<td>Â </td>
 <td>[2]</td>
-<td>[2]</td>
-<td>[2]</td>
-<td>[2]</td>
-<td>[2]</td>
-<td> </td>
-<td>[2]</td>
-<td>[2]</td>
-<td>[2]</td>
+<td>Â </td>
+<td>Â </td>
 </tr>
 <tr>
 <td>
 <a name="cgiparams-displaytype"></a>displaytype</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 <td>X</td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
 </tr>
 <tr>
 <td>
 <a name="cgiparams-down_id"></a>down_id</td>
-<td> </td>
+<td>Â </td>
 <td>X</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 </tr>
 <tr>
 <td>
 <a name="cgiparams-eday"></a>eday</td>
 <td>X</td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 <td>X</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 <td>X</td>
-<td> </td>
+<td>Â </td>
 <td>X</td>
 </tr>
 <tr>
 <td>
 <a name="cgiparams-ehour"></a>ehour</td>
 <td>X</td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 <td>X</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 <td>X</td>
-<td> </td>
+<td>Â </td>
 <td>X</td>
 </tr>
 <tr>
 <td>
 <a name="cgiparams-embedded"></a>embedded</td>
 <td>X</td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
 <td>X</td>
 <td>X</td>
 <td>X</td>
@@ -536,240 +595,240 @@
 <td>X</td>
 <td>X</td>
 <td>X</td>
-<td> </td>
+<td>Â </td>
 </tr>
 <tr>
 <td>
 <a name="cgiparams-emin"></a>emin</td>
 <td>X</td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 <td>X</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 <td>X</td>
-<td> </td>
+<td>Â </td>
 <td>X</td>
 </tr>
 <tr>
 <td>
 <a name="cgiparams-emon"></a>emon</td>
 <td>X</td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 <td>X</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 <td>X</td>
-<td> </td>
+<td>Â </td>
 <td>X</td>
 </tr>
 <tr>
 <td>
 <a name="cgiparams-end_time"></a>end_time</td>
-<td> </td>
+<td>Â </td>
 <td>X</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>X[5]</td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 </tr>
 <tr>
 <td>
 <a name="cgiparams-esec"></a>esec</td>
 <td>X</td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 <td>X</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 <td>X</td>
-<td> </td>
+<td>Â </td>
 <td>X</td>
 </tr>
 <tr>
 <td>
 <a name="cgiparams-eyear"></a>eyear</td>
 <td>X</td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 <td>X</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 <td>X</td>
-<td> </td>
+<td>Â </td>
 <td>X</td>
 </tr>
 <tr>
 <td>
 <a name="cgiparams-fixed"></a>fixed</td>
-<td> </td>
+<td>Â </td>
 <td>X</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 </tr>
 <tr>
 <td>
 <a name="cgiparams-force_check"></a>force_check</td>
-<td> </td>
+<td>Â </td>
 <td>X</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 </tr>
 <tr>
 <td>
 <a name="cgiparams-force_notification"></a>force_notification</td>
-<td> </td>
+<td>Â </td>
 <td>X</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 </tr>
 <tr>
 <td>
 <a name="cgiparams-full_log_entries"></a>full_log_entries</td>
 <td>X</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 </tr>
 <tr>
 <td>
 <a name="cgiparams-get_date_parts"></a>get_date_parts</td>
 <td>X</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 </tr>
 <tr>
 <td>
 <a name="cgiparams-graphevents"></a>graphevents</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 <td>X</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 </tr>
 <tr>
 <td>
 <a name="cgiparams-graphstatetypes"></a>graphstatetypes</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 <td>X</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 </tr>
 <tr>
 <td>
 <a name="cgiparams-host"></a>host</td>
 <td>X</td>
 <td>X</td>
-<td> </td>
+<td>Â </td>
 <td>X</td>
 <td>X</td>
 <td>X</td>
 <td>X</td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
 <td>X</td>
-<td> </td>
+<td>Â </td>
 <td>X</td>
-<td> </td>
+<td>Â </td>
 <td>X</td>
 </tr>
 <tr>
@@ -777,331 +836,349 @@
 <a name="cgiparams-hostgroup"></a>hostgroup</td>
 <td>X</td>
 <td>X</td>
-<td> </td>
+<td>Â </td>
 <td>X</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>X[5]</td>
+<td>X[5]</td>
+<td>Â </td>
+<td>Â </td>
 <td>X</td>
-<td> </td>
+<td>Â </td>
 <td>X</td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
 </tr>
 <tr>
 <td>
 <a name="cgiparams-hostprops"></a>hostprops</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 <td>X</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 </tr>
 <tr>
 <td>
 <a name="cgiparams-hoststates"></a>hoststates</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 <td>X</td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
 </tr>
 <tr>
 <td>
 <a name="cgiparams-hoststatustypes"></a>hoststatustypes</td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 <td>X</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td>X</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 </tr>
 <tr>
 <td>
 <a name="cgiparams-hours"></a>hours</td>
-<td> </td>
+<td>Â </td>
 <td>X</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 </tr>
 <tr>
 <td>
 <a name="cgiparams-includesoftstates"></a>includesoftstates</td>
 <td>X</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 </tr>
 <tr>
 <td>
 <a name="cgiparams-initialassumedhoststate"></a>initialassumedhoststate</td>
 <td>X</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 <td>X</td>
 </tr>
 <tr>
 <td>
 <a name="cgiparams-initialassumedservicestate"></a>initialassumedservicestate</td>
 <td>X</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 <td>X</td>
 </tr>
 <tr>
 <td>
 <a name="cgiparams-initialstateslogged"></a>initialstateslogged</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 <td>X</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 </tr>
 <tr>
 <td>
 <a name="cgiparams-input"></a>input</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 <td>X</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>X</td>
+</tr>
+<tr>
+<td>
+<a name="cgiparams-item_name"></a>item_name [5]</td>
+<td>Â </td>
+<td>Â </td>
+<td>X</td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 <td>X</td>
 </tr>
 <tr>
 <td>
 <a name="cgiparams-jsonoutput"></a>jsonoutput [2][3]</td>
 <td>X</td>
-<td> </td>
+<td>Â </td>
 <td>X</td>
 <td>X</td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
 <td>X</td>
 <td>X</td>
 <td>X</td>
 <td>X</td>
+<td>Â </td>
 <td>X</td>
-<td> </td>
 <td>X</td>
-<td>X</td>
-<td> </td>
+<td>Â </td>
 </tr>
 <tr>
 <td>
-<a name="cgiparams-limit"></a>limit</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<a name="cgiparams-limit"></a>limit [5]</td>
+<td>Â </td>
+<td>Â </td>
 <td>X</td>
-<td> </td>
-<td> </td>
+<td>X</td>
+<td>Â </td>
+<td>X</td>
+<td>X</td>
+<td>Â </td>
+<td>X</td>
+<td>X</td>
+<td>Â </td>
+<td>X</td>
+<td>Â </td>
+<td>Â </td>
 </tr>
 <tr>
 <td>
 <a name="cgiparams-minutes"></a>minutes</td>
-<td> </td>
+<td>Â </td>
 <td>X</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 </tr>
 <tr>
 <td>
 <a name="cgiparams-navbarsearch"></a>navbarsearch</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 <td>X</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 </tr>
 <tr>
 <td>
 <a name="cgiparams-newstatesonly"></a>newstatesonly</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 <td>X</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 </tr>
 <tr>
 <td>
 <a name="cgiparams-nodowntime"></a>nodowntime</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 <td>X</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 </tr>
 <tr>
 <td>
 <a name="cgiparams-noflapping"></a>noflapping</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 <td>X</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 </tr>
 <tr>
 <td>
 <a name="cgiparams-nofrills"></a>nofrills</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 <td>X</td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
 <td>X</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 </tr>
 <tr>
 <td>
 <a name="cgiparams-noheader"></a>noheader</td>
 <td>X</td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
 <td>X</td>
 <td>X</td>
 <td>X</td>
@@ -1117,770 +1194,883 @@
 <tr>
 <td>
 <a name="cgiparams-not_dly"></a>not_dly</td>
-<td> </td>
+<td>Â </td>
 <td>X</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 </tr>
 <tr>
 <td>
 <a name="cgiparams-notimebreaks"></a>notimebreaks</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 <td>X</td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
 <td>X</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 </tr>
 <tr>
 <td>
 <a name="cgiparams-nosystem"></a>nosystem</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 <td>X</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 </tr>
 <tr>
 <td>
-<a name="cgiparams-oldestfirst"></a>oldestfirst</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<a name="cgiparams-oldestfirst"></a>oldestfirst [6]</td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>X</td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+</tr>
+<tr>
+<td>
+<a name="cgiparams-order"></a>order [5]</td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 <td>X</td>
 <td>X</td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+</tr>
+<tr>
+<td>
+<a name="cgiparams-paused"></a>paused [7]</td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 <td>X</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>X</td>
+<td>Â </td>
+<td>X</td>
+<td>X</td>
+<td>Â </td>
+<td>X</td>
+<td>Â </td>
 </tr>
 <tr>
 <td>
 <a name="cgiparams-performance_data"></a>performance_data</td>
-<td> </td>
+<td>Â </td>
 <td>X</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 </tr>
 <tr>
 <td>
 <a name="cgiparams-persistent"></a>persistent</td>
-<td> </td>
+<td>Â </td>
 <td>X</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 </tr>
 <tr>
 <td>
 <a name="cgiparams-plugin_output"></a>plugin_output</td>
-<td> </td>
+<td>Â </td>
 <td>X</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 </tr>
 <tr>
 <td>
 <a name="cgiparams-plugin_state"></a>plugin_state</td>
-<td> </td>
+<td>Â </td>
 <td>X</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 </tr>
 <tr>
 <td>
 <a name="cgiparams-ptc"></a>ptc</td>
-<td> </td>
+<td>Â </td>
 <td>X</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 </tr>
 <tr>
 <td>
 <a name="cgiparams-report"></a>report</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 <td>X</td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
 </tr>
 <tr>
 <td>
 <a name="cgiparams-report_type"></a>report_type</td>
 <td>X</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 </tr>
 <tr>
 <td>
 <a name="cgiparams-rpttimeperiod"></a>rpttimeperiod</td>
 <td>X</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 </tr>
 <tr>
 <td>
 <a name="cgiparams-sched_dly"></a>sched_dly</td>
-<td> </td>
+<td>Â </td>
 <td>X</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 </tr>
 <tr>
 <td>
 <a name="cgiparams-sday"></a>sday</td>
 <td>X</td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 <td>X</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 <td>X</td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+</tr>
+<tr>
+<td>
+<a name="cgiparams-search_string"></a>search_string [5]</td>
+<td>Â </td>
+<td>Â </td>
+<td>X</td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>X</td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 </tr>
 <tr>
 <td>
 <a name="cgiparams-send_notification"></a>send_notification</td>
-<td> </td>
+<td>Â </td>
 <td>X</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 </tr>
 <tr>
 <td>
 <a name="cgiparams-service"></a>service</td>
 <td>X</td>
 <td>X</td>
-<td> </td>
+<td>Â </td>
 <td>X</td>
 <td>X</td>
 <td>X</td>
 <td>X</td>
-<td> </td>
-<td> </td>
-<td>X</td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 <td>X</td>
 </tr>
 <tr>
 <td>
 <a name="cgiparams-servicefilter"></a>servicefilter</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 <td>X</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 </tr>
 <tr>
 <td>
 <a name="cgiparams-servicegroup"></a>servicegroup</td>
 <td>X</td>
 <td>X</td>
-<td> </td>
+<td>Â </td>
 <td>X</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>X[5]</td>
+<td>X[5]</td>
+<td>Â </td>
+<td>Â </td>
 <td>X</td>
-<td> </td>
+<td>Â </td>
 <td>X</td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
 </tr>
 <tr>
 <td>
 <a name="cgiparams-serviceprops"></a>serviceprops</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 <td>X</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 </tr>
 <tr>
 <td>
 <a name="cgiparams-servicestates"></a>servicestates</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 <td>X</td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
 </tr>
 <tr>
 <td>
 <a name="cgiparams-servicestatustypes"></a>servicestatustypes</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 <td>X</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 </tr>
 <tr>
 <td>
 <a name="cgiparams-service_divisor"></a>service_divisor</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 <td>X</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 </tr>
 <tr>
 <td>
 <a name="cgiparams-shour"></a>shour</td>
 <td>X</td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 <td>X</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 <td>X</td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
 </tr>
 <tr>
 <td>
 <a name="cgiparams-showscheduleddowntime"></a>showscheduleddowntime</td>
 <td>X</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 </tr>
 <tr>
 <td>
 <a name="cgiparams-show_log_entries"></a>show_log_entries</td>
 <td>X</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 </tr>
 <tr>
 <td>
 <a name="cgiparams-smin"></a>smin</td>
 <td>X</td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 <td>X</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 <td>X</td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
 </tr>
 <tr>
 <td>
 <a name="cgiparams-smon"></a>smon</td>
 <td>X</td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 <td>X</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 <td>X</td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
 </tr>
 <tr>
 <td>
 <a name="cgiparams-sortoption"></a>sortoption</td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 <td>X</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 <td>X</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 </tr>
 <tr>
 <td>
 <a name="cgiparams-sorttype"></a>sorttype</td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 <td>X</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 <td>X</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 </tr>
 <tr>
 <td>
 <a name="cgiparams-ssec"></a>ssec</td>
 <td>X</td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 <td>X</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 <td>X</td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
 </tr>
 <tr>
 <td>
 <a name="cgiparams-standardreport"></a>standardreport</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 <td>X</td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+</tr>
+<tr>
+<td>
+<a name="cgiparams-start"></a>start [5]</td>
+<td>Â </td>
+<td>Â </td>
+<td>X</td>
+<td>X</td>
+<td>Â </td>
+<td>X</td>
+<td>X</td>
+<td>Â </td>
+<td>X</td>
+<td>X</td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 </tr>
 <tr>
 <td>
 <a name="cgiparams-start_time"></a>start_time</td>
-<td> </td>
+<td>Â </td>
 <td>X</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>X[5]</td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 </tr>
 <tr>
 <td>
 <a name="cgiparams-statetype"></a>statetype</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 <td>X</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 </tr>
 <tr>
 <td>
 <a name="cgiparams-statetypes"></a>statetypes</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 <td>X</td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
 </tr>
 <tr>
 <td>
 <a name="cgiparams-sticky_ack"></a>sticky_ack</td>
-<td> </td>
+<td>Â </td>
 <td>X</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 </tr>
 <tr>
 <td>
 <a name="cgiparams-style"></a>style</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 <td>X</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 </tr>
 <tr>
 <td>
 <a name="cgiparams-syear"></a>syear</td>
 <td>X</td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 <td>X</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 <td>X</td>
-<td> </td>
+<td>Â </td>
 <td>X</td>
 </tr>
 <tr>
 <td>
 <a name="cgiparams-t1"></a>t1</td>
 <td>X</td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 <td>X</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 <td>X</td>
-<td> </td>
+<td>Â </td>
 <td>X</td>
 </tr>
 <tr>
 <td>
 <a name="cgiparams-t2"></a>t2</td>
 <td>X</td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 <td>X</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 <td>X</td>
-<td> </td>
+<td>Â </td>
 <td>X</td>
 </tr>
 <tr>
 <td>
 <a name="cgiparams-timeperiod"></a>timeperiod</td>
 <td>X</td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 <td>X</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>X[5]</td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 <td>X</td>
-<td> </td>
+<td>Â </td>
 <td>X</td>
 </tr>
 <tr>
 <td>
 <a name="cgiparams-trigger"></a>trigger</td>
-<td> </td>
+<td>Â </td>
 <td>X</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+</tr>
+<tr>
+<td>
+<a name="cgiparams-ts_end"></a>ts_end [5]</td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>X</td>
+<td>X</td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+</tr>
+<tr>
+<td>
+<a name="cgiparams-ts_start"></a>ts_start [5]</td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>X</td>
+<td>X</td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 </tr>
 <tr>
 <td>
 <a name="cgiparams-type"></a>type</td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
 <td>X</td>
 <td>X</td>
-<td> </td>
+<td>Â </td>
 <td>X</td>
 <td>X</td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 </tr>
 </tbody>
 </table>
-  </div>
+    </div>
 
-  <p><a name="cgiparams_expl"></a><span class="bold"><strong>Einzelheiten zu den Parametern</strong></span></p>
+    </div>
 
-  <p>Mehr Informationen zu den einzelnen Parametern finden Sie nachfolgend. Für ein tiefergehendes Verständnis sollten Sie einen Blick
-  auf den Source-Code werfen.</p>
+    <div class="section" title="6.2.5. Einzelheiten zu den Parametern">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="cgiparams_expl"></a>6.2.5. Einzelheiten zu den Parametern</h3></div></div></div>
+	    
 
-  <div class="informaltable">
-    <table border="1">
+    <p>Mehr Informationen zu den einzelnen Parametern finden Sie nachfolgend. FÃ¼r ein tiefergehendes VerstÃ¤ndnis sollten Sie einen Blick
+    auf den Source-Code werfen.</p>
+
+    <div class="informaltable">
+      <table border="1">
 <colgroup>
 <col>
 <col>
@@ -1891,7 +2081,7 @@
 <thead><tr>
 <th align="center">Parameter</th>
 <th align="center">Beschreibung</th>
-<th align="center">Mögl. Werte</th>
+<th align="center">MÃ¶gl. Werte</th>
 <th align="center">Beispiel</th>
 <th align="center">Anmerkungen</th>
 </tr></thead>
@@ -1899,44 +2089,44 @@
 <tr>
 <td><a class="link" href="cgiparams.html#cgiparams-ahas">ahas</a></td>
 <td>Der Befehl beeinflusst den Host und seine Services</td>
-<td> </td>
+<td>Â </td>
 <td>ahas</td>
-<td> </td>
+<td>Â </td>
 </tr>
 <tr>
 <td><a class="link" href="cgiparams.html#cgiparams-alerttypes">alerttypes</a></td>
 <td>Host- und/oder Service-Alarme anzeigen</td>
 <td>1=Host-Alarme; 2=Service-Alarme; 3=Host- und Service-Alarme</td>
 <td>alerttypes=3</td>
-<td> </td>
-</tr>
-<tr>
-<td><a class="link" href="cgiparams.html#cgiparams-archive">archive</a></td>
-<td> </td>
-<td>0-n</td>
-<td> </td>
-<td> </td>
+<td>Â </td>
 </tr>
 <tr>
 <td><a class="link" href="cgiparams.html#cgiparams-assumeinitialstates">assumeinitialstates</a></td>
-<td> </td>
+<td>Â </td>
 <td>yes; no</td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
 </tr>
 <tr>
 <td><a class="link" href="cgiparams.html#cgiparams-assumestatesduringnotrunning">assumestatesduringnotrunning</a></td>
-<td> </td>
+<td>Â </td>
 <td>yes; no</td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
 </tr>
 <tr>
 <td><a class="link" href="cgiparams.html#cgiparams-assumestateretention">assumestateretention</a></td>
-<td> </td>
+<td>Â </td>
 <td>yes; no</td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+</tr>
+<tr>
+<td><a class="link" href="cgiparams.html#cgiparams-attr">attr</a></td>
+<td>ZurÃ¼cksetzen der modifizierten Attribute und keine VerÃ¤nderungen mehr zulassen</td>
+<td>0</td>
+<td>attr=0</td>
+<td>siehe [4]</td>
 </tr>
 <tr>
 <td><a class="link" href="cgiparams.html#cgiparams-backtrack">backtrack</a></td>
@@ -1948,31 +2138,31 @@
 <tr>
 <td><a class="link" href="cgiparams.html#cgiparams-breakdown">breakdown</a></td>
 <td>Aufteilen der Daten nach Zeitbereich</td>
-<td>0=monatlich; 1=Tag des Monats; 2=Tag der Woche; 3=stündlich</td>
+<td>0=monatlich; 1=Tag des Monats; 2=Tag der Woche; 3=stÃ¼ndlich</td>
 <td>breakdown=2</td>
-<td> </td>
+<td>Â </td>
 </tr>
 <tr>
 <td><a class="link" href="cgiparams.html#cgiparams-broadcast_notification">broadcast_notification</a></td>
 <td>Benachrichtigung an alle Kontakte versenden ("non-escalated" und "escalated")</td>
-<td> </td>
+<td>Â </td>
 <td>broadcast_notification</td>
-<td> </td>
+<td>Â </td>
 </tr>
 <tr>
 <td><a class="link" href="cgiparams.html#cgiparams-childoptions">childoptions</a></td>
-<td>Ausfallzeitbehandlung für abhängige Hosts</td>
-<td>0=ohne Berücksichtigung von abh. Hosts; 1="triggered downtime" für abh. Hosts planen; 2="non-triggered downtime" für abh.
-          Hosts planen</td>
+<td>Ausfallzeitbehandlung fÃ¼r abhÃ¤ngige Hosts</td>
+<td>0=ohne BerÃ¼cksichtigung von abh. Hosts; 1="triggered downtime" fÃ¼r abh. Hosts planen; 2="non-triggered downtime" fÃ¼r abh.
+            Hosts planen</td>
 <td>childoptions=1</td>
-<td> </td>
+<td>Â </td>
 </tr>
 <tr>
 <td><a class="link" href="cgiparams.html#cgiparams-cmd_mod">cmd_mod</a></td>
 <td>Command mode</td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>1, 2</td>
+<td>cmd_mod=2</td>
+<td>1 zeigt das Bestaetigungsformular; 2 schickt direkt ab</td>
 </tr>
 <tr>
 <td><a class="link" href="cgiparams.html#cgiparams-cmd_typ">cmd_typ</a></td>
@@ -1983,506 +2173,536 @@
 </tr>
 <tr>
 <td><a class="link" href="cgiparams.html#cgiparams-columns">columns</a></td>
-<td>Anzahl von Übersichtsspalten</td>
+<td>Anzahl von Ãœbersichtsspalten</td>
 <td>&gt;= 1</td>
-<td> </td>
+<td>Â </td>
 <td>Default ist 3</td>
 </tr>
 <tr>
 <td><a class="link" href="cgiparams.html#cgiparams-com_author">com_author</a></td>
 <td>Autor des Kommentars</td>
-<td>ein gültiger Benutzer</td>
+<td>ein gÃ¼ltiger Benutzer</td>
 <td>com_author=icingaadmin</td>
-<td>Kann ggf. von der Einstellung von "lock_author_names" in cgi.cfg abhängen</td>
+<td>Kann ggf. von der Einstellung von "lock_author_names" in cgi.cfg abhÃ¤ngen</td>
 </tr>
 <tr>
 <td><a class="link" href="cgiparams.html#cgiparams-com_data">com_data</a></td>
 <td>Inhalt des Kommentars</td>
 <td>eine Zeichenkette (urlencoded)</td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
 </tr>
 <tr>
 <td><a class="link" href="cgiparams.html#cgiparams-com_id">com_id</a></td>
 <td>Id des Kommentars</td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 </tr>
 <tr>
 <td><a class="link" href="cgiparams.html#cgiparams-contact">contact</a></td>
-<td>Ein gültiger Kontakt als Mail-Empfänger</td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Ein gÃ¼ltiger Kontakt als Mail-EmpfÃ¤nger</td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 </tr>
 <tr>
 <td><a class="link" href="cgiparams.html#cgiparams-createimage">createimage</a></td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
 <td>createimage</td>
-<td> </td>
+<td>Â </td>
 </tr>
 <tr>
 <td><a class="link" href="cgiparams.html#cgiparams-csvoutput">csvoutput</a></td>
 <td>Ob die Ausgabe im CSV-Format sein soll</td>
 <td>yes;no</td>
-<td> </td>
-<td>Diese Option setzt automatisch "noheader". In fast allen CGIs verfügbar (siehe [2])</td>
+<td>Â </td>
+<td>Diese Option setzt automatisch "noheader". In fast allen CGIs verfÃ¼gbar (siehe [2])</td>
 </tr>
 <tr>
 <td><a class="link" href="cgiparams.html#cgiparams-displaytype">displaytype</a></td>
 <td>Typ der Alarmauswertung</td>
 <td>1=recent alerts; 2=alert totals; 3=top alerts; 4=hostgroup alert totals; 5=host alert totals; 6=service alert totals;
-          7=servicegroup alert totals</td>
-<td> </td>
-<td> </td>
+            7=servicegroup alert totals</td>
+<td>Â </td>
+<td>Â </td>
 </tr>
 <tr>
 <td><a class="link" href="cgiparams.html#cgiparams-down_id">down_id</a></td>
 <td>ID der Ausfallzeit</td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 </tr>
 <tr>
 <td><a class="link" href="cgiparams.html#cgiparams-eday">eday</a></td>
-<td>Ende des maßgeschneiderten Zeitfensters (Tag)</td>
-<td> </td>
-<td> </td>
-<td>Nur gültig bei "maßgeschneiderten" Zeitfenstern</td>
+<td>Ende des maÃŸgeschneiderten Zeitfensters (Tag)</td>
+<td>Â </td>
+<td>Â </td>
+<td>Nur gÃ¼ltig bei "maÃŸgeschneiderten" Zeitfenstern</td>
 </tr>
 <tr>
 <td><a class="link" href="cgiparams.html#cgiparams-ehour">ehour</a></td>
-<td>Ende des maßgeschneiderten Zeitfensters (Stunde)</td>
-<td> </td>
-<td> </td>
-<td>Nur gültig bei "maßgeschneiderten" Zeitfenstern</td>
+<td>Ende des maÃŸgeschneiderten Zeitfensters (Stunde)</td>
+<td>Â </td>
+<td>Â </td>
+<td>Nur gÃ¼ltig bei "maÃŸgeschneiderten" Zeitfenstern</td>
 </tr>
 <tr>
 <td><a class="link" href="cgiparams.html#cgiparams-embedded">embedded</a></td>
 <td>verschiedenen HTML-Code und SSI-header/footer weglassen</td>
-<td> </td>
+<td>Â </td>
 <td>embedded</td>
-<td> </td>
+<td>Â </td>
 </tr>
 <tr>
 <td><a class="link" href="cgiparams.html#cgiparams-emin">emin</a></td>
-<td>Ende des maßgeschneiderten Zeitfensters (Minute)</td>
-<td> </td>
-<td> </td>
-<td>Nur gültig bei "maßgeschneiderten" Zeitfenstern</td>
+<td>Ende des maÃŸgeschneiderten Zeitfensters (Minute)</td>
+<td>Â </td>
+<td>Â </td>
+<td>Nur gÃ¼ltig bei "maÃŸgeschneiderten" Zeitfenstern</td>
 </tr>
 <tr>
 <td><a class="link" href="cgiparams.html#cgiparams-emon">emon</a></td>
-<td>Ende des maßgeschneiderten Zeitfensters (Monat)</td>
-<td> </td>
-<td> </td>
-<td>Nur gültig bei "maßgeschneiderten" Zeitfenstern</td>
+<td>Ende des maÃŸgeschneiderten Zeitfensters (Monat)</td>
+<td>Â </td>
+<td>Â </td>
+<td>Nur gÃ¼ltig bei "maÃŸgeschneiderten" Zeitfenstern</td>
 </tr>
 <tr>
 <td><a class="link" href="cgiparams.html#cgiparams-end_time">end_time</a></td>
 <td>Endzeit der festen Ausfallzeit</td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
 <td>Format "MM-DD-YYYY HH:MI"</td>
 </tr>
 <tr>
 <td><a class="link" href="cgiparams.html#cgiparams-esec">esec</a></td>
-<td>Ende des maßgeschneiderten Zeitfensters (Sekunde)</td>
-<td> </td>
-<td> </td>
-<td>Nur gültig bei "maßgeschneiderten" Zeitfenstern</td>
+<td>Ende des maÃŸgeschneiderten Zeitfensters (Sekunde)</td>
+<td>Â </td>
+<td>Â </td>
+<td>Nur gÃ¼ltig bei "maÃŸgeschneiderten" Zeitfenstern</td>
 </tr>
 <tr>
 <td><a class="link" href="cgiparams.html#cgiparams-eyear">eyear</a></td>
-<td>Ende des maßgeschneiderten Zeitfensters (Jahr)</td>
-<td> </td>
-<td> </td>
-<td>Nur gültig bei "maßgeschneiderten" Zeitfenstern</td>
+<td>Ende des maÃŸgeschneiderten Zeitfensters (Jahr)</td>
+<td>Â </td>
+<td>Â </td>
+<td>Nur gÃ¼ltig bei "maÃŸgeschneiderten" Zeitfenstern</td>
 </tr>
 <tr>
 <td><a class="link" href="cgiparams.html#cgiparams-fixed">fixed</a></td>
 <td>Feste oder flexible Ausfallzeit</td>
 <td>0=flexible, &gt;0=fixed</td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
 </tr>
 <tr>
 <td><a class="link" href="cgiparams.html#cgiparams-force_check">force_check</a></td>
-<td>Die Service-Prüfung wird erzwungen</td>
-<td> </td>
+<td>Die Service-PrÃ¼fung wird erzwungen</td>
+<td>Â </td>
 <td>forcecheck</td>
-<td> </td>
+<td>Â </td>
 </tr>
 <tr>
 <td><a class="link" href="cgiparams.html#cgiparams-force_notification">force_notification</a></td>
 <td>Benachrichtigung ungeachtet von Restriktionen versenden (Zeitfenster oder andere)</td>
-<td> </td>
+<td>Â </td>
 <td>force_notification</td>
-<td> </td>
+<td>Â </td>
 </tr>
 <tr>
+<td><a class="link" href="cgiparams.html#cgiparams-full_log_entries">full_log_entries</a></td>
+<td>VollstÃ¤ndige oder gekÃ¼rzte Log-Eintrage anzeigen</td>
+<td>Â </td>
 <td>full_log_entries</td>
-<td>Vollständige oder gekürzte Log-Eintrage anzeigen</td>
-<td> </td>
-<td>full_log_entries</td>
-<td>Default ist gekürzte Ansicht</td>
+<td>Default ist gekÃ¼rzte Ansicht</td>
 </tr>
 <tr>
+<td><a class="link" href="cgiparams.html#cgiparams-get_date_parts">get_date_parts</a></td>
+<td>maÃŸgeschneiderte Zeitbereiche ermitteln</td>
+<td>Â </td>
 <td>get_date_parts</td>
-<td>maßgeschneiderte Zeitbereiche ermitteln</td>
-<td> </td>
-<td>get_date_parts</td>
-<td> </td>
+<td>Â </td>
 </tr>
 <tr>
 <td><a class="link" href="cgiparams.html#cgiparams-graphevents">graphevents</a></td>
 <td>Welche Objekte in welchem Zustand dargestellt werden sollen</td>
-<td> </td>
+<td>Â </td>
 <td>graphevents=112 (alle Service-Probleme)</td>
 <td>Ein logisches ODER von: 1=Host up; 2=Host down; 4=Host unreachable; 8=Service OK; 16=Service Warning; 32=Service Unknown;
-          64=Service Critical</td>
+            64=Service Critical</td>
 </tr>
 <tr>
 <td><a class="link" href="cgiparams.html#cgiparams-graphstatetypes">graphstatetypes</a></td>
 <td>Hard- und/oder Soft-Zustande darstellen</td>
 <td>1=Soft-states; 2=Hard states; 3=Hard- und Soft-states</td>
 <td>graphstatetypes=3</td>
-<td> </td>
+<td>Â </td>
 </tr>
 <tr>
 <td><a class="link" href="cgiparams.html#cgiparams-host">host</a></td>
-<td>Alle Hosts oder einen bestimmten Host auswählen, dessen Service angezeigt werden sollen</td>
+<td>Alle Hosts oder einen bestimmten Host auswÃ¤hlen, dessen Service angezeigt werden sollen</td>
 <td>all; &lt;host name&gt;</td>
 <td>host=monitor</td>
-<td>Spezielle Zeichen im Namen müssen kodiert werden ("urlencoded", z.B. "%20" statt eines Leerzeichens)</td>
+<td>Spezielle Zeichen im Namen mÃ¼ssen kodiert werden ("urlencoded", z.B. "%20" statt eines Leerzeichens)</td>
 </tr>
 <tr>
 <td><a class="link" href="cgiparams.html#cgiparams-hostgroup">hostgroup</a></td>
-<td>Alle Hostgruppen oder eine bestimmte Hostgruppe auswählen, deren Hosts und Services angezeigt werden sollen</td>
+<td>Alle Hostgruppen oder eine bestimmte Hostgruppe auswÃ¤hlen, deren Hosts und Services angezeigt werden sollen</td>
 <td>all; &lt;hostgroup name&gt;</td>
 <td>hostgroup=linux-boxes</td>
-<td>Spezielle Zeichen im Namen müssen kodiert werden ("urlencoded", z.B. "%20" statt eines Leerzeichens)</td>
+<td>Spezielle Zeichen im Namen mÃ¼ssen kodiert werden ("urlencoded", z.B. "%20" statt eines Leerzeichens)</td>
 </tr>
 <tr>
 <td><a class="link" href="cgiparams.html#cgiparams-hostprops">hostprops</a></td>
-<td>Alle Hosts auswählen, die dem angegebenen Bitmuster entsprechen. Bitte beachten Sie, dass die Hosts ALLE angegebenen
-          Bedingungen entsprechen müssen</td>
-<td> </td>
-<td>hostprops=131088 (aktive Prüfungen, die deaktiviert sind)</td>
-<td>Ein logisches ODER der Bedingungen, die in include/cgiutils.c angegeben sind <a class="link" href="cgiparams.html#cgiparams-filter">[1]</a>
-          (HOST AND SERVICE FILTER PROPERTIES)</td>
+<td>Alle Hosts auswÃ¤hlen, die dem angegebenen Bitmuster entsprechen. Bitte beachten Sie, dass die Hosts ALLE angegebenen
+            Bedingungen entsprechen mÃ¼ssen</td>
+<td>Â </td>
+<td>hostprops=131088 (aktive PrÃ¼fungen, die deaktiviert sind)</td>
+<td>Ein logisches ODER der Bedingungen, die in include/cgiutils.c angegeben sind <a class="link" href="cgiparams.html#cgiparams-filter" title="6.2.7. Host und Service Filter Properties">[1]</a>
+            (HOST AND SERVICE FILTER PROPERTIES)</td>
 </tr>
 <tr>
 <td><a class="link" href="cgiparams.html#cgiparams-hoststates">hoststates</a></td>
 <td>Der Zustand, in dem der Host sein sollte</td>
 <td>1 - 7</td>
 <td>hoststates=3 (Hosts in einem Problemzustand)</td>
-<td>Ein logisches ODER der Zustände: 1=DOWN; 2=UNREACHABLE; 4=UP</td>
+<td>Ein logisches ODER der ZustÃ¤nde: 1=DOWN; 2=UNREACHABLE; 4=UP</td>
 </tr>
 <tr>
 <td><a class="link" href="cgiparams.html#cgiparams-hoststatustypes">hoststatustypes</a></td>
 <td>Der Zustand, in dem der Host sein sollte</td>
 <td>1 - 15</td>
 <td>hoststatustypes=12 (Hosts in einem Problemzustand)</td>
-<td>Ein logisches ODER der Zustände: 1=Pending; 2=Up; 4=Down; 8=Unreachable</td>
+<td>Ein logisches ODER der ZustÃ¤nde: 1=Pending; 2=Up; 4=Down; 8=Unreachable</td>
 </tr>
 <tr>
 <td><a class="link" href="cgiparams.html#cgiparams-hours">hours</a></td>
 <td>Dauer der flexiblen Ausfallzeit in Stunden (siehe "minutes")</td>
 <td>&gt;= 0</td>
-<td> </td>
-<td>Nur gültig für flexible Ausfallzeiten</td>
+<td>Â </td>
+<td>Nur gÃ¼ltig fÃ¼r flexible Ausfallzeiten</td>
 </tr>
 <tr>
 <td><a class="link" href="cgiparams.html#cgiparams-includesoftstates">includesoftstates</a></td>
-<td>"soft"-Zustände einschließen</td>
+<td>"soft"-ZustÃ¤nde einschlieÃŸen</td>
 <td>yes; no</td>
 <td>includesoftstate=yes</td>
-<td>Default: "soft"-Zustände nicht berücksichtigen</td>
+<td>Default: "soft"-ZustÃ¤nde nicht berÃ¼cksichtigen</td>
 </tr>
 <tr>
 <td><a class="link" href="cgiparams.html#cgiparams-initialassumedhoststate">initialassumedhoststate</a></td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 </tr>
 <tr>
 <td><a class="link" href="cgiparams.html#cgiparams-initialassumedservicestate">initialassumedservicestate</a></td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 </tr>
 <tr>
 <td><a class="link" href="cgiparams.html#cgiparams-initialstateslogged">initialstateslogged</a></td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 </tr>
 <tr>
 <td><a class="link" href="cgiparams.html#cgiparams-input">input</a></td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+</tr>
+<tr>
+<td><a class="link" href="cgiparams.html#cgiparams-item_name">item_name</a></td>
+<td>Suche nach exakter Ãœbereinstimmung der angegebenen Zeichenkette (fÃ¼r regex-Suche siehe <a class="link" href="cgiparams.html#cgiparams-search_string">search_string</a>)</td>
+<td>Â </td>
+<td>item_name=localhost</td>
+<td>[5]</td>
 </tr>
 <tr>
 <td><a class="link" href="cgiparams.html#cgiparams-jsonoutput">jsonoutput</a></td>
 <td>Ob die Ausgabe im json-Format sein soll</td>
 <td>yes;no</td>
-<td> </td>
-<td>Diese Option setzt automatisch "noheader". In fast allen CGIs verfügbar (siehe [2])</td>
+<td>Â </td>
+<td>Diese Option setzt automatisch "noheader". In fast allen CGIs verfÃ¼gbar (siehe [2])</td>
 </tr>
 <tr>
 <td><a class="link" href="cgiparams.html#cgiparams-limit">limit</a></td>
-<td>max. Anzahl von anzuzeigenden Einträgen</td>
+<td>max. Anzahl von anzuzeigenden EintrÃ¤gen pro Seite</td>
 <td>1-n</td>
 <td>limit=10</td>
-<td>Default ist 25</td>
+<td>Nutzbar fÃ¼r Paging-FÃ¤higkeit [5], ausgenommen summary.cgi, default=25.</td>
 </tr>
 <tr>
 <td><a class="link" href="cgiparams.html#cgiparams-minutes">minutes</a></td>
 <td>Dauer der flexiblen Ausfallzeit (siehe "hours")</td>
 <td>&gt;= 0</td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
 </tr>
 <tr>
 <td><a class="link" href="cgiparams.html#cgiparams-navbarsearch">navbarsearch</a></td>
-<td> </td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 </tr>
 <tr>
 <td><a class="link" href="cgiparams.html#cgiparams-newstatesonly">newstatesonly</a></td>
-<td>Nur "neue" Zustände anzeigen</td>
+<td>Nur "neue" ZustÃ¤nde anzeigen</td>
 <td>yes; no</td>
 <td>newstatesonly=yes</td>
-<td>Default: alle Zustände anzeigen</td>
+<td>Default: alle ZustÃ¤nde anzeigen</td>
 </tr>
 <tr>
 <td><a class="link" href="cgiparams.html#cgiparams-nodowntime">nodowntime</a></td>
 <td>Ausfallzeiten nicht anzeigen</td>
-<td> </td>
+<td>Â </td>
 <td>nodowntime</td>
-<td> </td>
+<td>Â </td>
 </tr>
 <tr>
 <td><a class="link" href="cgiparams.html#cgiparams-noflapping">noflapping</a></td>
 <td>"Flatter"-Alarme nicht anzeigen</td>
-<td> </td>
+<td>Â </td>
 <td>noflapping</td>
-<td> </td>
+<td>Â </td>
 </tr>
 <tr>
 <td><a class="link" href="cgiparams.html#cgiparams-nofrills">nofrills</a></td>
 <td>Don't display frills (?)</td>
-<td> </td>
+<td>Â </td>
 <td>nofrills</td>
-<td> </td>
+<td>Â </td>
 </tr>
 <tr>
 <td><a class="link" href="cgiparams.html#cgiparams-noheader">noheader</a></td>
 <td>Globale Statusinformationen weglassen und nur Status-Details anzeigen</td>
-<td> </td>
+<td>Â </td>
 <td>noheader</td>
-<td> </td>
+<td>Â </td>
 </tr>
 <tr>
 <td><a class="link" href="cgiparams.html#cgiparams-not_dly">not_dly</a></td>
-<td>Benachrichtigung um n Minuten verzögern</td>
+<td>Benachrichtigung um n Minuten verzÃ¶gern</td>
 <td>&gt;= 0</td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
 </tr>
 <tr>
 <td><a class="link" href="cgiparams.html#cgiparams-notimebreaks">notimebreaks</a></td>
 <td>Don't display timebreaks (?)</td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 </tr>
 <tr>
 <td><a class="link" href="cgiparams.html#cgiparams-nosystem">nosystem</a></td>
 <td>Keine Systemmeldungen anzeigen</td>
-<td> </td>
+<td>Â </td>
 <td>nosystem</td>
 <td>Default: Systemmeldungen (des Icinga-Prozesses) anzeigen</td>
 </tr>
 <tr>
 <td><a class="link" href="cgiparams.html#cgiparams-oldestfirst">oldestfirst</a></td>
 <td>Sortierreihenfolge umdrehen</td>
-<td> </td>
+<td>Â </td>
 <td>oldestfirst</td>
-<td>Default: aktuelles Einträge zuerst anzeigen</td>
+<td>Default: aktuelle EintrÃ¤ge zuerst anzeigen; siehe [6]</td>
+</tr>
+<tr>
+<td><a class="link" href="cgiparams.html#cgiparams-order">order</a></td>
+<td>Sortierreihenfolge festlegen</td>
+<td>old2new / new2old</td>
+<td>order=old2new</td>
+<td>Default: aktuelle EintrÃ¤ge zuerst anzeigen; siehe [5]</td>
+</tr>
+<tr>
+<td><a class="link" href="cgiparams.html#cgiparams-paused">paused</a></td>
+<td>Stoppt den automatischen Update</td>
+<td>Â </td>
+<td>paused</td>
+<td>Â </td>
 </tr>
 <tr>
 <td><a class="link" href="cgiparams.html#cgiparams-performance_data">performance_data</a></td>
 <td>Die als Performance-Daten zu sendende Zeichenkette</td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
 </tr>
 <tr>
 <td><a class="link" href="cgiparams.html#cgiparams-persistent">persistent</a></td>
 <td>Der Kommentar ist persistent, wenn diese Option gesetzt ist</td>
-<td> </td>
+<td>Â </td>
 <td>persistent</td>
-<td> </td>
+<td>Â </td>
 </tr>
 <tr>
 <td><a class="link" href="cgiparams.html#cgiparams-plugin_output">plugin_output</a></td>
 <td>Die als Plugin-Output zu sendende Zeichenkette</td>
-<td> </td>
-<td> </td>
-<td>Die Länge ist begrenzt durch den Wert von MAX_INPUT_LENGTH (festgelegt während des Compile-Vorgangs)</td>
+<td>Â </td>
+<td>Â </td>
+<td>Die LÃ¤nge ist begrenzt durch den Wert von MAX_INPUT_LENGTH (festgelegt wÃ¤hrend des Compile-Vorgangs)</td>
 </tr>
 <tr>
 <td><a class="link" href="cgiparams.html#cgiparams-plugin_state">plugin_state</a></td>
 <td>Zustand des Plugins festlegen</td>
 <td>0=OK; 1=Warning; 2=Critical; 3=Unknown</td>
 <td>plugin_state=2</td>
-<td> </td>
+<td>Â </td>
 </tr>
 <tr>
 <td><a class="link" href="cgiparams.html#cgiparams-ptc">ptc</a></td>
-<td>Der Befehl wird an abhängige Hosts propagiert</td>
-<td> </td>
+<td>Der Befehl wird an abhÃ¤ngige Hosts propagiert</td>
+<td>Â </td>
 <td>ptc</td>
-<td> </td>
+<td>Â </td>
 </tr>
 <tr>
 <td><a class="link" href="cgiparams.html#cgiparams-report">report</a></td>
 <td>Report erzeugen</td>
-<td> </td>
+<td>Â </td>
 <td>report</td>
-<td> </td>
+<td>Â </td>
 </tr>
 <tr>
 <td><a class="link" href="cgiparams.html#cgiparams-report_type">report_type</a></td>
-<td>Reporttyp auswählen</td>
+<td>Reporttyp auswÃ¤hlen</td>
 <td>hostgroups; servicegroups; hosts; services</td>
 <td>report_type=hostgroups</td>
-<td> </td>
+<td>Â </td>
 </tr>
 <tr>
 <td><a class="link" href="cgiparams.html#cgiparams-rpttimeperiod">rpttimeperiod</a></td>
-<td>Angeben eines Zeitfensters, die für den Availability-Bericht benutzt wird</td>
+<td>Angeben eines Zeitfensters, die fÃ¼r den Availability-Bericht benutzt wird</td>
 <td>Eins der definierten Zeitfenster</td>
-<td> </td>
+<td>Â </td>
 <td>Benutzen Sie den Kurznamen der Zeitfenster-Definition</td>
 </tr>
 <tr>
 <td><a class="link" href="cgiparams.html#cgiparams-sched_dly">sched_dly</a></td>
-<td>Befehlsausführung um n Minuten verzögern</td>
+<td>BefehlsausfÃ¼hrung um n Minuten verzÃ¶gern</td>
 <td>&gt;= 0</td>
-<td> </td>
-<td> </td>
+<td>Â </td>
+<td>Â </td>
 </tr>
 <tr>
 <td><a class="link" href="cgiparams.html#cgiparams-sday">sday</a></td>
-<td>Start des maßgeschneiderten Zeitfensters (Tag)</td>
-<td> </td>
-<td> </td>
-<td> </td>
+<td>Start des maÃŸgeschneiderten Zeitfensters (Tag)</td>
+<td>Â </td>
+<td>Â </td>
+<td>Â </td>
+</tr>
+<tr>
+<td><a class="link" href="cgiparams.html#cgiparams-search_string">search_string</a></td>
+<td>Suche nach der angegebenen Zeichenkette (Hosts, Services, etc) mit Hilfe von regulÃ¤ren AusdrÃ¼cken</td>
+<td>Â </td>
+<td>Â </td>
+<td>[5]</td>
 </tr>
 <tr>
 <td><a class="link" href="cgiparams.html#cgiparams-send_notification">send_notification</a></td>
-<td>Eine Benachrichtigung für die Bestätigung senden</td>
-<td> </td>
+<td>Eine Benachrichtigung fÃ¼r die BestÃ¤tigung senden</td>
+<td>0=disabled, 1=enabled (default)</td>
 <td>send_notification</td>
-<td> </td>
+<td>[5] cmd.cgi erfordert 0|1 Werte, wenn nicht gesetzt, wird 1 als Standard verwendet. Siehe auch <a class="link" href="https://dev.icinga.org/issues/2926" target="_top">Bug #2926</a> fÃ¼r weitere Informationen.</td>
 </tr>
 <tr>
 <td><a class="link" href="cgiparams.html#cgiparams-service">service</a></td>
-<td>Alle oder einen bestimmten Service auswählen, der angezeigt werden soll</td>
+<td>Alle oder einen bestimmten Service auswÃ¤hlen, der angezeigt werden soll</td>
 <td>all; &lt;service description&gt;</td>
 <td>service=PING</td>
-<td>Spezielle Zeichen im Namen müssen kodiert werden ("urlencoded", z.B. "%20" statt einen Leerzeichens)</td>
+<td>Spezielle Zeichen im Namen mÃ¼ssen kodiert werden ("urlencoded", z.B. "%20" statt einen Leerzeichens)</td>
 </tr>
 <tr>
 <td><a class="link" href="cgiparams.html#cgiparams-servicefilter">servicefilter</a></td>
 <td>Nur Service selektieren, deren Beschreibung auf das angegebene Muster passt</td>
-<td> </td>
+<td>Â </td>
 <td>servicefilter=Current; servicefilter=[PL]</td>
-<td>Das Muster ist abhängig von Groß-/Kleinschreibung. Reguläre Ausdrucke scheinen zu funktionieren</td>
+<td>Das Muster ist abhÃ¤ngig von GroÃŸ-/Kleinschreibung. RegulÃ¤re Ausdrucke scheinen bis zu Icinga 1.6 zu funktionieren.
+            Siehe <a class="link" href="cgiparams.html#cgiparams-search_string">search_string</a>
+</td>
 </tr>
 <tr>
 <td><a class="link" href="cgiparams.html#cgiparams-servicegroup">servicegroup</a></td>
-<td>Alle oder eine bestimmte Servicegruppe auswählen, deren Hosts und Services angezeigt werden sollen</td>
+<td>Alle oder eine bestimmte Servicegruppe auswÃ¤hlen, deren Hosts und Services angezeigt werden sollen</td>
 <td>all; &lt;servicegroup name&gt;</td>
 <td>servicegroup=disk</td>
-<td>Spezielle Zeichen im Namen müssen kodiert werden ("urlencoded", z.B. "%20" statt einen Leerzeichens)</td>
+<td>Spezielle Zeichen im Namen mÃ¼ssen kodiert werden ("urlencoded", z.B. "%20" statt einen Leerzeichens)</td>
 </tr>
 <tr>
 <td><a class="link" href="cgiparams.html#cgiparams-serviceprops">serviceprops</a></td>
-<td>Alle Services auswählen, die dem angegebenen Bitmuster entsprechen. Bitte beachten Sie, dass die Services ALLE angegebenen
-          Bedingungen entsprechen müssen</td>
-<td> </td>
-<td>serviceprops=131088 (aktive Prüfungen, die deaktiviert sind)</td>
-<td>Ein logisches ODER der Bedingungen, die in include/cgiutils.c angegeben sind <a class="link" href="cgiparams.html#cgiparams-filter">[1]</a>
-          (HOST AND SERVICE FILTER PROPERTIES)</td>
+<td>Alle Services auswÃ¤hlen, die dem angegebenen Bitmuster entsprechen. Bitte beachten Sie, dass die Services ALLE
+            angegebenen Bedingungen entsprechen mÃ¼ssen</td>
+<td>Â </td>
+<td>serviceprops=131088 (aktive PrÃ¼fungen, die deaktiviert sind)</td>
+<td>Ein logisches ODER der Bedingungen, die in include/cgiutils.c angegeben sind <a class="link" href="cgiparams.html#cgiparams-filter" title="6.2.7. Host und Service Filter Properties">[1]</a>
+            (HOST AND SERVICE FILTER PROPERTIES)</td>
 </tr>
 <tr>
 <td><a class="link" href="cgiparams.html#cgiparams-servicestates">servicestates</a></td>
 <td>Zustand, in dem die Services sein sollten</td>
-<td> </td>
+<td>Â </td>
 <td>servicestates=56 (Services in einem Problemzustand)</td>
-<td>Ein logisches ODER der Zustände: 8=Warning; 16=Unknown; 32=Critical; 64=OK</td>
+<td>Ein logisches ODER der ZustÃ¤nde: 8=Warning; 16=Unknown; 32=Critical; 64=OK</td>
 </tr>
 <tr>
 <td><a class="link" href="cgiparams.html#cgiparams-servicestatustypes">servicestatustypes</a></td>
 <td>Zustand, in dem die Services sein sollten</td>
 <td>1 - 31</td>
 <td>servicestatustype=28 (services in problem state)</td>
-<td>Ein logisches ODER der Zustände: 1=Pending; 2=OK, 4=Warning; 8=Unknown; 16=Critical</td>
+<td>Ein logisches ODER der ZustÃ¤nde: 1=Pending; 2=OK, 4=Warning; 8=Unknown; 16=Critical</td>
 </tr>
 <tr>
 <td><a class="link" href="cgiparams.html#cgiparams-service_divisor">service_divisor</a></td>
 <td>Wichtigkeit der Service in Relation zu Hosts</td>
 <td>&gt;=1</td>
-<td> </td>
+<td>Â </td>
 <td>Services sind 1/n so wichtig wie Hosts. Default: n=4</td>
 </tr>
 <tr>
 <td><a class="link" href="cgiparams.html#cgiparams-shour">shour</a></td>
-<td>Start des maßgeschneiderten Zeitfensters (Stunde)</td>
-<td> </td>
-<td> </td>
-<td>Nur gültig für flexible Ausfallzeiten</td>
+<td>Start des maÃŸgeschneiderten Zeitfensters (Stunde)</td>
+<td>Â </td>
+<td>Â </td>
+<td>Nur gÃ¼ltig fÃ¼r flexible Ausfallzeiten</td>
 </tr>
 <tr>
 <td><a class="link" href="cgiparams.html#cgiparams-showscheduleddowntime">showscheduleddowntime</a></td>
 <td>Geplante Ausfallzeiten anzeigen</td>
 <td>yes; no</td>
-<td> </td>
+<td>Â </td>
 <td>Default: yes</td>
 </tr>
 <tr>
-<td>show_log_entries</td>
+<td><a class="link" href="cgiparams.html#cgiparams-show_log_entries">show_log_entries</a></td>
 <td>Log-Eintrage anzeigen</td>
-<td> </td>
+<td>Â </td>
 <td>show_log_entries</td>
-<td>Default: keine Log-Einträge anzeigen</td>
+<td>Default: keine Log-EintrÃ¤ge anzeigen</td>
 </tr>
 <tr>
 <td><a class="link" href="cgiparams.html#cgiparams-smin">smin</a></td>
-<td>Start des maßgeschneiderten Zeitfensters (Minute)</td>
-<td> </td>
-<td> </td>
-<td>Nur gültig für flexible Ausfallzeiten</td>
+<td>Start des maÃŸgeschneiderten Zeitfensters (Minute)</td>
+<td>Â </td>
+<td>Â </td>
+<td>Nur gÃ¼ltig fÃ¼r flexible Ausfallzeiten</td>
 </tr>
 <tr>
 <td><a class="link" href="cgiparams.html#cgiparams-smon">smon</a></td>
-<td>Start des maßgeschneiderten Zeitfensters (Monat)</td>
-<td> </td>
-<td> </td>
-<td>Nur gültig für flexible Ausfallzeiten</td>
+<td>Start des maÃŸgeschneiderten Zeitfensters (Monat)</td>
+<td>Â </td>
+<td>Â </td>
+<td>Nur gÃ¼ltig fÃ¼r flexible Ausfallzeiten</td>
 </tr>
 <tr>
 <td><a class="link" href="cgiparams.html#cgiparams-sortoption">sortoption</a></td>
@@ -2493,117 +2713,173 @@
 </tr>
 <tr>
 <td><a class="link" href="cgiparams.html#cgiparams-sorttype">sorttype</a></td>
-<td>Sortierrichtung für die Spalte, die über "sortoption=&lt;n&gt;" angegeben wurde</td>
+<td>Sortierrichtung fÃ¼r die Spalte, die Ã¼ber "sortoption=&lt;n&gt;" angegeben wurde</td>
 <td>1=ascending; 2=decending</td>
 <td>sorttype=2</td>
-<td> </td>
+<td>Â </td>
 </tr>
 <tr>
 <td><a class="link" href="cgiparams.html#cgiparams-ssec">ssec</a></td>
-<td>Start des maßgeschneiderten Zeitfensters (Sekunde)</td>
-<td> </td>
-<td> </td>
-<td>Nur gültig für flexible Ausfallzeiten</td>
+<td>Start des maÃŸgeschneiderten Zeitfensters (Sekunde)</td>
+<td>Â </td>
+<td>Â </td>
+<td>Nur gÃ¼ltig fÃ¼r flexible Ausfallzeiten</td>
 </tr>
 <tr>
 <td><a class="link" href="cgiparams.html#cgiparams-standardreport">standardreport</a></td>
 <td>Standard-Report</td>
 <td>1=recent alerts; 2=recent host alerts; 3=recent service alerts; 4=top host alert producers; 5=top service alert
-          producers</td>
-<td> </td>
-<td> </td>
+            producers</td>
+<td>Â </td>
+<td>Â </td>
+</tr>
+<tr>
+<td><a class="link" href="cgiparams.html#cgiparams-start">start</a></td>
+<td>ErgebniszÃ¤hler</td>
+<td>Â </td>
+<td>Â </td>
+<td>[5] Nutzbar fÃ¼r Paging-FÃ¤higkeit</td>
 </tr>
 <tr>
 <td><a class="link" href="cgiparams.html#cgiparams-start_time">start_time</a></td>
 <td>Start der festen Ausfallzeit</td>
-<td> </td>
-<td> </td>
-<td>Format "MM-DD-YYYY HH:MI" (kann ggf. von Ihren Ländereinstellungen abhängen, das ist aber unklar)</td>
+<td>Â </td>
+<td>Â </td>
+<td>Format "MM-DD-YYYY HH:MI" (kann ggf. von Ihren LÃ¤ndereinstellungen abhÃ¤ngen, das ist aber unklar)</td>
 </tr>
 <tr>
 <td><a class="link" href="cgiparams.html#cgiparams-statetype">statetype</a></td>
 <td>Hard- und/oder Soft-states</td>
 <td>0=Hard- und Soft-states; 1=Soft-states; 2=Hard-states</td>
 <td>statetype=2</td>
-<td> </td>
+<td>Â </td>
 </tr>
 <tr>
 <td><a class="link" href="cgiparams.html#cgiparams-statetypes">statetypes</a></td>
 <td>Hard- und/oder Soft-states</td>
 <td>1=Soft-states; 2=Hard-states; 3=Hard- und Soft-states</td>
 <td>statetypes=2</td>
-<td> </td>
+<td>Â </td>
 </tr>
 <tr>
 <td><a class="link" href="cgiparams.html#cgiparams-sticky_ack">sticky_ack</a></td>
-<td>Die Bestätigung ist "sticky"</td>
-<td> </td>
+<td>Die BestÃ¤tigung ist "sticky"</td>
+<td>0=disabled, 1=enabled (default)</td>
 <td>sticky_ack</td>
-<td> </td>
+<td>[5] cmd.cgi erfordert 0|1 Werte, wenn nicht gesetzt, wird 1 als Standard verwendet. Siehe auch <a class="link" href="https://dev.icinga.org/issues/2926" target="_top">Bug #2926</a> fÃ¼r weitere Informationen.</td>
 </tr>
 <tr>
 <td><a class="link" href="cgiparams.html#cgiparams-style">style</a></td>
 <td>Angabe der anzuzeigenden Informationen</td>
 <td>overview; detail; summary; grid; hostdetail</td>
-<td> </td>
+<td>Â </td>
 <td>Trifft nur auf die Objekttypen "hostgroups" und "servicegroups" zu; hostdetail=host status details; detail=service status
-          details; summary=status summary; grid=status grid;</td>
+            details; summary=status summary; grid=status grid;</td>
 </tr>
 <tr>
 <td><a class="link" href="cgiparams.html#cgiparams-syear">syear</a></td>
-<td>Start des maßgeschneiderten Zeitfensters (Jahr)</td>
-<td> </td>
-<td> </td>
-<td>Nur gültig für flexible Ausfallzeiten</td>
+<td>Start des maÃŸgeschneiderten Zeitfensters (Jahr)</td>
+<td>Â </td>
+<td>Â </td>
+<td>Nur gÃ¼ltig fÃ¼r flexible Ausfallzeiten</td>
 </tr>
 <tr>
-<td>t1</td>
-<td>Startpunkt eines maßgeschneiderten Zeitfensters</td>
-<td> </td>
+<td><a class="link" href="cgiparams.html#cgiparams-t1">t1</a></td>
+<td>Startpunkt eines maÃŸgeschneiderten Zeitfensters</td>
+<td>Â </td>
 <td>t1=1296109300</td>
 <td>Unix timestamp</td>
 </tr>
 <tr>
-<td>t2</td>
-<td>Endpunkt eines maßgeschneiderten Zeitfensters</td>
-<td> </td>
+<td><a class="link" href="cgiparams.html#cgiparams-t2">t2</a></td>
+<td>Endpunkt eines maÃŸgeschneiderten Zeitfensters</td>
+<td>Â </td>
 <td>t2=1296189360</td>
 <td>Unix timestamp</td>
 </tr>
 <tr>
 <td><a class="link" href="cgiparams.html#cgiparams-timeperiod">timeperiod</a></td>
-<td>Zeitfenster, das für den "Availability report" benutzt werden soll</td>
+<td>Zeitfenster, das fÃ¼r den "Availability report" benutzt werden soll</td>
 <td>today; yesterday; thisweek; lastweek; thismonth; lastmonth; thisquarter; lastquarter; thisyear; lastyear; last24hours;
-          last7days; last31days; custom</td>
+            last7days; last31days; custom</td>
 <td>timeperiod=lastmonth</td>
-<td> </td>
+<td>Â </td>
 </tr>
 <tr>
 <td><a class="link" href="cgiparams.html#cgiparams-trigger">trigger</a></td>
-<td>Die Ausfallzeit wird von der Downtime-ID &lt;n&gt; ausgelöst</td>
-<td>Eine gültige Downtime-ID</td>
-<td> </td>
-<td> </td>
+<td>Die Ausfallzeit wird von der Downtime-ID &lt;n&gt; ausgelÃ¶st</td>
+<td>Eine gÃ¼ltige Downtime-ID</td>
+<td>Â </td>
+<td>Â </td>
+</tr>
+<tr>
+<td><a class="link" href="cgiparams.html#cgiparams-ts_end">ts_end</a></td>
+<td>Daten bis zu ts_end anzeigen (Unix-Timestamp)</td>
+<td>Ein gÃ¼ltiger Unix-Timestamp</td>
+<td>Â </td>
+<td>siehe [5]</td>
+</tr>
+<tr>
+<td><a class="link" href="cgiparams.html#cgiparams-ts_start">ts_start</a></td>
+<td>Daten ab ts_start anzeigen (Unix-Timestamp)</td>
+<td>Ein gÃ¼ltiger Unix-Timestamp</td>
+<td>Â </td>
+<td>siehe [5]</td>
 </tr>
 <tr>
 <td><a class="link" href="cgiparams.html#cgiparams-type">type</a></td>
 <td>Objekttyp</td>
 <td>hosts; hostgroups; services; servicegroups; contacts; contactgroups; timeperiods; commands; hostescalations;
-          serviceescalations; hostdependencies; servicedependencies</td>
+            serviceescalations; hostdependencies; servicedependencies</td>
 <td>type=hosts</td>
-<td> </td>
+<td>Â </td>
 </tr>
 </tbody>
 </table>
-  </div>
+    </div>
 
-  <p><a name="cgiparams_abbrev"></a><span class="bold"><strong>Abkürzungen, CGIs, Verweise</strong></span></p>
+    <div class="note" title="Anmerkung" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note">
+<tr>
+<td rowspan="2" align="center" valign="top" width="25"><img alt="[Anmerkung]" src="../images/note.png"></td>
+<th align="left">Anmerkung</th>
+</tr>
+<tr><td align="left" valign="top">
+      <p>Seit 1.8 gibt es 'scroll' als Parameter fÃ¼r status.cgi. Dies dient dazu, die aktuelle Scrollposition abzuspeichern und
+      wiederherzustellen. Dies ist nicht essenziell, da diese Variable nur intern verwendet wird, wenn refresh_type=javascript gesetzt ist
+      in der cgi.cfg</p>
+    </td></tr>
+</table></div>
 
-  <p>Abkürzungen, die in der ersten Tabelle benutzt werden, Beziehungen zu CGIs- und Menüeintragen sowie Verweise auf den Source-Code in
-  &lt;icinga-core&gt;/cgis.</p>
+    <p>[1] Logisches ODER bedeutet, dass die jeweiligen Zahlen addiert werden. Es werden dann die Objekte angezeigt, die ALLE Bedingungen
+    erfÃ¼llen.</p>
 
-  <div class="informaltable">
-    <table border="1">
+    <p>[2] VerfÃ¼gbar ab Icinga 1.4.</p>
+
+    <p>[3] avail, log, notif, out, status, sum: Alle Views/Reports unterstÃ¼tzen jsonoutput; config: Alle Typen auÃŸer command expansion;
+    ext: Alle Views auÃŸer hostgroup/servicegroup info (immer auÃŸer Performance-Daten); tac: Datenausgabe im json-Format. Mehr Informationen
+    finden Sie im <a class="link" href="https://wiki.icinga.org/display/howtos/Using+JSON+export+in+Classic-UI" target="_top">Icinga-Wiki</a>.</p>
+
+    <p>[4] VerfÃ¼gbar ab Icinga 1.7.</p>
+
+    <p>[5] VerfÃ¼gbar ab Icinga 1.8.</p>
+
+    <p>[6] EntfÃ¤llt ab Icinga 1.8.</p>
+
+    <p>[7] Undokumentiert seit Icinga 1.2.</p>
+
+
+    </div>
+
+    <div class="section" title="6.2.6. AbkÃ¼rzungen, CGIs, Verweise">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="cgiparams_abbrev"></a>6.2.6. AbkÃ¼rzungen, CGIs, Verweise</h3></div></div></div>
+	    
+
+    <p>AbkÃ¼rzungen, die in der ersten Tabelle benutzt werden, Beziehungen zu CGIs- und MenÃ¼eintragen sowie Verweise auf den Source-Code
+    in &lt;icinga-core&gt;/cgis.</p>
+
+    <div class="informaltable">
+      <table border="1">
 <colgroup>
 <col>
 <col>
@@ -2611,9 +2887,9 @@
 <col>
 </colgroup>
 <thead><tr>
-<th align="center">Abkurzung</th>
+<th align="center">AbkÃ¼rzung</th>
 <th align="center">CGI</th>
-<th align="center">Menueintrag</th>
+<th align="center">MenÃ¼eintrag</th>
 <th align="center">Source-Code</th>
 </tr></thead>
 <tbody>
@@ -2703,11 +2979,18 @@
 </tr>
 </tbody>
 </table>
-  </div>
+    </div>
 
-  <p><a name="cgiparams-filter"></a><span class="bold"><strong>Ausschnitt aus include/cgiutils.h</strong></span></p>
+    </div>
 
-  <pre class="programlisting">/****************** HOST AND SERVICE FILTER PROPERTIES  *******************/
+    <div class="section" title="6.2.7. Host und Service Filter Properties">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="cgiparams-filter"></a>6.2.7. Host und Service Filter Properties</h3></div></div></div>
+	
+
+    <p><span class="bold"><strong>Ausschnitt aus include/cgiutils.h</strong></span></p>
+
+    <pre class="programlisting">/****************** HOST AND SERVICE FILTER PROPERTIES  *******************/
 
 #define HOST_SCHEDULED_DOWNTIME         1
 #define HOST_NO_SCHEDULED_DOWNTIME      2
@@ -2729,6 +3012,8 @@
 #define HOST_ACTIVE_CHECK               131072
 #define HOST_HARD_STATE                 262144
 #define HOST_SOFT_STATE                 524288
+#define HOST_STATE_HANDLED              1048576
+#define HOST_NOT_ALL_CHECKS_DISABLED    2097152
 
 #define SERVICE_SCHEDULED_DOWNTIME      1
 #define SERVICE_NO_SCHEDULED_DOWNTIME   2
@@ -2749,11 +3034,20 @@
 #define SERVICE_PASSIVE_CHECK           65536
 #define SERVICE_ACTIVE_CHECK            131072
 #define SERVICE_HARD_STATE              262144
-#define SERVICE_SOFT_STATE              524288</pre>
+#define SERVICE_SOFT_STATE              524288
+#define SERVICE_STATE_HANDLED           1048576
+#define SERVICE_NOT_ALL_CHECKS_DISABLED 2097152</pre>
 
-  <p><a name="cgiparams-statustypes"></a><span class="bold"><strong>Excerpt from include/statusdata.h</strong></span></p>
+    </div>
 
-  <pre class="screen">/*************************** SERVICE STATES ***************************/
+    <div class="section" title="6.2.8. Host und Service Statustypen">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="cgiparams-statustypes"></a>6.2.8. Host und Service Statustypen</h3></div></div></div>
+	
+
+    <p><span class="bold"><strong>Excerpt from include/statusdata.h</strong></span></p>
+
+    <pre class="programlisting">/*************************** SERVICE STATES ***************************/
 #define SERVICE_PENDING  1
 #define SERVICE_OK       2
 #define SERVICE_WARNING  4
@@ -2766,242 +3060,248 @@
 #define HOST_DOWN        4
 #define HOST_UNREACHABLE 8</pre>
 
-  <p>[1] Logisches ODER bedeutet, dass die jeweiligen Zahlen addiert werden. Es werden dann die Objekte angezeigt, die ALLE Bedingungen
-  erfüllen.</p>
+    <a class="indexterm" name="idp12168496"></a>
 
-  <p>[2] Verfügbar ab Icinga 1.4.</p>
+    <a class="indexterm" name="idp12170192"></a>
 
-  <p>[3] avail, log, notif, out, status, sum: Alle Views/Reports unterstützen jsonoutput; config: Alle Typen außer command expansion;
-  ext: Alle Views außer hostgroup/servicegroup info (immer außer Performance-Daten); tac: Datenausgabe im json-Format. Mehr Informationen
-  finden Sie im <a class="link" href="https://wiki.icinga.org/display/howtos/Using+JSON+export+in+Classic-UI" target="_top">Icinga-Wiki</a>.</p>
+    <a class="indexterm" name="idp12171808"></a>
 
-  <a class="indexterm" name="idp11025536"></a>
+    <a class="indexterm" name="idp12173008"></a>
 
-  <a class="indexterm" name="idp11026928"></a>
+    <a class="indexterm" name="idp12174016"></a>
 
-  <a class="indexterm" name="idp11028320"></a>
+    <a class="indexterm" name="idp12175792"></a>
 
-  <a class="indexterm" name="idp11029328"></a>
+    <a class="indexterm" name="idp12176928"></a>
 
-  <a class="indexterm" name="idp11030336"></a>
+    <a class="indexterm" name="idp12178112"></a>
 
-  <a class="indexterm" name="idp11031728"></a>
+    <a class="indexterm" name="idp12179680"></a>
 
-  <a class="indexterm" name="idp11032976"></a>
+    <a class="indexterm" name="idp12181376"></a>
 
-  <a class="indexterm" name="idp11033984"></a>
+    <a class="indexterm" name="idp12182944"></a>
 
-  <a class="indexterm" name="idp11035712"></a>
+    <a class="indexterm" name="idp12184576"></a>
 
-  <a class="indexterm" name="idp11037296"></a>
+    <a class="indexterm" name="idp12186208"></a>
 
-  <a class="indexterm" name="idp11038912"></a>
+    <a class="indexterm" name="idp12187840"></a>
 
-  <a class="indexterm" name="idp11040368"></a>
+    <a class="indexterm" name="idp12189536"></a>
 
-  <a class="indexterm" name="idp11042128"></a>
+    <a class="indexterm" name="idp12191168"></a>
 
-  <a class="indexterm" name="idp11043696"></a>
+    <a class="indexterm" name="idp12192768"></a>
 
-  <a class="indexterm" name="idp11045344"></a>
+    <a class="indexterm" name="idp12194464"></a>
 
-  <a class="indexterm" name="idp11047168"></a>
+    <a class="indexterm" name="idp12196080"></a>
 
-  <a class="indexterm" name="idp11048688"></a>
+    <a class="indexterm" name="idp12197696"></a>
 
-  <a class="indexterm" name="idp11050160"></a>
+    <a class="indexterm" name="idp12199312"></a>
 
-  <a class="indexterm" name="idp11050288"></a>
+    <a class="indexterm" name="idp12200928"></a>
 
-  <a class="indexterm" name="idp11053408"></a>
+    <a class="indexterm" name="idp12202544"></a>
 
-  <a class="indexterm" name="idp11055152"></a>
+    <a class="indexterm" name="idp12204160"></a>
 
-  <a class="indexterm" name="idp11056784"></a>
+    <a class="indexterm" name="idp12205776"></a>
 
-  <a class="indexterm" name="idp11058512"></a>
+    <a class="indexterm" name="idp12207392"></a>
 
-  <a class="indexterm" name="idp11060128"></a>
+    <a class="indexterm" name="idp12209008"></a>
 
-  <a class="indexterm" name="idp11061744"></a>
+    <a class="indexterm" name="idp12210624"></a>
 
-  <a class="indexterm" name="idp11063360"></a>
+    <a class="indexterm" name="idp12212240"></a>
 
-  <a class="indexterm" name="idp11064976"></a>
+    <a class="indexterm" name="idp12213856"></a>
 
-  <a class="indexterm" name="idp11066592"></a>
+    <a class="indexterm" name="idp12215472"></a>
 
-  <a class="indexterm" name="idp11068208"></a>
+    <a class="indexterm" name="idp12217088"></a>
 
-  <a class="indexterm" name="idp11069824"></a>
+    <a class="indexterm" name="idp12218704"></a>
 
-  <a class="indexterm" name="idp11071440"></a>
+    <a class="indexterm" name="idp12220320"></a>
 
-  <a class="indexterm" name="idp11073056"></a>
+    <a class="indexterm" name="idp12221936"></a>
 
-  <a class="indexterm" name="idp11074672"></a>
+    <a class="indexterm" name="idp12223552"></a>
 
-  <a class="indexterm" name="idp11076288"></a>
+    <a class="indexterm" name="idp12225168"></a>
 
-  <a class="indexterm" name="idp11077904"></a>
+    <a class="indexterm" name="idp12226784"></a>
 
-  <a class="indexterm" name="idp11079520"></a>
+    <a class="indexterm" name="idp12228400"></a>
 
-  <a class="indexterm" name="idp11081136"></a>
+    <a class="indexterm" name="idp12229984"></a>
 
-  <a class="indexterm" name="idp11082752"></a>
+    <a class="indexterm" name="idp12231552"></a>
 
-  <a class="indexterm" name="idp11084368"></a>
+    <a class="indexterm" name="idp12233184"></a>
 
-  <a class="indexterm" name="idp11085856"></a>
+    <a class="indexterm" name="idp12234880"></a>
 
-  <a class="indexterm" name="idp11087248"></a>
+    <a class="indexterm" name="idp12236448"></a>
 
-  <a class="indexterm" name="idp11087376"></a>
+    <a class="indexterm" name="idp12238144"></a>
 
-  <a class="indexterm" name="idp11090800"></a>
+    <a class="indexterm" name="idp12239776"></a>
 
-  <a class="indexterm" name="idp11092448"></a>
+    <a class="indexterm" name="idp12241440"></a>
 
-  <a class="indexterm" name="idp11094208"></a>
+    <a class="indexterm" name="idp12243072"></a>
 
-  <a class="indexterm" name="idp11095776"></a>
+    <a class="indexterm" name="idp12244768"></a>
 
-  <a class="indexterm" name="idp11097536"></a>
+    <a class="indexterm" name="idp12246320"></a>
 
-  <a class="indexterm" name="idp11099104"></a>
+    <a class="indexterm" name="idp12248016"></a>
 
-  <a class="indexterm" name="idp11100688"></a>
+    <a class="indexterm" name="idp12249504"></a>
 
-  <a class="indexterm" name="idp11102304"></a>
+    <a class="indexterm" name="idp12251136"></a>
 
-  <a class="indexterm" name="idp11103920"></a>
+    <a class="indexterm" name="idp12252768"></a>
 
-  <a class="indexterm" name="idp11105504"></a>
+    <a class="indexterm" name="idp12254432"></a>
 
-  <a class="indexterm" name="idp11107088"></a>
+    <a class="indexterm" name="idp12256064"></a>
 
-  <a class="indexterm" name="idp11108688"></a>
+    <a class="indexterm" name="idp12257728"></a>
 
-  <a class="indexterm" name="idp11110352"></a>
+    <a class="indexterm" name="idp12259360"></a>
 
-  <a class="indexterm" name="idp11112016"></a>
+    <a class="indexterm" name="idp12260992"></a>
 
-  <a class="indexterm" name="idp11113680"></a>
+    <a class="indexterm" name="idp12262624"></a>
 
-  <a class="indexterm" name="idp11115344"></a>
+    <a class="indexterm" name="idp12264256"></a>
 
-  <a class="indexterm" name="idp11117008"></a>
+    <a class="indexterm" name="idp12265888"></a>
 
-  <a class="indexterm" name="idp11118672"></a>
+    <a class="indexterm" name="idp12267520"></a>
 
-  <a class="indexterm" name="idp11120336"></a>
+    <a class="indexterm" name="idp12269152"></a>
 
-  <a class="indexterm" name="idp11122000"></a>
+    <a class="indexterm" name="idp12270784"></a>
 
-  <a class="indexterm" name="idp11123664"></a>
+    <a class="indexterm" name="idp12272416"></a>
 
-  <a class="indexterm" name="idp11125328"></a>
+    <a class="indexterm" name="idp12274048"></a>
 
-  <a class="indexterm" name="idp11126992"></a>
+    <a class="indexterm" name="idp12275680"></a>
 
-  <a class="indexterm" name="idp11128656"></a>
+    <a class="indexterm" name="idp12277312"></a>
 
-  <a class="indexterm" name="idp11130320"></a>
+    <a class="indexterm" name="idp12278944"></a>
 
-  <a class="indexterm" name="idp11131984"></a>
+    <a class="indexterm" name="idp12280576"></a>
 
-  <a class="indexterm" name="idp11133616"></a>
+    <a class="indexterm" name="idp12282272"></a>
 
-  <a class="indexterm" name="idp11135280"></a>
+    <a class="indexterm" name="idp12283824"></a>
 
-  <a class="indexterm" name="idp11136944"></a>
+    <a class="indexterm" name="idp12285456"></a>
 
-  <a class="indexterm" name="idp11138608"></a>
+    <a class="indexterm" name="idp12287088"></a>
 
-  <a class="indexterm" name="idp11140272"></a>
+    <a class="indexterm" name="idp12288720"></a>
 
-  <a class="indexterm" name="idp11141936"></a>
+    <a class="indexterm" name="idp12290352"></a>
 
-  <a class="indexterm" name="idp11143600"></a>
+    <a class="indexterm" name="idp12291984"></a>
 
-  <a class="indexterm" name="idp11145264"></a>
+    <a class="indexterm" name="idp12293616"></a>
 
-  <a class="indexterm" name="idp11146928"></a>
+    <a class="indexterm" name="idp12295248"></a>
 
-  <a class="indexterm" name="idp11148592"></a>
+    <a class="indexterm" name="idp12296880"></a>
 
-  <a class="indexterm" name="idp11150224"></a>
+    <a class="indexterm" name="idp12298512"></a>
 
-  <a class="indexterm" name="idp11151888"></a>
+    <a class="indexterm" name="idp12300208"></a>
 
-  <a class="indexterm" name="idp11153552"></a>
+    <a class="indexterm" name="idp12301760"></a>
 
-  <a class="indexterm" name="idp11155088"></a>
+    <a class="indexterm" name="idp12303392"></a>
 
-  <a class="indexterm" name="idp11156480"></a>
+    <a class="indexterm" name="idp12305024"></a>
 
-  <a class="indexterm" name="idp11157872"></a>
+    <a class="indexterm" name="idp12306656"></a>
 
-  <a class="indexterm" name="idp11159264"></a>
+    <a class="indexterm" name="idp12308288"></a>
 
-  <a class="indexterm" name="idp11160960"></a>
+    <a class="indexterm" name="idp12309984"></a>
 
-  <a class="indexterm" name="idp11162352"></a>
+    <a class="indexterm" name="idp12311472"></a>
 
-  <a class="indexterm" name="idp11164192"></a>
+    <a class="indexterm" name="idp12313168"></a>
 
-  <a class="indexterm" name="idp11165584"></a>
+    <a class="indexterm" name="idp12314752"></a>
 
-  <a class="indexterm" name="idp11167424"></a>
+    <a class="indexterm" name="idp12316320"></a>
 
-  <a class="indexterm" name="idp11168944"></a>
+    <a class="indexterm" name="idp12318016"></a>
 
-  <a class="indexterm" name="idp11170672"></a>
+    <a class="indexterm" name="idp12319648"></a>
 
-  <a class="indexterm" name="idp11172288"></a>
+    <a class="indexterm" name="idp12321312"></a>
 
-  <a class="indexterm" name="idp11173904"></a>
+    <a class="indexterm" name="idp12322944"></a>
 
-  <a class="indexterm" name="idp11175424"></a>
+    <a class="indexterm" name="idp12324576"></a>
 
-  <a class="indexterm" name="idp11176896"></a>
+    <a class="indexterm" name="idp12326272"></a>
 
-  <a class="indexterm" name="idp11177024"></a>
+    <a class="indexterm" name="idp12327824"></a>
 
-  <a class="indexterm" name="idp11180368"></a>
+    <a class="indexterm" name="idp12329456"></a>
 
-  <a class="indexterm" name="idp11180496"></a>
+    <a class="indexterm" name="idp12331088"></a>
 
-  <a class="indexterm" name="idp11183696"></a>
+    <a class="indexterm" name="idp12332720"></a>
 
-  <a class="indexterm" name="idp11185168"></a>
+    <a class="indexterm" name="idp12334352"></a>
 
-  <a class="indexterm" name="idp11186912"></a>
+    <a class="indexterm" name="idp12335984"></a>
 
-  <a class="indexterm" name="idp11187040"></a>
+    <a class="indexterm" name="idp12337616"></a>
 
-  <a class="indexterm" name="idp11190240"></a>
+    <a class="indexterm" name="idp12339248"></a>
 
-  <a class="indexterm" name="idp11191712"></a>
+    <a class="indexterm" name="idp12340880"></a>
+
+    <a class="indexterm" name="idp12342512"></a>
+
+    <a class="indexterm" name="idp12344144"></a>
+
+    <a class="indexterm" name="idp12345776"></a>
+
+    <a class="indexterm" name="idp12347408"></a>
+  </div>
 </div>
 <div class="navfooter">
 <hr>
 <table width="100%" summary="Navigation footer">
 <tr>
 <td width="40%" align="left">
-<a accesskey="p" href="cgis.html">Zurück</a> </td>
+<a accesskey="p" href="cgis.html">ZurÃ¼ck</a>Â </td>
 <td width="20%" align="center"><a accesskey="u" href="ch06.html">Nach oben</a></td>
-<td width="40%" align="right"> <a accesskey="n" href="cgicmd.html">Weiter</a>
+<td width="40%" align="right">Â <a accesskey="n" href="cgicmd.html">Weiter</a>
 </td>
 </tr>
 <tr>
-<td width="40%" align="left" valign="top">Icinga Classic UI: Informationen über die CGIs </td>
+<td width="40%" align="left" valign="top">6.1. Icinga Classic UI: Informationen Ã¼ber die CGIsÂ </td>
 <td width="20%" align="center"><a accesskey="h" href="index.html">Zum Anfang</a></td>
-<td width="40%" align="right" valign="top"> Ausführen von CGIs auf der Kommandzeile</td>
+<td width="40%" align="right" valign="top">Â 6.3. AusfÃ¼hren von CGIs auf der Kommandozeile</td>
 </tr>
 </table>
 </div>
-<P class="copyright">© 2009-2011 Icinga Development Team, http://www.icinga.org</P>
+<P class="copyright">Â© 2009-2013 Icinga Development Team, http://www.icinga.org</P>
 </body>
 </html>

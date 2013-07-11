@@ -3,7 +3,7 @@
  * READLOGS.H - Header file for log reading functions
  *
  * Copyright (c) 1999-2008  Ethan Galstad (egalstad@nagios.org)
- * Copyright (c) 2009-2011 Icinga Development Team (http://www.icinga.org) 
+ * Copyright (c) 2009-2013 Icinga Development Team (http://www.icinga.org) 
  *
  * License:
  * 
@@ -18,7 +18,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  ************************************************************************/
 
 /** @file readlogs.h
@@ -105,9 +105,9 @@ extern "C" {
  @{**/
 
 #define READLOG_OK		0
-#define READLOG_ERROR		1
-#define READLOG_ERROR_MEMORY	2
-#define READLOG_ERROR_NOFILE	3
+#define READLOG_ERROR_WARNING	1
+#define READLOG_ERROR_FATAL	2
+#define READLOG_ERROR_MEMORY	3
 #define READLOG_ERROR_FILTER	4
 /** @}*/
 
@@ -136,17 +136,12 @@ typedef struct logentry_filter {
 /* for documentation on these functions see cgi/readlogs.c */
 /** @name log reading
     @{ **/
-int add_log_filter(int, int);
-int get_log_entries(char *, char *, int, time_t, time_t);
-void free_log_filters(void);
-void free_log_entries(void);
-/**@}*/
-
-/** @name log archive determination
-    @{ **/
-void get_log_archive_to_use(int,char *,int);
-int determine_archive_to_use_from_time(time_t);
-void determine_log_rotation_times(int);
+int sort_icinga_logfiles_by_name(const void *a_in, const void *b_in);
+int add_log_filter(logfilter **filter_list, int requested_filter, int include_exclude);
+int get_log_entries(logentry **entry_list, logfilter **filter_list, char **error_text, char *search_string, int reverse, time_t ts_start, time_t ts_end);
+void free_log_filters(logfilter **filter_list);
+void free_log_entries(logentry **entry_list);
+time_t get_backtrack_seconds(int backtrack_archives);
 /**@}*/
 
 #ifdef __cplusplus

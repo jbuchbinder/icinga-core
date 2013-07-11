@@ -3,8 +3,8 @@
  * XODTEMPLATE.C - Template-based object configuration data input routines
  *
  * Copyright (c) 1999-2009 Ethan Galstad (egalstad@nagios.org)
- * Copyright (c) 2009-2011 Nagios Core Development Team and Community Contributors
- * Copyright (c) 2009-2011 Icinga Development Team (http://www.icinga.org)
+ * Copyright (c) 2009-2013 Nagios Core Development Team and Community Contributors
+ * Copyright (c) 2009-2013 Icinga Development Team (http://www.icinga.org)
  *
  * Description:
  *
@@ -41,7 +41,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  *****************************************************************************/
 
@@ -1051,7 +1051,7 @@ int xodtemplate_begin_object_definition(char *input, int options, int config_fil
 		xod_begin_def(serviceescalation);
 		new_serviceescalation->first_notification = -2;
 		new_serviceescalation->last_notification = -2;
-#ifdef USE_ST_BASED_ESCAL_RANGES
+		/* state based escalation ranges */
 		new_serviceescalation->first_warning_notification = -2;
 		new_serviceescalation->last_warning_notification = -2;
 		new_serviceescalation->first_critical_notification = -2;
@@ -1059,7 +1059,6 @@ int xodtemplate_begin_object_definition(char *input, int options, int config_fil
 		new_serviceescalation->first_unknown_notification = -2;
 		new_serviceescalation->last_unknown_notification = -2;
 		new_serviceescalation->notification_interval = -2.0;
-#endif
 		break;
 
 	case XODTEMPLATE_CONTACT:
@@ -1129,13 +1128,12 @@ int xodtemplate_begin_object_definition(char *input, int options, int config_fil
 		xod_begin_def(hostescalation);
 		new_hostescalation->first_notification = -2;
 		new_hostescalation->last_notification = -2;
-#ifdef USE_ST_BASED_ESCAL_RANGE
+		/* state based escalation ranges */
 		new_hostescalation->first_down_notification = -2;
 		new_hostescalation->last_down_notification = -2;
 		new_hostescalation->first_unreachable_notification = -2;
 		new_hostescalation->last_unreachable_notification = -2;
 		new_hostescalation->notification_interval = -2.0;
-#endif
 		break;
 
 	case XODTEMPLATE_HOSTEXTINFO:
@@ -2007,7 +2005,7 @@ int xodtemplate_add_object_property(char *input, int options) {
 			temp_serviceescalation->last_notification = atoi(value);
 			temp_serviceescalation->have_last_notification = TRUE;
 		}
-#ifdef USE_ST_BASED_ESCAL_RANGES
+		/* state based escalation ranges */
 		else if (!strcmp(variable, "first_warning_notification")) {
 			temp_serviceescalation->first_warning_notification = atoi(value);
 			temp_serviceescalation->have_first_warning_notification = TRUE;
@@ -2027,7 +2025,7 @@ int xodtemplate_add_object_property(char *input, int options) {
 			temp_serviceescalation->last_unknown_notification = atoi(value);
 			temp_serviceescalation->have_last_unknown_notification = TRUE;
 		}
-#endif
+
 		else if (!strcmp(variable, "notification_interval")) {
 			temp_serviceescalation->notification_interval = strtod(value, NULL);
 			temp_serviceescalation->have_notification_interval = TRUE;
@@ -3264,7 +3262,7 @@ int xodtemplate_add_object_property(char *input, int options) {
 			temp_hostescalation->last_notification = atoi(value);
 			temp_hostescalation->have_last_notification = TRUE;
 		}
-#ifdef USE_ST_BASED_ESCAL_RANGES
+		/* state based escalation ranges */
 		else if (!strcmp(variable, "first_down_notification")) {
 			temp_hostescalation->first_down_notification = atoi(value);
 			temp_hostescalation->have_first_down_notification = TRUE;
@@ -3278,7 +3276,7 @@ int xodtemplate_add_object_property(char *input, int options) {
 			temp_hostescalation->last_unreachable_notification = atoi(value);
 			temp_hostescalation->have_last_unreachable_notification = TRUE;
 		}
-#endif
+
 		else if (!strcmp(variable, "notification_interval")) {
 			temp_hostescalation->notification_interval = strtod(value, NULL);
 			temp_hostescalation->have_notification_interval = TRUE;
@@ -4060,7 +4058,9 @@ int xodtemplate_duplicate_services(void) {
 				} else {
 					/* User is ok with hostgroup -> service mappings with no hosts */
 					if (allow_empty_hostgroup_assignment == 1) {
-						continue;
+						/* skip the service only if it doesn't have host_name entry either */
+						if (temp_service->host_name == NULL)
+							continue;
 					}
 				}
 			}
@@ -4128,8 +4128,14 @@ int xodtemplate_duplicate_services(void) {
 		/* skip service definitions without enough data */
 		/* make host_name optional for services, only warn */
 		if (temp_service->host_name == NULL) {
-			logit(NSLOG_CONFIG_WARNING, TRUE, "Warning: No host_name found for service definition or used template (config file '%s', starting on line %d)\n", xodtemplate_config_file_name(temp_service->_config_file), temp_service->_start_line);
-			result = ERROR;
+			/* allow_empty_hostgroup_assignment is not set, so actually warn the user about missing hostname attribute */
+			if(allow_empty_hostgroup_assignment == 0) {
+				logit(NSLOG_CONFIG_WARNING, TRUE, "Warning: No host_name found for service definition or used template (config file '%s', starting on line %d)\n", xodtemplate_config_file_name(temp_service->_config_file), temp_service->_start_line);
+				return ERROR;
+			} else {
+				/* we can't let the object being added to skiplist and then erroring out with NULL'ed host_name in common/objects.c add_service() */
+				continue;
+			}
 		}
 
 		if (temp_service->service_description == NULL) {
@@ -4169,9 +4175,16 @@ int xodtemplate_duplicate_services(void) {
 		xodtemplate_unset_service_is_from_hostgroup(temp_service);
 
 		/* skip service definitions without enough data */
-		if (temp_service->host_name == NULL) {
-			logit(NSLOG_CONFIG_ERROR, TRUE, "Error: No host_name found for service definition or used template (config file '%s', starting on line %d)\n", xodtemplate_config_file_name(temp_service->_config_file), temp_service->_start_line);
-			return ERROR;
+                /* make host_name optional for services, only warn */
+                if (temp_service->host_name == NULL) {
+                        /* allow_empty_hostgroup_assignment is not set, so actually warn the user about missing hostname attribute */
+                        if(allow_empty_hostgroup_assignment == 0) {
+                                logit(NSLOG_CONFIG_WARNING, TRUE, "Warning: No host_name found for service definition or used template (config file '%s', starting on line %d)\n", xodtemplate_config_file_name(temp_service->_config_file), temp_service->_start_line);
+                                return ERROR;
+                        } else {
+                                /* we can't let the object being added to skiplist and then erroring out with NULL'ed host_name in common/objects.c add_service() */
+				continue;
+                        }
 		}
 
 		if (temp_service->service_description == NULL) {
@@ -4429,14 +4442,14 @@ int xodtemplate_duplicate_objects(void) {
 
 		/* get list of master host names */
 		master_hostlist = xodtemplate_expand_hostgroups_and_hosts(temp_hostdependency->hostgroup_name, temp_hostdependency->host_name, temp_hostdependency->_config_file, temp_hostdependency->_start_line);
-		if (master_hostlist == NULL) {
+		if (master_hostlist == NULL && allow_empty_hostgroup_assignment==0) {
 			logit(NSLOG_CONFIG_ERROR, TRUE, "Error: Could not expand master hostgroups and/or hosts specified in host dependency (config file '%s', starting on line %d)\n", xodtemplate_config_file_name(temp_hostdependency->_config_file), temp_hostdependency->_start_line);
 			return ERROR;
 		}
 
 		/* get list of dependent host names */
 		dependent_hostlist = xodtemplate_expand_hostgroups_and_hosts(temp_hostdependency->dependent_hostgroup_name, temp_hostdependency->dependent_host_name, temp_hostdependency->_config_file, temp_hostdependency->_start_line);
-		if (dependent_hostlist == NULL) {
+		if (dependent_hostlist == NULL && allow_empty_hostgroup_assignment==0) {
 			logit(NSLOG_CONFIG_ERROR, TRUE, "Error: Could not expand dependent hostgroups and/or hosts specified in host dependency (config file '%s', starting on line %d)\n", xodtemplate_config_file_name(temp_hostdependency->_config_file), temp_hostdependency->_start_line);
 			xodtemplate_free_memberlist(&master_hostlist);
 			return ERROR;
@@ -4568,7 +4581,7 @@ int xodtemplate_duplicate_objects(void) {
 #endif
 
 			master_hostlist = xodtemplate_expand_hostgroups_and_hosts(temp_servicedependency->hostgroup_name, temp_servicedependency->host_name, temp_servicedependency->_config_file, temp_servicedependency->_start_line);
-			if (master_hostlist == NULL) {
+			if (master_hostlist == NULL && allow_empty_hostgroup_assignment==0) {
 				logit(NSLOG_CONFIG_ERROR, TRUE, "Error: Could not expand master hostgroups and/or hosts specified in service dependency (config file '%s', starting on line %d)\n", xodtemplate_config_file_name(temp_servicedependency->_config_file), temp_servicedependency->_start_line);
 				return ERROR;
 			}
@@ -4760,7 +4773,7 @@ int xodtemplate_duplicate_objects(void) {
 		if (temp_servicedependency->dependent_host_name != NULL || temp_servicedependency->dependent_hostgroup_name != NULL) {
 
 			dependent_hostlist = xodtemplate_expand_hostgroups_and_hosts(temp_servicedependency->dependent_hostgroup_name, temp_servicedependency->dependent_host_name, temp_servicedependency->_config_file, temp_servicedependency->_start_line);
-			if (dependent_hostlist == NULL) {
+			if (dependent_hostlist == NULL && allow_empty_hostgroup_assignment==0) {
 				logit(NSLOG_CONFIG_ERROR, TRUE, "Error: Could not expand dependent hostgroups and/or hosts specified in service dependency (config file '%s', starting on line %d)\n", xodtemplate_config_file_name(temp_servicedependency->_config_file), temp_servicedependency->_start_line);
 				return ERROR;
 			}
@@ -5263,20 +5276,22 @@ int xodtemplate_duplicate_hostescalation(xodtemplate_hostescalation *temp_hostes
 	/* duplicate non-string members */
 	new_hostescalation->first_notification = temp_hostescalation->first_notification;
 	new_hostescalation->last_notification = temp_hostescalation->last_notification;
-#ifdef USE_ST_BASED_ESCAL_RANGES
+
+/* state based escalation ranges */
 	new_hostescalation->first_down_notification = temp_hostescalation->first_down_notification;
 	new_hostescalation->last_down_notification = temp_hostescalation->last_down_notification;
 	new_hostescalation->first_unreachable_notification = temp_hostescalation->first_unreachable_notification;
 	new_hostescalation->last_unreachable_notification = temp_hostescalation->last_unreachable_notification;
-#endif
+
 	new_hostescalation->have_first_notification = temp_hostescalation->have_first_notification;
 	new_hostescalation->have_last_notification = temp_hostescalation->have_last_notification;
-#ifdef USE_ST_BASED_ESCAL_RANGES
+
+/* state based escalation ranges */
 	new_hostescalation->have_first_down_notification = temp_hostescalation->have_first_down_notification;
 	new_hostescalation->have_last_down_notification = temp_hostescalation->have_last_down_notification;
 	new_hostescalation->have_first_unreachable_notification = temp_hostescalation->have_first_unreachable_notification;
 	new_hostescalation->have_last_unreachable_notification = temp_hostescalation->have_last_unreachable_notification;
-#endif
+
 	new_hostescalation->notification_interval = temp_hostescalation->notification_interval;
 	new_hostescalation->have_notification_interval = temp_hostescalation->have_notification_interval;
 	new_hostescalation->escalate_on_down = temp_hostescalation->escalate_on_down;
@@ -5399,24 +5414,25 @@ int xodtemplate_duplicate_serviceescalation(xodtemplate_serviceescalation *temp_
 	/* duplicate non-string members */
 	new_serviceescalation->first_notification = temp_serviceescalation->first_notification;
 	new_serviceescalation->last_notification = temp_serviceescalation->last_notification;
-#ifdef USE_ST_BASED_ESCAL_RANGES
+
+	/* state based escalation ranges */
 	new_serviceescalation->first_warning_notification = temp_serviceescalation->first_warning_notification;
 	new_serviceescalation->last_warning_notification = temp_serviceescalation->last_warning_notification;
 	new_serviceescalation->first_critical_notification = temp_serviceescalation->first_critical_notification;
 	new_serviceescalation->last_critical_notification = temp_serviceescalation->last_critical_notification;
 	new_serviceescalation->first_unknown_notification = temp_serviceescalation->first_unknown_notification;
 	new_serviceescalation->last_unknown_notification = temp_serviceescalation->last_unknown_notification;
-#endif
+
 	new_serviceescalation->have_first_notification = temp_serviceescalation->have_first_notification;
 	new_serviceescalation->have_last_notification = temp_serviceescalation->have_last_notification;
-#ifdef USE_ST_BASED_ESCAL_RANGES
+	/* state based escalation ranges */
 	new_serviceescalation->have_first_warning_notification = temp_serviceescalation->have_first_warning_notification;
 	new_serviceescalation->have_last_warning_notification = temp_serviceescalation->have_last_warning_notification;
 	new_serviceescalation->have_first_critical_notification = temp_serviceescalation->have_first_critical_notification;
 	new_serviceescalation->have_last_critical_notification = temp_serviceescalation->have_last_critical_notification;
 	new_serviceescalation->have_first_unknown_notification = temp_serviceescalation->have_first_unknown_notification;
 	new_serviceescalation->have_last_unknown_notification = temp_serviceescalation->have_last_unknown_notification;
-#endif
+
 	new_serviceescalation->notification_interval = temp_serviceescalation->notification_interval;
 	new_serviceescalation->have_notification_interval = temp_serviceescalation->have_notification_interval;
 	new_serviceescalation->escalate_on_warning = temp_serviceescalation->escalate_on_warning;
@@ -6126,9 +6142,12 @@ int xodtemplate_resolve_timeperiod(xodtemplate_timeperiod *this_timeperiod) {
 	template_name_ptr = template_names;
 	for (temp_ptr = my_strsep(&template_name_ptr, ","); temp_ptr != NULL; temp_ptr = my_strsep(&template_name_ptr, ",")) {
 
+		/* strip whitespaces */
+		strip(temp_ptr);
+
 		template_timeperiod = xodtemplate_find_timeperiod(temp_ptr);
 		if (template_timeperiod == NULL) {
-			logit(NSLOG_CONFIG_ERROR, TRUE, "Error: Template '%s' specified in timeperiod definition could not be not found (config file '%s', starting on line %d)\n", temp_ptr, xodtemplate_config_file_name(this_timeperiod->_config_file), this_timeperiod->_start_line);
+			logit(NSLOG_CONFIG_ERROR, TRUE, "Error: Template '%s' specified in timeperiod definition could not be found (config file '%s', starting on line %d)\n", temp_ptr, xodtemplate_config_file_name(this_timeperiod->_config_file), this_timeperiod->_start_line);
 			my_free(template_names);
 			return ERROR;
 		}
@@ -6221,9 +6240,12 @@ int xodtemplate_resolve_command(xodtemplate_command *this_command) {
 	template_name_ptr = template_names;
 	for (temp_ptr = my_strsep(&template_name_ptr, ","); temp_ptr != NULL; temp_ptr = my_strsep(&template_name_ptr, ",")) {
 
+		/* strip whitespaces */
+		strip(temp_ptr);
+
 		template_command = xodtemplate_find_command(temp_ptr);
 		if (template_command == NULL) {
-			logit(NSLOG_CONFIG_ERROR, TRUE, "Error: Template '%s' specified in command definition could not be not found (config file '%s', starting on line %d)\n", temp_ptr, xodtemplate_config_file_name(this_command->_config_file), this_command->_start_line);
+			logit(NSLOG_CONFIG_ERROR, TRUE, "Error: Template '%s' specified in command definition could not be found (config file '%s', starting on line %d)\n", temp_ptr, xodtemplate_config_file_name(this_command->_config_file), this_command->_start_line);
 			my_free(template_names);
 			return ERROR;
 		}
@@ -6271,9 +6293,12 @@ int xodtemplate_resolve_contactgroup(xodtemplate_contactgroup *this_contactgroup
 	template_name_ptr = template_names;
 	for (temp_ptr = my_strsep(&template_name_ptr, ","); temp_ptr != NULL; temp_ptr = my_strsep(&template_name_ptr, ",")) {
 
+		/* strip whitespaces */
+		strip(temp_ptr);
+
 		template_contactgroup = xodtemplate_find_contactgroup(temp_ptr);
 		if (template_contactgroup == NULL) {
-			logit(NSLOG_CONFIG_ERROR, TRUE, "Error: Template '%s' specified in contactgroup definition could not be not found (config file '%s', starting on line %d)\n", temp_ptr, xodtemplate_config_file_name(this_contactgroup->_config_file), this_contactgroup->_start_line);
+			logit(NSLOG_CONFIG_ERROR, TRUE, "Error: Template '%s' specified in contactgroup definition could not be found (config file '%s', starting on line %d)\n", temp_ptr, xodtemplate_config_file_name(this_contactgroup->_config_file), this_contactgroup->_start_line);
 			my_free(template_names);
 			return ERROR;
 		}
@@ -6325,9 +6350,12 @@ int xodtemplate_resolve_hostgroup(xodtemplate_hostgroup *this_hostgroup) {
 	template_name_ptr = template_names;
 	for (temp_ptr = my_strsep(&template_name_ptr, ","); temp_ptr != NULL; temp_ptr = my_strsep(&template_name_ptr, ",")) {
 
+		/* strip whitespaces */
+		strip(temp_ptr);
+
 		template_hostgroup = xodtemplate_find_hostgroup(temp_ptr);
 		if (template_hostgroup == NULL) {
-			logit(NSLOG_CONFIG_ERROR, TRUE, "Error: Template '%s' specified in hostgroup definition could not be not found (config file '%s', starting on line %d)\n", temp_ptr, xodtemplate_config_file_name(this_hostgroup->_config_file), this_hostgroup->_start_line);
+			logit(NSLOG_CONFIG_ERROR, TRUE, "Error: Template '%s' specified in hostgroup definition could not be found (config file '%s', starting on line %d)\n", temp_ptr, xodtemplate_config_file_name(this_hostgroup->_config_file), this_hostgroup->_start_line);
 			my_free(template_names);
 			return ERROR;
 		}
@@ -6394,9 +6422,12 @@ int xodtemplate_resolve_servicegroup(xodtemplate_servicegroup *this_servicegroup
 	template_name_ptr = template_names;
 	for (temp_ptr = my_strsep(&template_name_ptr, ","); temp_ptr != NULL; temp_ptr = my_strsep(&template_name_ptr, ",")) {
 
+		/* strip whitespaces */
+		strip(temp_ptr);
+
 		template_servicegroup = xodtemplate_find_servicegroup(temp_ptr);
 		if (template_servicegroup == NULL) {
-			logit(NSLOG_CONFIG_ERROR, TRUE, "Error: Template '%s' specified in servicegroup definition could not be not found (config file '%s', starting on line %d)\n", temp_ptr, xodtemplate_config_file_name(this_servicegroup->_config_file), this_servicegroup->_start_line);
+			logit(NSLOG_CONFIG_ERROR, TRUE, "Error: Template '%s' specified in servicegroup definition could not be found (config file '%s', starting on line %d)\n", temp_ptr, xodtemplate_config_file_name(this_servicegroup->_config_file), this_servicegroup->_start_line);
 			my_free(template_names);
 			return ERROR;
 		}
@@ -6461,9 +6492,12 @@ int xodtemplate_resolve_servicedependency(xodtemplate_servicedependency *this_se
 	template_name_ptr = template_names;
 	for (temp_ptr = my_strsep(&template_name_ptr, ","); temp_ptr != NULL; temp_ptr = my_strsep(&template_name_ptr, ",")) {
 
+		/* strip whitespaces */
+		strip(temp_ptr);
+
 		template_servicedependency = xodtemplate_find_servicedependency(temp_ptr);
 		if (template_servicedependency == NULL) {
-			logit(NSLOG_CONFIG_ERROR, TRUE, "Error: Template '%s' specified in service dependency definition could not be not found (config file '%s', starting on line %d)\n", temp_ptr, xodtemplate_config_file_name(this_servicedependency->_config_file), this_servicedependency->_start_line);
+			logit(NSLOG_CONFIG_ERROR, TRUE, "Error: Template '%s' specified in service dependency definition could not be found (config file '%s', starting on line %d)\n", temp_ptr, xodtemplate_config_file_name(this_servicedependency->_config_file), this_servicedependency->_start_line);
 			my_free(template_names);
 			return ERROR;
 		}
@@ -6539,9 +6573,12 @@ int xodtemplate_resolve_serviceescalation(xodtemplate_serviceescalation *this_se
 	template_name_ptr = template_names;
 	for (temp_ptr = my_strsep(&template_name_ptr, ","); temp_ptr != NULL; temp_ptr = my_strsep(&template_name_ptr, ",")) {
 
+		/* strip whitespaces */
+		strip(temp_ptr);
+
 		template_serviceescalation = xodtemplate_find_serviceescalation(temp_ptr);
 		if (template_serviceescalation == NULL) {
-			logit(NSLOG_CONFIG_ERROR, TRUE, "Error: Template '%s' specified in service escalation definition could not be not found (config file '%s', starting on line %d)\n", temp_ptr, xodtemplate_config_file_name(this_serviceescalation->_config_file), this_serviceescalation->_start_line);
+			logit(NSLOG_CONFIG_ERROR, TRUE, "Error: Template '%s' specified in service escalation definition could not be found (config file '%s', starting on line %d)\n", temp_ptr, xodtemplate_config_file_name(this_serviceescalation->_config_file), this_serviceescalation->_start_line);
 			my_free(template_names);
 			return ERROR;
 		}
@@ -6570,7 +6607,7 @@ int xodtemplate_resolve_serviceescalation(xodtemplate_serviceescalation *this_se
 			this_serviceescalation->last_notification = template_serviceescalation->last_notification;
 			this_serviceescalation->have_last_notification = TRUE;
 		}
-#ifdef USE_ST_BASED_ESCAL_RANGES
+		/* state based escalation ranges */
 		if (this_serviceescalation->have_first_warning_notification == FALSE && template_serviceescalation->have_first_warning_notification == TRUE) {
 			this_serviceescalation->first_warning_notification = template_serviceescalation->first_warning_notification;
 			this_serviceescalation->have_first_warning_notification = TRUE;
@@ -6595,7 +6632,7 @@ int xodtemplate_resolve_serviceescalation(xodtemplate_serviceescalation *this_se
 			this_serviceescalation->last_unknown_notification = template_serviceescalation->last_unknown_notification;
 			this_serviceescalation->have_last_unknown_notification = TRUE;
 		}
-#endif
+
 		if (this_serviceescalation->have_notification_interval == FALSE && template_serviceescalation->have_notification_interval == TRUE) {
 			this_serviceescalation->notification_interval = template_serviceescalation->notification_interval;
 			this_serviceescalation->have_notification_interval = TRUE;
@@ -6644,9 +6681,12 @@ int xodtemplate_resolve_contact(xodtemplate_contact *this_contact) {
 	template_name_ptr = template_names;
 	for (temp_ptr = my_strsep(&template_name_ptr, ","); temp_ptr != NULL; temp_ptr = my_strsep(&template_name_ptr, ",")) {
 
+		/* strip whitespaces */
+		strip(temp_ptr);
+
 		template_contact = xodtemplate_find_contact(temp_ptr);
 		if (template_contact == NULL) {
-			logit(NSLOG_CONFIG_ERROR, TRUE, "Error: Template '%s' specified in contact definition could not be not found (config file '%s', starting on line %d)\n", temp_ptr, xodtemplate_config_file_name(this_contact->_config_file), this_contact->_start_line);
+			logit(NSLOG_CONFIG_ERROR, TRUE, "Error: Template '%s' specified in contact definition could not be found (config file '%s', starting on line %d)\n", temp_ptr, xodtemplate_config_file_name(this_contact->_config_file), this_contact->_start_line);
 			my_free(template_names);
 			return ERROR;
 		}
@@ -6779,9 +6819,12 @@ int xodtemplate_resolve_host(xodtemplate_host *this_host) {
 	template_name_ptr = template_names;
 	for (temp_ptr = my_strsep(&template_name_ptr, ","); temp_ptr != NULL; temp_ptr = my_strsep(&template_name_ptr, ",")) {
 
+		/* strip whitespaces */
+		strip(temp_ptr);
+
 		template_host = xodtemplate_find_host(temp_ptr);
 		if (template_host == NULL) {
-			logit(NSLOG_CONFIG_ERROR, TRUE, "Error: Template '%s' specified in host definition could not be not found (config file '%s', starting on line %d)\n", temp_ptr, xodtemplate_config_file_name(this_host->_config_file), this_host->_start_line);
+			logit(NSLOG_CONFIG_ERROR, TRUE, "Error: Template '%s' specified in host definition could not be found (config file '%s', starting on line %d)\n", temp_ptr, xodtemplate_config_file_name(this_host->_config_file), this_host->_start_line);
 			my_free(template_names);
 			return ERROR;
 		}
@@ -7030,9 +7073,12 @@ int xodtemplate_resolve_service(xodtemplate_service *this_service) {
 	template_name_ptr = template_names;
 	for (temp_ptr = my_strsep(&template_name_ptr, ","); temp_ptr != NULL; temp_ptr = my_strsep(&template_name_ptr, ",")) {
 
+		/* strip whitespaces */
+		strip(temp_ptr);
+
 		template_service = xodtemplate_find_service(temp_ptr);
 		if (template_service == NULL) {
-			logit(NSLOG_CONFIG_ERROR, TRUE, "Error: Template '%s' specified in service definition could not be not found (config file '%s', starting on line %d)\n", temp_ptr, xodtemplate_config_file_name(this_service->_config_file), this_service->_start_line);
+			logit(NSLOG_CONFIG_ERROR, TRUE, "Error: Template '%s' specified in service definition could not be found (config file '%s', starting on line %d)\n", temp_ptr, xodtemplate_config_file_name(this_service->_config_file), this_service->_start_line);
 			my_free(template_names);
 			return ERROR;
 		}
@@ -7272,9 +7318,12 @@ int xodtemplate_resolve_hostdependency(xodtemplate_hostdependency *this_hostdepe
 	template_name_ptr = template_names;
 	for (temp_ptr = my_strsep(&template_name_ptr, ","); temp_ptr != NULL; temp_ptr = my_strsep(&template_name_ptr, ",")) {
 
+		/* strip whitespaces */
+		strip(temp_ptr);
+
 		template_hostdependency = xodtemplate_find_hostdependency(temp_ptr);
 		if (template_hostdependency == NULL) {
-			logit(NSLOG_CONFIG_ERROR, TRUE, "Error: Template '%s' specified in host dependency definition could not be not found (config file '%s', starting on line %d)\n", temp_ptr, xodtemplate_config_file_name(this_hostdependency->_config_file), this_hostdependency->_start_line);
+			logit(NSLOG_CONFIG_ERROR, TRUE, "Error: Template '%s' specified in host dependency definition could not be found (config file '%s', starting on line %d)\n", temp_ptr, xodtemplate_config_file_name(this_hostdependency->_config_file), this_hostdependency->_start_line);
 			my_free(template_names);
 			return ERROR;
 		}
@@ -7345,9 +7394,12 @@ int xodtemplate_resolve_hostescalation(xodtemplate_hostescalation *this_hostesca
 	template_name_ptr = template_names;
 	for (temp_ptr = my_strsep(&template_name_ptr, ","); temp_ptr != NULL; temp_ptr = my_strsep(&template_name_ptr, ",")) {
 
+		/* strip whitespaces */
+		strip(temp_ptr);
+
 		template_hostescalation = xodtemplate_find_hostescalation(temp_ptr);
 		if (template_hostescalation == NULL) {
-			logit(NSLOG_CONFIG_ERROR, TRUE, "Error: Template '%s' specified in host escalation definition could not be not found (config file '%s', starting on line %d)\n", temp_ptr, xodtemplate_config_file_name(this_hostescalation->_config_file), this_hostescalation->_start_line);
+			logit(NSLOG_CONFIG_ERROR, TRUE, "Error: Template '%s' specified in host escalation definition could not be found (config file '%s', starting on line %d)\n", temp_ptr, xodtemplate_config_file_name(this_hostescalation->_config_file), this_hostescalation->_start_line);
 			my_free(template_names);
 			return ERROR;
 		}
@@ -7374,7 +7426,7 @@ int xodtemplate_resolve_hostescalation(xodtemplate_hostescalation *this_hostesca
 			this_hostescalation->last_notification = template_hostescalation->last_notification;
 			this_hostescalation->have_last_notification = TRUE;
 		}
-#ifdef USE_ST_BASED_ESCAL_RANGES
+		/* state based escalation ranges */
 		if (this_hostescalation->have_first_down_notification == FALSE && template_hostescalation->have_first_down_notification == TRUE) {
 			this_hostescalation->first_down_notification = template_hostescalation->first_down_notification;
 			this_hostescalation->have_first_down_notification = TRUE;
@@ -7391,7 +7443,7 @@ int xodtemplate_resolve_hostescalation(xodtemplate_hostescalation *this_hostesca
 			this_hostescalation->last_unreachable_notification = template_hostescalation->last_unreachable_notification;
 			this_hostescalation->have_last_unreachable_notification = TRUE;
 		}
-#endif
+
 		if (this_hostescalation->have_notification_interval == FALSE && template_hostescalation->have_notification_interval == TRUE) {
 			this_hostescalation->notification_interval = template_hostescalation->notification_interval;
 			this_hostescalation->have_notification_interval = TRUE;
@@ -7436,9 +7488,12 @@ int xodtemplate_resolve_hostextinfo(xodtemplate_hostextinfo *this_hostextinfo) {
 	template_name_ptr = template_names;
 	for (temp_ptr = my_strsep(&template_name_ptr, ","); temp_ptr != NULL; temp_ptr = my_strsep(&template_name_ptr, ",")) {
 
+		/* strip whitespaces */
+		strip(temp_ptr);
+
 		template_hostextinfo = xodtemplate_find_hostextinfo(temp_ptr);
 		if (template_hostextinfo == NULL) {
-			logit(NSLOG_CONFIG_ERROR, TRUE, "Error: Template '%s' specified in extended host info definition could not be not found (config file '%s', starting on line %d)\n", temp_ptr, xodtemplate_config_file_name(this_hostextinfo->_config_file), this_hostextinfo->_start_line);
+			logit(NSLOG_CONFIG_ERROR, TRUE, "Error: Template '%s' specified in extended host info definition could not be found (config file '%s', starting on line %d)\n", temp_ptr, xodtemplate_config_file_name(this_hostextinfo->_config_file), this_hostextinfo->_start_line);
 			my_free(template_names);
 			return ERROR;
 		}
@@ -7537,9 +7592,12 @@ int xodtemplate_resolve_serviceextinfo(xodtemplate_serviceextinfo *this_servicee
 	template_name_ptr = template_names;
 	for (temp_ptr = my_strsep(&template_name_ptr, ","); temp_ptr != NULL; temp_ptr = my_strsep(&template_name_ptr, ",")) {
 
+		/* strip whitespaces */
+		strip(temp_ptr);
+
 		template_serviceextinfo = xodtemplate_find_serviceextinfo(temp_ptr);
 		if (template_serviceextinfo == NULL) {
-			logit(NSLOG_CONFIG_ERROR, TRUE, "Error: Template '%s' specified in extended service info definition could not be not found (config file '%s', starting on line %d)\n", temp_ptr, xodtemplate_config_file_name(this_serviceextinfo->_config_file), this_serviceextinfo->_start_line);
+			logit(NSLOG_CONFIG_ERROR, TRUE, "Error: Template '%s' specified in extended service info definition could not be found (config file '%s', starting on line %d)\n", temp_ptr, xodtemplate_config_file_name(this_serviceextinfo->_config_file), this_serviceextinfo->_start_line);
 			my_free(template_names);
 			return ERROR;
 		}
@@ -7621,9 +7679,12 @@ int xodtemplate_resolve_module(xodtemplate_module *this_module) {
 	template_name_ptr = template_names;
 	for (temp_ptr = my_strsep(&template_name_ptr, ","); temp_ptr != NULL; temp_ptr = my_strsep(&template_name_ptr, ",")) {
 
+		/* strip whitespaces */
+		strip(temp_ptr);
+
 		template_module = xodtemplate_find_module(temp_ptr);
 		if (template_module == NULL) {
-			logit(NSLOG_CONFIG_ERROR, TRUE, "Error: Template '%s' specified in module definition could not be not found (config file '%s', starting on line %d)\n", temp_ptr, xodtemplate_config_file_name(this_module->_config_file), this_module->_start_line);
+			logit(NSLOG_CONFIG_ERROR, TRUE, "Error: Template '%s' specified in module definition could not be found (config file '%s', starting on line %d)\n", temp_ptr, xodtemplate_config_file_name(this_module->_config_file), this_module->_start_line);
 			my_free(template_names);
 			return ERROR;
 		}
@@ -7715,7 +7776,8 @@ int xodtemplate_recombobulate_contactgroups(void) {
 
 	/* expand subgroup membership recursively */
 	for (temp_contactgroup = xodtemplate_contactgroup_list; temp_contactgroup; temp_contactgroup = temp_contactgroup->next)
-		xodtemplate_recombobulate_contactgroup_subgroups(temp_contactgroup, NULL);
+		if(xodtemplate_recombobulate_contactgroup_subgroups(temp_contactgroup, NULL) != OK)
+			return ERROR;
 
 
 	/* expand members of all contactgroups - this could be done in xodtemplate_register_contactgroup(), but we can save the CGIs some work if we do it here */
@@ -7835,6 +7897,7 @@ int xodtemplate_recombobulate_hostgroups(void) {
 	xodtemplate_host *temp_host = NULL;
 	xodtemplate_hostgroup *temp_hostgroup = NULL;
 	xodtemplate_memberlist *temp_memberlist = NULL;
+	xodtemplate_memberlist *reject_memberlist = NULL;
 	xodtemplate_memberlist *this_memberlist = NULL;
 	char *hostgroup_names = NULL;
 	char *temp_ptr = NULL;
@@ -7909,8 +7972,30 @@ int xodtemplate_recombobulate_hostgroups(void) {
 #endif
 
 	/* expand subgroup membership recursively */
-	for (temp_hostgroup = xodtemplate_hostgroup_list; temp_hostgroup; temp_hostgroup = temp_hostgroup->next)
-		xodtemplate_recombobulate_hostgroup_subgroups(temp_hostgroup, NULL);
+	for (temp_hostgroup = xodtemplate_hostgroup_list; temp_hostgroup; temp_hostgroup = temp_hostgroup->next) {
+		if (xodtemplate_recombobulate_hostgroup_subgroups(temp_hostgroup, &temp_memberlist, &reject_memberlist) != OK) {
+			xodtemplate_free_memberlist(&temp_memberlist);
+			return ERROR;
+		}
+
+		xodtemplate_reject_hosts_from_hostgroup(&temp_memberlist, &reject_memberlist);
+
+		for (this_memberlist = temp_memberlist; this_memberlist; this_memberlist = this_memberlist->next) {
+			/* add this host to the hostgroup members directive */
+			if (temp_hostgroup->members == NULL)
+				temp_hostgroup->members = (char *)strdup(this_memberlist->name1);
+			else {
+				new_members = (char *)realloc(temp_hostgroup->members, strlen(temp_hostgroup->members) + strlen(this_memberlist->name1) + 2);
+				if (new_members != NULL) {
+					temp_hostgroup->members = new_members;
+					strcat(temp_hostgroup->members, ",");
+					strcat(temp_hostgroup->members, this_memberlist->name1);
+				}
+			}
+		}
+		xodtemplate_free_memberlist(&temp_memberlist);
+
+	}
 
 	/* expand members of all hostgroups - this could be done in xodtemplate_register_hostgroup(), but we can save the CGIs some work if we do it here */
 	for (temp_hostgroup = xodtemplate_hostgroup_list; temp_hostgroup; temp_hostgroup = temp_hostgroup->next) {
@@ -7926,7 +8011,7 @@ int xodtemplate_recombobulate_hostgroups(void) {
 		temp_memberlist = xodtemplate_expand_hostgroups_and_hosts(NULL, temp_hostgroup->members, temp_hostgroup->_config_file, temp_hostgroup->_start_line);
 
 		/* add all members to the host group */
-		if (temp_memberlist == NULL) {
+		if (temp_memberlist == NULL && allow_empty_hostgroup_assignment == 0) {
 			logit(NSLOG_CONFIG_ERROR, TRUE, "Error: Could not expand members specified in hostgroup (config file '%s', starting on line %d)\n", xodtemplate_config_file_name(temp_hostgroup->_config_file), temp_hostgroup->_start_line);
 			return ERROR;
 		}
@@ -7964,13 +8049,14 @@ int xodtemplate_recombobulate_hostgroups(void) {
 
 
 
-int xodtemplate_recombobulate_hostgroup_subgroups(xodtemplate_hostgroup *temp_hostgroup, char **members) {
+int xodtemplate_recombobulate_hostgroup_subgroups(xodtemplate_hostgroup *temp_hostgroup, xodtemplate_memberlist **member_list, xodtemplate_memberlist **reject_list) {
 	xodtemplate_hostgroup *sub_group = NULL;
+	xodtemplate_memberlist *reject_memberlist = NULL;
 	char *orig_hgmembers = NULL;
 	char *hgmembers = NULL;
-	char *newmembers = NULL;
 	char *buf = NULL;
 	char *ptr = NULL;
+	int reject_item = FALSE;
 
 	if (temp_hostgroup == NULL)
 		return ERROR;
@@ -7998,21 +8084,26 @@ int xodtemplate_recombobulate_hostgroup_subgroups(xodtemplate_hostgroup *temp_ho
 			strip(buf);
 
 			/* find subgroup and recurse */
+			if (buf[0] == '!') {
+				reject_item = TRUE;
+				buf++;
+				logit(NSLOG_CONFIG_ERROR, TRUE, "Warning: Excluding member group '%s' specified in hostgroup (config file '%s', starting on line %d)\n", buf, xodtemplate_config_file_name(temp_hostgroup->_config_file), temp_hostgroup->_start_line);
+			}
+			else {
+				reject_item = FALSE;
+			}
+
 			if ((sub_group = xodtemplate_find_real_hostgroup(buf)) == NULL) {
 				logit(NSLOG_CONFIG_ERROR, TRUE, "Error: Could not find member group '%s' specified in hostgroup (config file '%s', starting on line %d)\n", buf, xodtemplate_config_file_name(temp_hostgroup->_config_file), temp_hostgroup->_start_line);
 				return ERROR;
 			}
-			xodtemplate_recombobulate_hostgroup_subgroups(sub_group, &newmembers);
 
-			/* add new (sub) members */
-			if (newmembers != NULL) {
-				if (temp_hostgroup->members == NULL)
-					temp_hostgroup->members = (char *)strdup(newmembers);
-				else if ((temp_hostgroup->members = realloc(temp_hostgroup->members, strlen(temp_hostgroup->members) + strlen(newmembers) + 2))) {
-					strcat(temp_hostgroup->members, ",");
-					strcat(temp_hostgroup->members, newmembers);
-				}
-			}
+			if (reject_item)
+				xodtemplate_recombobulate_hostgroup_subgroups(sub_group, &reject_memberlist, member_list);
+			else
+				xodtemplate_recombobulate_hostgroup_subgroups(sub_group, member_list, &reject_memberlist);
+
+			xodtemplate_reject_hosts_from_hostgroup(member_list, &reject_memberlist);
 		}
 
 		/* free memory */
@@ -8023,8 +8114,7 @@ int xodtemplate_recombobulate_hostgroup_subgroups(xodtemplate_hostgroup *temp_ho
 	}
 
 	/* return host members */
-	if (members != NULL)
-		*members = temp_hostgroup->members;
+	xodtemplate_expand_hosts(member_list, reject_list, temp_hostgroup->members, temp_hostgroup->_config_file, temp_hostgroup->_start_line);
 
 	return OK;
 }
@@ -8104,7 +8194,8 @@ int xodtemplate_recombobulate_servicegroups(void) {
 
 	/* expand subgroup membership recursively */
 	for (temp_servicegroup = xodtemplate_servicegroup_list; temp_servicegroup; temp_servicegroup = temp_servicegroup->next)
-		xodtemplate_recombobulate_servicegroup_subgroups(temp_servicegroup, NULL);
+		if (xodtemplate_recombobulate_servicegroup_subgroups(temp_servicegroup, NULL) != OK)
+			return ERROR;
 
 	/* expand members of all servicegroups - this could be done in xodtemplate_register_servicegroup(), but we can save the CGIs some work if we do it here */
 	for (temp_servicegroup = xodtemplate_servicegroup_list; temp_servicegroup; temp_servicegroup = temp_servicegroup->next) {
@@ -9048,11 +9139,7 @@ int xodtemplate_register_serviceescalation(xodtemplate_serviceescalation *this_s
 	}
 
 	/* add the serviceescalation */
-#ifndef USE_ST_BASED_ESCAL_RANGES
-	new_serviceescalation = add_serviceescalation(this_serviceescalation->host_name, this_serviceescalation->service_description, this_serviceescalation->first_notification, this_serviceescalation->last_notification, this_serviceescalation->notification_interval, this_serviceescalation->escalation_period, this_serviceescalation->escalate_on_warning, this_serviceescalation->escalate_on_unknown, this_serviceescalation->escalate_on_critical, this_serviceescalation->escalate_on_recovery);
-#else
 	new_serviceescalation = add_serviceescalation(this_serviceescalation->host_name, this_serviceescalation->service_description, this_serviceescalation->first_notification, this_serviceescalation->last_notification, this_serviceescalation->first_warning_notification, this_serviceescalation->last_warning_notification, this_serviceescalation->first_critical_notification, this_serviceescalation->last_critical_notification, this_serviceescalation->first_unknown_notification, this_serviceescalation->last_unknown_notification, this_serviceescalation->notification_interval, this_serviceescalation->escalation_period, this_serviceescalation->escalate_on_warning, this_serviceescalation->escalate_on_unknown, this_serviceescalation->escalate_on_critical, this_serviceescalation->escalate_on_recovery);
-#endif
 
 	/* return with an error if we couldn't add the serviceescalation */
 	if (new_serviceescalation == NULL) {
@@ -9386,11 +9473,7 @@ int xodtemplate_register_hostescalation(xodtemplate_hostescalation *this_hostesc
 	}
 
 	/* add the hostescalation */
-#ifndef USE_ST_BASED_ESCAL_RANGES
-	new_hostescalation = add_hostescalation(this_hostescalation->host_name, this_hostescalation->first_notification, this_hostescalation->last_notification, this_hostescalation->notification_interval, this_hostescalation->escalation_period, this_hostescalation->escalate_on_down, this_hostescalation->escalate_on_unreachable, this_hostescalation->escalate_on_recovery);
-#else
 	new_hostescalation = add_hostescalation(this_hostescalation->host_name, this_hostescalation->first_notification, this_hostescalation->last_notification, this_hostescalation->first_down_notification, this_hostescalation->last_down_notification, this_hostescalation->first_unreachable_notification, this_hostescalation->last_unreachable_notification, this_hostescalation->notification_interval, this_hostescalation->escalation_period, this_hostescalation->escalate_on_down, this_hostescalation->escalate_on_unreachable, this_hostescalation->escalate_on_recovery);
-#endif
 
 	/* return with an error if we couldn't add the hostescalation */
 	if (new_hostescalation == NULL) {
@@ -10433,6 +10516,9 @@ int xodtemplate_cache_objects(char *cache_file) {
 	time_t current_time = 0L;
 	void *ptr = NULL;
 
+	/* skip if set to /dev/null */
+	if (!cache_file || !strcmp(cache_file, "/dev/null"))
+		return OK;
 
 	time(&current_time);
 
@@ -10994,14 +11080,14 @@ int xodtemplate_cache_objects(char *cache_file) {
 			fprintf(fp, "\tservice_description\t%s\n", temp_serviceescalation->service_description);
 		fprintf(fp, "\tfirst_notification\t%d\n", temp_serviceescalation->first_notification);
 		fprintf(fp, "\tlast_notification\t%d\n", temp_serviceescalation->last_notification);
-#ifdef USE_ST_BASED_ESCAL_RANGES
+		/* state based escalation ranges */
 		fprintf(fp, "\tfirst_warning_notification\t%d\n", temp_serviceescalation->first_warning_notification);
 		fprintf(fp, "\tlast_warning_notification\t%d\n", temp_serviceescalation->last_warning_notification);
 		fprintf(fp, "\tfirst_critical_notification\t%d\n", temp_serviceescalation->first_critical_notification);
 		fprintf(fp, "\tlast_critical_notification\t%d\n", temp_serviceescalation->last_critical_notification);
 		fprintf(fp, "\tfirst_unknown_notification\t%d\n", temp_serviceescalation->first_unknown_notification);
 		fprintf(fp, "\tlast_unknown_notification\t%d\n", temp_serviceescalation->last_unknown_notification);
-#endif
+
 		fprintf(fp, "\tnotification_interval\t%f\n", temp_serviceescalation->notification_interval);
 		if (temp_serviceescalation->escalation_period)
 			fprintf(fp, "\tescalation_period\t%s\n", temp_serviceescalation->escalation_period);
@@ -11085,12 +11171,12 @@ int xodtemplate_cache_objects(char *cache_file) {
 			fprintf(fp, "\thost_name\t%s\n", temp_hostescalation->host_name);
 		fprintf(fp, "\tfirst_notification\t%d\n", temp_hostescalation->first_notification);
 		fprintf(fp, "\tlast_notification\t%d\n", temp_hostescalation->last_notification);
-#ifdef USE_ST_BASED_ESCAL_RANGES
+		/* state based escalation ranges */
 		fprintf(fp, "\tfirst_down_notification\t%d\n", temp_hostescalation->first_down_notification);
 		fprintf(fp, "\tlast_down_notification\t%d\n", temp_hostescalation->last_down_notification);
 		fprintf(fp, "\tfirst_unreachable_notification\t%d\n", temp_hostescalation->first_unreachable_notification);
 		fprintf(fp, "\tlast_unreachable_notification\t%d\n", temp_hostescalation->last_unreachable_notification);
-#endif
+
 		fprintf(fp, "\tnotification_interval\t%f\n", temp_hostescalation->notification_interval);
 		if (temp_hostescalation->escalation_period)
 			fprintf(fp, "\tescalation_period\t%s\n", temp_hostescalation->escalation_period);
@@ -12929,6 +13015,28 @@ int xodtemplate_add_hostgroup_members_to_memberlist(xodtemplate_memberlist **lis
 	return OK;
 }
 
+
+int xodtemplate_reject_hosts_from_hostgroup(xodtemplate_memberlist **member_list, xodtemplate_memberlist **reject_list) {
+	xodtemplate_memberlist *member_list_ptr = NULL;
+	xodtemplate_memberlist *reject_list_ptr = NULL;
+
+	if (member_list == NULL || reject_list == NULL) {
+		return ERROR;
+	}
+
+	/* remove rejects (if any) from the list (no duplicate entries exist in either list) */
+	for (reject_list_ptr = *reject_list; reject_list_ptr; reject_list_ptr = reject_list_ptr->next) {
+		for (member_list_ptr = *member_list; member_list_ptr; member_list_ptr = member_list_ptr->next) {
+			if (!strcmp(reject_list_ptr->name1, member_list_ptr->name1)) {
+				xodtemplate_remove_memberlist_item(member_list_ptr, member_list);
+				break;
+			}
+		}
+	}
+
+	xodtemplate_free_memberlist(reject_list);
+	return OK;
+}
 
 
 /* expands a comma-delimited list of servicegroups and/or service descriptions */

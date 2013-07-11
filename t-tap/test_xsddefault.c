@@ -2,16 +2,17 @@
  *
  * test_xsddefault.c - Test configuration loading
  *
- * Program: Nagios Core Testing
+ * Program: Icinga Core Testing
  * License: GPL
- * Copyright (c) 2009-2011 Nagios Core Development Team and Community Contributors
  * Copyright (c) 1999-2009 Ethan Galstad
+ * Copyright (c) 2009-2013 Nagios Core Development Team and Community Contributors
+ * Copyright (c) 2009-2013 Icinga Development Team (http://www.icinga.org)
  *
  * First Written:   06-01-2010, based on test_nagios_config.c
  *
  * Description:
  *
- * Tests Nagios status file reading
+ * Tests Icinga status file reading
  *
  * License:
  *
@@ -26,7 +27,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  *****************************************************************************/
 
@@ -50,7 +51,7 @@ extern scheduled_downtime *scheduled_downtime_list;
 void profile_object_update_count(char * name, int val) {}
 void profile_object_update_elapsed(char * name, double val) {}
 
-/* Icinga cgiutils.c special */
+/* Icinga cgiutils.c special (extern!) */
 char alert_message;
 char *host_name;
 char *host_filter;
@@ -67,10 +68,8 @@ int overview_columns;
 int max_grid_width;
 int group_style_type;
 int navbar_search;
-void get_log_archive_to_use(int archive, char *file_name, int file_name_length) {}
-time_t last_scheduled_log_rotation = 0L;
-time_t this_scheduled_log_rotation = 0L;
 int CGI_ID;
+
 
 int main(int argc, char **argv) {
 	int result;
@@ -80,7 +79,7 @@ int main(int argc, char **argv) {
 	comment *temp_comment;
 	scheduled_downtime *temp_downtime;
 
-	plan_tests(7);
+	plan(7);
 
 	chdir("../t");
 

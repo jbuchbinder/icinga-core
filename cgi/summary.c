@@ -3,7 +3,7 @@
  * SUMMARY.C -  Icinga Alert Summary CGI
  *
  * Copyright (c) 2002-2008 Ethan Galstad (egalstad@nagios.org)
- * Copyright (c) 2009-2011 Icinga Development Team (http://www.icinga.org)
+ * Copyright (c) 2009-2013 Icinga Development Team (http://www.icinga.org)
  *
  * License:
  *
@@ -18,7 +18,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *************************************************************************/
 
 #include "../include/config.h"
@@ -33,19 +33,11 @@
 
 
 extern char main_config_file[MAX_FILENAME_LENGTH];
-extern char url_html_path[MAX_FILENAME_LENGTH];
-extern char url_images_path[MAX_FILENAME_LENGTH];
-extern char url_stylesheets_path[MAX_FILENAME_LENGTH];
-extern char url_js_path[MAX_FILENAME_LENGTH];
 
 extern host *host_list;
 extern hostgroup *hostgroup_list;
 extern service *service_list;
 extern servicegroup *servicegroup_list;
-extern logentry *entry_list;
-
-extern int       log_rotation_method;
-
 
 /* custom report types */
 #define REPORT_NONE				0
@@ -103,7 +95,6 @@ typedef struct alert_producer_struct {
 } alert_producer;
 
 void read_archived_event_data(void);
-void scan_log_file_for_archived_event_data(char *);
 void compute_report_times(void);
 void determine_standard_report_options(void);
 void add_archived_event(int, time_t, int, int, char *, char *, char *);
@@ -177,13 +168,6 @@ int show_all_hosts = TRUE;
 int show_all_hostgroups = TRUE;
 int show_all_servicegroups = TRUE;
 
-char *host_name = NULL;
-char *host_filter = NULL;
-char *hostgroup_name = NULL;
-char *servicegroup_name = NULL;
-char *service_desc = NULL;
-char *service_filter = NULL;
-
 int standard_report = SREPORT_NONE;
 int generate_report = FALSE;
 
@@ -209,8 +193,8 @@ int main(int argc, char **argv) {
 	/* read the CGI configuration file */
 	result = read_cgi_config_file(get_cgi_config_location());
 	if (result == ERROR) {
-		document_header(CGI_ID, FALSE);
-		print_error(get_cgi_config_location(), ERROR_CGI_CFG_FILE);
+		document_header(CGI_ID, FALSE, "Error");
+		print_error(get_cgi_config_location(), ERROR_CGI_CFG_FILE, FALSE);
 		document_footer(CGI_ID);
 		return ERROR;
 	}
@@ -218,8 +202,8 @@ int main(int argc, char **argv) {
 	/* read the main configuration file */
 	result = read_main_config_file(main_config_file);
 	if (result == ERROR) {
-		document_header(CGI_ID, FALSE);
-		print_error(main_config_file, ERROR_CGI_MAIN_CFG);
+		document_header(CGI_ID, FALSE, "Error");
+		print_error(main_config_file, ERROR_CGI_MAIN_CFG, FALSE);
 		document_footer(CGI_ID);
 		return ERROR;
 	}
@@ -227,8 +211,8 @@ int main(int argc, char **argv) {
 	/* read all object configuration data */
 	result = read_all_object_configuration_data(main_config_file, READ_ALL_OBJECT_DATA);
 	if (result == ERROR) {
-		document_header(CGI_ID, FALSE);
-		print_error(NULL, ERROR_CGI_OBJECT_DATA);
+		document_header(CGI_ID, FALSE, "Error");
+		print_error(NULL, ERROR_CGI_OBJECT_DATA, FALSE);
 		document_footer(CGI_ID);
 		return ERROR;
 	}
@@ -240,7 +224,7 @@ int main(int argc, char **argv) {
 	/* get the arguments passed in the URL */
 	process_cgivars();
 
-	document_header(CGI_ID, TRUE);
+	document_header(CGI_ID, TRUE, "Event Summary");
 
 	/* get authentication information */
 	get_authentication_information(&current_authdata);
@@ -269,7 +253,7 @@ int main(int argc, char **argv) {
 
 		snprintf(temp_buffer, sizeof(temp_buffer) - 1, "Alert Summary Report");
 		temp_buffer[sizeof(temp_buffer)-1] = '\x0';
-		display_info_table(temp_buffer, FALSE, &current_authdata, daemon_check);
+		display_info_table(temp_buffer, &current_authdata, daemon_check);
 
 		printf("</td>\n");
 
@@ -387,35 +371,6 @@ int main(int argc, char **argv) {
 			printf("</form>\n");
 			printf("</td>\n");
 			printf("</tr>\n");
-
-			/* display context-sensitive help */
-			printf("<tr><td></td><td align=right valign=bottom>\n");
-			if (display_type == REPORT_TOP_ALERTS)
-				display_context_help(CONTEXTHELP_SUMMARY_ALERT_PRODUCERS);
-			else if (display_type == REPORT_ALERT_TOTALS)
-				display_context_help(CONTEXTHELP_SUMMARY_ALERT_TOTALS);
-			else if (display_type == REPORT_HOSTGROUP_ALERT_TOTALS)
-				display_context_help(CONTEXTHELP_SUMMARY_HOSTGROUP_ALERT_TOTALS);
-			else if (display_type == REPORT_HOST_ALERT_TOTALS)
-				display_context_help(CONTEXTHELP_SUMMARY_HOST_ALERT_TOTALS);
-			else if (display_type == REPORT_SERVICE_ALERT_TOTALS)
-				display_context_help(CONTEXTHELP_SUMMARY_SERVICE_ALERT_TOTALS);
-			else if (display_type == REPORT_SERVICEGROUP_ALERT_TOTALS)
-				display_context_help(CONTEXTHELP_SUMMARY_SERVICEGROUP_ALERT_TOTALS);
-			else
-				display_context_help(CONTEXTHELP_SUMMARY_RECENT_ALERTS);
-			printf("</td></tr>\n");
-
-			printf("</table>\n");
-		}
-
-		else {
-			printf("<table border=0>\n");
-
-			printf("<tr><td></td><td align=right valign=bottom>\n");
-			display_context_help(CONTEXTHELP_SUMMARY_MENU);
-			printf("</td></tr>\n");
-
 			printf("</table>\n");
 		}
 
@@ -448,13 +403,11 @@ int main(int argc, char **argv) {
 		end_year = t->tm_year + 1900;
 
 		printf("<DIV ALIGN=CENTER CLASS='dateSelectTitle'>Standard Reports:</DIV>\n");
-		printf("<DIV ALIGN=CENTER>\n");
 		printf("<form method=\"get\" action=\"%s\">\n", SUMMARY_CGI);
 
 		printf("<input type='hidden' name='report' value='1'>\n");
 
-		printf("<table border=0 cellpadding=5>\n");
-
+		printf("<table border=0 cellpadding=5 align='center'>\n");
 		printf("<tr><td class='reportSelectSubTitle' align=right>Report Type:</td>\n");
 		printf("<td class='reportSelectItem'>\n");
 		printf("<select name='standardreport'>\n");
@@ -471,15 +424,15 @@ int main(int argc, char **argv) {
 		printf("</table>\n");
 
 		printf("</form>\n");
-		printf("</DIV>\n");
+
 
 		printf("<DIV ALIGN=CENTER CLASS='dateSelectTitle'>Custom Report Options:</DIV>\n");
-		printf("<DIV ALIGN=CENTER>\n");
+
 		printf("<form method=\"get\" action=\"%s\">\n", SUMMARY_CGI);
 
 		printf("<input type='hidden' name='report' value='1'>\n");
 
-		printf("<table border=0 cellpadding=5>\n");
+		printf("<table border=0 cellpadding=5 align='center'>\n");
 
 		printf("<tr><td class='reportSelectSubTitle' align=right>Report Type:</td>\n");
 		printf("<td class='reportSelectItem'>\n");
@@ -650,7 +603,6 @@ int main(int argc, char **argv) {
 		printf("</table>\n");
 
 		printf("</form>\n");
-		printf("</DIV>\n");
 	}
 
 
@@ -1123,61 +1075,35 @@ int process_cgivars(void) {
 
 /* reads log files for archived event data */
 void read_archived_event_data(void) {
-	char filename[MAX_FILENAME_LENGTH];
-	int oldest_archive = 0;
-	int newest_archive = 0;
-	int current_archive = 0;
-
-	/* determine oldest archive to use when scanning for data */
-	oldest_archive = determine_archive_to_use_from_time(t1);
-
-	/* determine most recent archive to use when scanning for data */
-	newest_archive = determine_archive_to_use_from_time(t2);
-
-	if (oldest_archive < newest_archive)
-		oldest_archive = newest_archive;
-
-	/* add host filter */
-	add_log_filter(LOGENTRY_HOST_UP, LOGFILTER_INCLUDE);
-	add_log_filter(LOGENTRY_HOST_DOWN, LOGFILTER_INCLUDE);
-	add_log_filter(LOGENTRY_HOST_UNREACHABLE, LOGFILTER_INCLUDE);
-	add_log_filter(LOGENTRY_HOST_RECOVERY, LOGFILTER_INCLUDE);
-
-	/* add service filter */
-	add_log_filter(LOGENTRY_SERVICE_OK, LOGFILTER_INCLUDE);
-	add_log_filter(LOGENTRY_SERVICE_WARNING, LOGFILTER_INCLUDE);
-	add_log_filter(LOGENTRY_SERVICE_CRITICAL, LOGFILTER_INCLUDE);
-	add_log_filter(LOGENTRY_SERVICE_UNKNOWN, LOGFILTER_INCLUDE);
-	add_log_filter(LOGENTRY_SERVICE_RECOVERY, LOGFILTER_INCLUDE);
-
-	/* read in all the necessary archived logs (from most recent to earliest) */
-	for (current_archive = newest_archive; current_archive <= oldest_archive; current_archive++) {
-
-		/* get the name of the log file that contains this archive */
-		get_log_archive_to_use(current_archive, filename, sizeof(filename) - 1);
-
-		/* scan the log file for archived state data */
-		scan_log_file_for_archived_event_data(filename);
-	}
-
-	free_log_filters();
-
-	return;
-}
-
-/* grabs archived event data from a log file */
-void scan_log_file_for_archived_event_data(char *filename) {
 	char entry_host_name[MAX_INPUT_BUFFER];
 	char entry_svc_description[MAX_INPUT_BUFFER];
 	char *temp_buffer;
 	char *plugin_output;
+	char *error_text = NULL;
 	int state;
 	int state_type;
-	int status;
+	int status = READLOG_OK;
 	logentry *temp_entry = NULL;
+	logentry *entry_list = NULL;
+	logfilter *filter_list = NULL;
+
+	/* add host filter */
+	add_log_filter(&filter_list, LOGENTRY_HOST_UP, LOGFILTER_INCLUDE);
+	add_log_filter(&filter_list, LOGENTRY_HOST_DOWN, LOGFILTER_INCLUDE);
+	add_log_filter(&filter_list, LOGENTRY_HOST_UNREACHABLE, LOGFILTER_INCLUDE);
+	add_log_filter(&filter_list, LOGENTRY_HOST_RECOVERY, LOGFILTER_INCLUDE);
+
+	/* add service filter */
+	add_log_filter(&filter_list, LOGENTRY_SERVICE_OK, LOGFILTER_INCLUDE);
+	add_log_filter(&filter_list, LOGENTRY_SERVICE_WARNING, LOGFILTER_INCLUDE);
+	add_log_filter(&filter_list, LOGENTRY_SERVICE_CRITICAL, LOGFILTER_INCLUDE);
+	add_log_filter(&filter_list, LOGENTRY_SERVICE_UNKNOWN, LOGFILTER_INCLUDE);
+	add_log_filter(&filter_list, LOGENTRY_SERVICE_RECOVERY, LOGFILTER_INCLUDE);
 
 	/* read log entries */
-	status = get_log_entries(filename, NULL, FALSE, t1, t2);
+	status = get_log_entries(&entry_list, &filter_list, &error_text, NULL, FALSE, t1, t2);
+
+	free_log_filters(&filter_list);
 
 	if (status == READLOG_OK) {
 
@@ -1262,9 +1188,9 @@ void scan_log_file_for_archived_event_data(char *filename) {
 				if (temp_entry->type == LOGENTRY_SERVICE_CRITICAL)
 					state = AE_SERVICE_CRITICAL;
 				else if (temp_entry->type == LOGENTRY_SERVICE_WARNING)
-					state = AE_SERVICE_UNKNOWN;
-				else if (temp_entry->type == LOGENTRY_SERVICE_UNKNOWN)
 					state = AE_SERVICE_WARNING;
+				else if (temp_entry->type == LOGENTRY_SERVICE_UNKNOWN)
+					state = AE_SERVICE_UNKNOWN;
 				else if (temp_entry->type == LOGENTRY_SERVICE_RECOVERY || temp_entry->type == LOGENTRY_SERVICE_OK)
 					state = AE_SERVICE_OK;
 				else
@@ -1279,7 +1205,7 @@ void scan_log_file_for_archived_event_data(char *filename) {
 	}
 
 	/* free memory */
-	free_log_entries();
+	free_log_entries(&entry_list);
 
 	return;
 }
@@ -1624,7 +1550,6 @@ void display_report(void) {
 	} else {
 		printf("<BR>\n");
 
-		printf("<DIV ALIGN=CENTER>\n");
 		printf("<table align=\"CENTER\" border=\"0\"><tr><td>");
 		printf("<DIV ALIGN=CENTER CLASS='dataSubTitle'>");
 		if (display_type == REPORT_ALERT_TOTALS)
@@ -1690,7 +1615,6 @@ void display_report(void) {
 
 	if (content_type != CSV_CONTENT && content_type != JSON_CONTENT) {
 		printf("</td></tr></table>");
-		printf("</DIV>\n");
 	} else if (content_type == JSON_CONTENT) {
 		printf("\n]\n");
 		if (display_type != REPORT_ALERT_TOTALS)
@@ -1727,12 +1651,11 @@ void display_recent_alerts(void) {
 		printf("<BR>\n");
 
 		if (item_limit <= 0 || total_items <= item_limit || total_items == 0)
-			printf("<DIV ALIGN=CENTER CLASS='dataSubTitle'>Displaying all %d matching alerts\n", total_items);
+			printf("<DIV ALIGN=CENTER CLASS='dataSubTitle'>Displaying all %d matching alerts</DIV>\n", total_items);
 		else
-			printf("<DIV ALIGN=CENTER CLASS='dataSubTitle'>Displaying most recent %d of %d total matching alerts\n", item_limit, total_items);
+			printf("<DIV ALIGN=CENTER CLASS='dataSubTitle'>Displaying most recent %d of %d total matching alerts</DIV>\n", item_limit, total_items);
 
-		printf("<DIV ALIGN=CENTER>\n");
-		printf("<TABLE BORDER=0 CLASS='data'>\n");
+		printf("<TABLE BORDER=0 CLASS='data' align='center'>\n");
 
 		printf("<TR><TD colspan='7'>");
 		/* add export to csv, json, link */
@@ -1759,10 +1682,12 @@ void display_recent_alerts(void) {
 			odd = 1;
 
 		/* find the host */
-		temp_host = find_host(temp_event->host_name);
+		if ((temp_host = find_host(temp_event->host_name)) == NULL)
+			continue;
 
 		/* find the service */
-		temp_service = find_service(temp_event->host_name, temp_event->service_description);
+		if ((temp_service = find_service(temp_event->host_name, temp_event->service_description)) == NULL)
+			continue;
 
 		get_time_string(&temp_event->time_stamp, date_time, (int)sizeof(date_time), SHORT_DATE_TIME);
 
@@ -1773,16 +1698,20 @@ void display_recent_alerts(void) {
 			json_start = FALSE;
 			printf("{ \"time\": \"%s\", ", date_time);
 			printf("\"alert_type\": \"%s\", ", (temp_event->event_type == AE_HOST_ALERT) ? "Host Alert" : "Service Alert");
-			printf("\"host\": \"%s\", ", (temp_host->display_name != NULL) ? json_encode(temp_host->display_name) : json_encode(temp_host->name));
-			if (temp_event->event_type == AE_HOST_ALERT)
-				printf("\"service\": null, ");
-			else
-				printf("\"service\": \"%s\", ", (temp_service->display_name != NULL) ? json_encode(temp_service->display_name) : json_encode(temp_service->description));
+			printf("\"host_name\": \"%s\", ", json_encode(temp_host->name));
+			printf("\"host_display_name\": \"%s\", ", (temp_host->display_name != NULL) ? json_encode(temp_host->display_name) : json_encode(temp_host->name));
+			if (temp_event->event_type == AE_HOST_ALERT) {
+				printf("\"service_description\": null, ");
+				printf("\"service_display_name\": null, ");
+			} else {
+				printf("\"service_description\": \"%s\", ", json_encode(temp_service->description));
+				printf("\"service_display_name\": \"%s\", ", (temp_service->display_name != NULL) ? json_encode(temp_service->display_name) : json_encode(temp_service->description));
+			}
 		} else if (content_type == CSV_CONTENT) {
 			printf("%s%s%s%s", csv_data_enclosure, date_time, csv_data_enclosure, csv_delimiter);
 			printf("%s%s%s%s", csv_data_enclosure, (temp_event->event_type == AE_HOST_ALERT) ? "Host Alert" : "Service Alert", csv_data_enclosure, csv_delimiter);
-			printf("%s%s%s%s", csv_data_enclosure, (temp_host->display_name != NULL) ? temp_host->display_name : temp_host->name, csv_data_enclosure, csv_delimiter);
-			printf("%s%s%s%s", csv_data_enclosure, (temp_event->event_type == AE_HOST_ALERT) ? "" : (temp_service->display_name != NULL) ? temp_service->display_name : temp_service->description, csv_data_enclosure, csv_delimiter);
+			printf("%s%s%s%s", csv_data_enclosure, temp_host->name, csv_data_enclosure, csv_delimiter);
+			printf("%s%s%s%s", csv_data_enclosure, (temp_event->event_type == AE_HOST_ALERT) ? "" : temp_service->description, csv_data_enclosure, csv_delimiter);
 		} else {
 			printf("<tr CLASS='data%s'>", (odd) ? "Even" : "Odd");
 
@@ -1855,10 +1784,9 @@ void display_recent_alerts(void) {
 		}
 	}
 
-	if (content_type != CSV_CONTENT && content_type != JSON_CONTENT) {
+	if (content_type != CSV_CONTENT && content_type != JSON_CONTENT)
 		printf("</TABLE>\n");
-		printf("</DIV>\n");
-	} else if (content_type == JSON_CONTENT)
+	else if (content_type == JSON_CONTENT)
 		printf("\n]\n");
 
 
@@ -1946,6 +1874,8 @@ void display_top_alerts(void) {
 	alert_producer *last_producer = NULL;
 	alert_producer *new_producer = NULL;
 	alert_producer *temp_list = NULL;
+	host *temp_host;
+	service *temp_service;
 	int producer_type = AE_HOST_PRODUCER;
 	int current_item = 0;
 	int odd = 0;
@@ -2018,12 +1948,11 @@ void display_top_alerts(void) {
 		printf("<BR>\n");
 
 		if (item_limit <= 0 || total_items <= item_limit || total_items == 0)
-			printf("<DIV ALIGN=CENTER CLASS='dataSubTitle'>Displaying all %d matching alert producers\n", total_items);
+			printf("<DIV ALIGN=CENTER CLASS='dataSubTitle'>Displaying all %d matching alert producers</DIV>\n", total_items);
 		else
-			printf("<DIV ALIGN=CENTER CLASS='dataSubTitle'>Displaying top %d of %d total matching alert producers\n", item_limit, total_items);
+			printf("<DIV ALIGN=CENTER CLASS='dataSubTitle'>Displaying top %d of %d total matching alert producers</DIV>\n", item_limit, total_items);
 
-		printf("<DIV ALIGN=CENTER>\n");
-		printf("<TABLE BORDER=0 CLASS='data'>\n");
+		printf("<TABLE BORDER=0 CLASS='data' align='center'>\n");
 
 		printf("<TR><TD colspan='5'>");
 		/* add export to csv, json, link */
@@ -2061,11 +1990,19 @@ void display_top_alerts(void) {
 			json_start = FALSE;
 			printf("{ \"rank\": %d, ", current_item);
 			printf(" \"producer_type\": \"%s\", ", (temp_producer->producer_type == AE_HOST_PRODUCER) ? "Host" : "Service");
-			printf(" \"host\": \"%s\", ", json_encode(temp_producer->host_name));
-			if (temp_producer->producer_type == AE_HOST_PRODUCER)
-				printf(" \"service\": null, ");
-			else
-				printf(" \"service\": \"%s\", ", json_encode(temp_producer->service_description));
+			printf(" \"host_name\": \"%s\", ", json_encode(temp_producer->host_name));
+
+			temp_host = find_host(temp_producer->host_name);
+			printf("\"host_display_name\": \"%s\", ", (temp_host != NULL && temp_host->display_name != NULL) ? json_encode(temp_host->display_name) : json_encode(temp_producer->host_name));
+			if (temp_producer->producer_type == AE_HOST_PRODUCER) {
+				printf(" \"service_description\": null, ");
+				printf(" \"service_display_name\": null, ");
+			} else {
+				printf(" \"service_description\": \"%s\", ", json_encode(temp_producer->service_description));
+
+				temp_service = find_service(temp_producer->host_name, temp_producer->service_description);
+				printf("\"service_display_name\": \"%s\", ", (temp_service != NULL && temp_service->display_name != NULL) ? json_encode(temp_service->display_name) : json_encode(temp_producer->service_description));
+			}
 			printf(" \"total_alerts\": %d}", temp_producer->total_alerts);
 		} else if (content_type == CSV_CONTENT) {
 			printf("%s%d%s%s", csv_data_enclosure, current_item, csv_data_enclosure, csv_delimiter);
@@ -2095,10 +2032,9 @@ void display_top_alerts(void) {
 		}
 	}
 
-	if (content_type != CSV_CONTENT && content_type != JSON_CONTENT) {
+	if (content_type != CSV_CONTENT && content_type != JSON_CONTENT)
 		printf("</TABLE>\n");
-		printf("</DIV>\n");
-	} else if (content_type == JSON_CONTENT)
+	else if (content_type == JSON_CONTENT)
 		printf("\n]\n");
 
 	return;
@@ -2120,9 +2056,7 @@ void display_alerts(void) {
 	int soft_service_unknown_alerts = 0;
 	int hard_service_critical_alerts = 0;
 	int soft_service_critical_alerts = 0;
-
 	int json_start = TRUE;
-
 	archived_event *temp_event;
 	host *temp_host;
 	service *temp_service;
@@ -2145,6 +2079,7 @@ void display_alerts(void) {
 				printf("],\n");
 			json_list_start = FALSE;
 			printf("\"host_name\": \"%s\",\n", json_encode(target_host->name));
+			printf("\"host_display_name\": \"%s\", ", (target_host->display_name != NULL) ? json_encode(target_host->display_name) : json_encode(target_host->name));
 			printf("\"report\": [\n");
 		}
 	}
@@ -2188,8 +2123,13 @@ void display_alerts(void) {
 			if (json_list_start == FALSE)
 				printf("],\n");
 			json_list_start = FALSE;
-			printf("\"host_name\": \"%s\",\n", json_encode(target_service->host_name));
-			printf("\"service\": \"%s\",\n", json_encode(target_service->description));
+			temp_host = find_host(target_service->host_name);
+			if (temp_host == NULL)
+				return;
+			printf("\"host_name\": \"%s\",\n", json_encode(temp_host->name));
+			printf("\"host_display_name\": \"%s\", ", (temp_host->display_name != NULL) ? json_encode(temp_host->display_name) : json_encode(temp_host->name));
+			printf("\"service_description\": \"%s\",\n", json_encode(target_service->description));
+			printf("\"service_display_name\": \"%s\", ", (target_service->display_name != NULL) ? json_encode(target_service->display_name) : json_encode(target_service->description));
 			printf("\"report\": [\n");
 		}
 

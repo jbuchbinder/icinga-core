@@ -21,8 +21,23 @@ log_file=@LOGDIR@/icinga.log
 # OBJECT CONFIGURATION FILE(S)
 # These are the object configuration files in which you define hosts,
 # host groups, contacts, contact groups, services, etc.
-# You can split your object definitions across several config files
-# if you wish (as shown below), or keep them all in a single config file.
+# Hint: Check the docs/wiki on how to monitor remote hosts with different
+# transport methods and plugins
+
+# You can tell Icinga to process all config files (with a .cfg
+# extension) in a particular directory recursively by using the
+# cfg_dir directive as shown below with conf.d
+
+cfg_dir=@sysconfdir@/conf.d
+
+# or you can split your object definitions across several config files
+# and include them one by one - see the provided sample config
+# in objects/
+#
+# ATTENTION: do not mix cfg_file and cfg_dir such as
+# cfg_file=foo/bar.cfg
+# cfg_dir=foo
+# this will include bar.cfg 2 times and lead to config verification errors.
 
 # You can specify individual object config files as shown below:
 cfg_file=@sysconfdir@/objects/commands.cfg
@@ -45,15 +60,6 @@ cfg_file=@sysconfdir@/objects/localhost.cfg
 # Definitions for ido2db process checks
 #cfg_file=@sysconfdir@/objects/ido2db_check_proc.cfg
 
-# You can also tell Icinga to process all config files (with a .cfg
-# extension) in a particular directory by using the cfg_dir
-# directive as shown below:
-
-#cfg_dir=@sysconfdir@/servers
-#cfg_dir=@sysconfdir@/printers
-#cfg_dir=@sysconfdir@/switches
-#cfg_dir=@sysconfdir@/routers
-
 # Definitions for broker modules like idoutils.cfg
 cfg_dir=@sysconfdir@/modules
 
@@ -65,8 +71,12 @@ cfg_dir=@sysconfdir@/modules
 # this cache file (rather than looking at the object config files
 # directly) in order to prevent inconsistencies that can occur
 # when the config files are modified after Icinga starts.
+# If you explicitely set it to /dev/null the core will skip writing
+# the objects cache file entirely.
+# Tip: Use that file to debug your configuration with fully resolved
+# objects like the core sees them.
 
-object_cache_file=@localstatedir@/objects.cache
+object_cache_file=@STATEDIR@/objects.cache
 
 
 
@@ -82,7 +92,7 @@ object_cache_file=@localstatedir@/objects.cache
 # Read the documentation section on optimizing Icinga to find our more
 # about how this feature works.
 
-precached_object_file=@localstatedir@/objects.precache
+precached_object_file=@STATEDIR@/objects.precache
 
 
 
@@ -103,9 +113,12 @@ resource_file=@sysconfdir@/resource.cfg
 # This is where the current status of all monitored services and
 # hosts is stored.  Its contents are read and processed by the CGIs.
 # The contents of the status file are deleted every time Icinga
-#  restarts.
+# restarts.
+# If you explicitely set it to /dev/null the core will skip writing
+# the status file entirely. This becomes handy when using other methods
+# for data retrieval (e.g. IDOUtils DB)
 
-status_file=@localstatedir@/status.dat
+status_file=@STATEDIR@/status.dat
 
 
 
@@ -205,7 +218,7 @@ lock_file=@lockfile@
 # is created, used, and deleted throughout the time that Icinga is
 # running.
 
-temp_file=@localstatedir@/icinga.tmp
+temp_file=@TMPFILE@
 
 
 
@@ -228,7 +241,10 @@ event_broker_options=-1
 
 
 # EVENT BROKER MODULE(S)
-# This directive is used to specify an event broker module that should
+# ----> use the new *module definition* instead:
+# ----> http://docs.icinga.org/latest/en/objectdefinitions.html
+#
+# This directive can be used to specify an event broker module that should
 # by loaded by Icinga at startup.  Use multiple directives if you want
 # to load more than one module.  Arguments that should be passed to
 # the module at startup are seperated from the module path by a space.
@@ -236,24 +252,28 @@ event_broker_options=-1
 #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 # WARNING !!! WARNING !!! WARNING !!! WARNING !!! WARNING !!! WARNING
 #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-#
 # Do NOT overwrite modules while they are being used by Icinga or Icinga
-# will crash in a fiery display of SEGFAULT glory.  This is a bug/limitation
-# either in dlopen(), the kernel, and/or the filesystem.  And maybe Icinga...
+# will crash in a fiery display of SEGFAULT glory.
 #
 # The correct/safe way of updating a module is by using one of these methods:
 #    1. Shutdown Icinga, replace the module file, restart Icinga
 #    2. Delete the original module file, move the new module file into place, restart Icinga
 #
-# Example:
+#!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+# WARNING !!! WARNING !!! WARNING !!! WARNING !!! WARNING !!! WARNING
+#!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 #
+# IDOUtils idomod.so should be enabled using the module definition,
+# i.e. using a package. First check that, and if not, you can
+# enable it here. 
+#
+# ATTENTION: DO NOT load the same module here AND as a module definition.
+# This can lead into problems with races on ressources.
+#
+# Example:
 #   broker_module=<modulepath> [moduleargs]
 
-#broker_module=/somewhere/module1.o
-#broker_module=/somewhere/module2.o arg1 arg2=3 debug=0
-
-# Uncomment this to enable idomod.o
-#broker_module=@bindir@/idomod.o config_file=@sysconfdir@/idomod.cfg
+#broker_module=@libdir@/idomod.so config_file=@sysconfdir@/idomod.cfg
 
 
 
@@ -381,23 +401,6 @@ log_external_commands=1
 # this value to 1.
 
 log_passive_checks=1
-
-
-
-# LOG EXTERNAL COMMAND USER - THIS WILL BE DEPRECATED!!!
-# Future Icinga versions after 1.5 will ignore this config option,
-# use the CGI logging feature instead (or any other logger/wrapper
-# to the command pipe).
-#
-# This option allows you to enable the logging of the current user
-# of external commands.
-# The syntax will be CMD;username;cmdargs instead of CMD;cmdargs
-# written to the logs, if the external application sends that
-# correctly.
-# Since this will break compatibility with existing log parsers,
-# it is intentionally disabled by default.
-
-log_external_commands_user=0
 
 
 
@@ -549,6 +552,23 @@ max_check_result_file_age=3600
 
 
 
+# MAX CHECK RESULT LIST ITEMS !!EXPERIMENTAL!!
+# This experimental option allows you to set the max number of items
+# the checkresult reaper will put onto the checkresult list for further
+# processing by the core. If there are too many, the reaping will be
+# terminated early, allowing the core to process the results sooner.
+# On larger setups, that list might grow too much, and decrease
+# performance on processing. You might experiment with that value, the
+# inner core default is set to 0, disabling that feature.
+# Values:
+#  0 = Disable max check result list items
+#  number = set max check result list items
+
+#max_check_result_list_items=1024
+
+
+
+
 # CACHED HOST CHECK HORIZON
 # This option determines the maximum amount of time (in seconds)
 # that the state of a previous host check is considered current.
@@ -618,7 +638,7 @@ soft_state_dependencies=0
 
 # TIME CHANGE ADJUSTMENT THRESHOLDS
 # These options determine when Icinga will react to detected changes
-# in system time (either forward or backwards).
+# in system time (forward into the future).
 
 #time_change_threshold=900
 
@@ -714,7 +734,7 @@ retain_state_information=1
 # This file is used only if the retain_state_information
 # variable is set to 1.
 
-state_retention_file=@localstatedir@/retention.dat
+state_retention_file=@STATEDIR@/retention.dat
 
 
 
@@ -740,7 +760,7 @@ state_retention_file=@localstatedir@/retention.dat
 # If the file does not exist, no error will appear.
 # There is also an API that will force a read of the sync file.
 
-#sync_retention_file=@localstatedir@/sync.dat
+#sync_retention_file=@STATEDIR@/sync.dat
 
 
 
@@ -905,6 +925,20 @@ enable_event_handlers=1
 
 
 
+# STATE BASED ESCALATION RANGES !!!Experimental!!!
+# This option allows you to enable state based escalation ranges which
+# will allow a more detailed granularity on when an escalation notification
+# may happen, adding a filter based on the current host or service state
+# when checking the escalation for notification viability.
+# This is a behavioural change to the default, and therefore intentionally
+# disabled. Enable at your own risk, as this remains an experimental feature.
+# Values: 1 = enable state based escalation ranges,
+# 0 = disable state based escalation ranges
+
+#enable_state_based_escalation_ranges=0
+
+
+
 # PROCESS PERFORMANCE DATA OPTION
 # This determines whether or not Icinga will process performance
 # data returned from service and host checks.  If this option is
@@ -1004,6 +1038,11 @@ process_performance_data=0
 # This boolean option determines whether services assigned to empty
 # host groups (host groups with no host members) will cause Icinga to
 # exit with error on start up (or during a configuration check) or not.
+# It's useful to be able to assign services to empty hostgroups when
+# configuration files or pre-cached object files are distributed to
+# various pollers, or when the process of generating Icinga config is
+# automated, or when a set of services is slowly being phased out but
+# should be kept around.
 # The default behavior if the option is not present in the main
 # configuration file is for Icinga to exit with error if services are
 # associated with host groups that have no hosts associated with them.
@@ -1318,6 +1357,21 @@ illegal_macro_output_chars=`~$&|'"<>
 
 
 
+# KEEP UNKNOWN MACROS
+# This option can be used to keep unknown macros within the output.
+# e.g. check_proc -C $foo$ will remain.
+# This was the default in versions older than Icinga 1.8, but now
+# the default is to remove those macros from the output, causing
+# the shell to interpret $foo and leaving a single $ there. See
+# #2291 for further information.
+# Make sure to escape single dollar signs with another '$', as the
+# docs describe. Other than that, enable this setting to revert to
+# the old behaviour.
+
+keep_unknown_macros=0
+
+
+
 # REGULAR EXPRESSION MATCHING
 # This option controls whether or not regular expression matching
 # takes place in the object config files.  Regular expression
@@ -1452,7 +1506,7 @@ debug_level=0
 #         1 = More detailed
 #         2 = Very detailed
 
-debug_verbosity=1
+debug_verbosity=2
 
 
 
@@ -1475,10 +1529,13 @@ max_debug_file_size=100000000
 
 
 
-# EVENT PROFILING
+# EVENT PROFILING - DEPRECATED!
 # This option enables or disables event profiling for stats of event counts
 # and time taken for events.  Option can't be used on Solaris with gcc3.
 # Values: 0 - disabled
 #         1 - enabled
+#
+# WARNING: This setting will be deprecated in 1.9 and not developed
+# anymore, as it remains buggy and wasn't really useful for anyone.
 
 event_profiling_enabled=0

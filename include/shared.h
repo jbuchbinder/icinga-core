@@ -18,7 +18,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  *****************************************************************************/
 
@@ -48,6 +48,7 @@ extern int mmap_fclose(mmapfile *temp_mmapfile);
 extern char *mmap_fgets(mmapfile *temp_mmapfile);
 extern char *mmap_fgets_multiline(mmapfile * temp_mmapfile);
 extern void strip(char *buffer);
+extern unsigned long sdbm(const char *str);
 extern int hashfunc(const char *name1, const char *name2, int hashslots);
 extern int compare_hashdata(const char *val1a, const char *val1b, const char *val2a,
 			    const char *val2b);

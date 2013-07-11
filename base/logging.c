@@ -3,8 +3,8 @@
  * LOGGING.C - Log file functions for use with Icinga
  *
  * Copyright (c) 1999-2008 Ethan Galstad (egalstad@nagios.org)
- * Copyright (c) 2009-2011 Nagios Core Development Team and Community Contributors
- * Copyright (c) 2009-2011 Icinga Development Team (http://www.icinga.org)
+ * Copyright (c) 2009-2013 Nagios Core Development Team and Community Contributors
+ * Copyright (c) 2009-2013 Icinga Development Team (http://www.icinga.org)
  *
  * License:
  *
@@ -19,7 +19,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  *****************************************************************************/
 
@@ -63,10 +63,45 @@ extern int      debug_level;
 extern int      debug_verbosity;
 extern unsigned long max_debug_file_size;
 FILE            *debug_file_fp = NULL;
+static FILE	*log_fp;
 
 int dummy;	/* reduce compiler warnings */
 
 static pthread_mutex_t debug_fp_lock;
+
+/*
+ * add state translation helpers
+ * to prevent extatic macro grabbing
+ */
+static const char *service_state_name(int state) {
+        switch (state) {
+        case STATE_OK:
+                return "OK";
+        case STATE_WARNING:
+                return "WARNING";
+        case STATE_CRITICAL:
+                return "CRITICAL";
+        }
+
+        return "UNKNOWN";
+}
+
+static const char *host_state_name(int state) {
+        switch (state) {
+        case HOST_UP:
+                return "UP";
+        case HOST_DOWN:
+                return "DOWN";
+        case HOST_UNREACHABLE:
+                return "UNREACHABLE";
+        }
+
+        return "(unknown)";
+}
+
+static const char *state_type_name(int state_type) {
+        return state_type == HARD_STATE ? "HARD" : "SOFT";
+}
 
 /*
  * since we don't want child processes to hang indefinitely
@@ -174,10 +209,60 @@ static void write_to_all_logs_with_timestamp(char *buffer, unsigned long data_ty
 	write_to_log(buffer, data_type, timestamp);
 }
 
+FILE *open_log_file(void) {
+
+	if (log_fp) /* keep it open unless we rotate */
+		return log_fp;
+
+	log_fp = fopen(log_file, "a+");
+
+	if (log_fp == NULL) {
+		if (daemon_mode == FALSE) {
+			printf("Warnings: Cannot open log file '%s' for writing\n", log_file);
+		}
+		return NULL;
+	}
+
+	(void)fcntl(fileno(log_fp), F_SETFD, FD_CLOEXEC);
+
+	return log_fp;
+}
+
+int fix_log_file_owner(uid_t uid, gid_t gid) {
+
+	int r1 = 0, r2 = 0;
+
+	if (!(log_fp = open_log_file()))
+		return -1;
+
+	r1 = fchown(fileno(log_fp), uid, gid);
+
+	if (open_debug_log() != OK)
+		return -1;
+
+	if (debug_file_fp)
+		r2 = fchown(fileno(debug_file_fp), uid, gid);
+
+	/* return 0 if both are 0 and otherwise < 0 */
+	return r1 < r2 ? r1 : r2;
+}
+
+int close_log_file(void) {
+
+	if (!log_fp)
+		return 0;
+
+	fflush(log_fp);
+	fclose(log_fp);
+	log_fp = NULL;
+
+	return 0;
+}
+
 
 /* write something to the icinga log file */
 int write_to_log(char *buffer, unsigned long data_type, time_t *timestamp) {
-	FILE *fp = NULL;
+	FILE *fp;
 	time_t log_time = 0L;
 
 	if (buffer == NULL)
@@ -195,12 +280,10 @@ int write_to_log(char *buffer, unsigned long data_type, time_t *timestamp) {
 	if (!(data_type & logging_options))
 		return OK;
 
-	fp = fopen(log_file, "a+");
-	if (fp == NULL) {
-		if (daemon_mode == FALSE)
-			printf("Warning: Cannot open log file '%s' for writing\n", log_file);
+	fp = open_log_file();
+
+	if (fp == NULL)
 		return ERROR;
-	}
 
 	/* what timestamp should we use? */
 	if (timestamp == NULL)
@@ -213,8 +296,7 @@ int write_to_log(char *buffer, unsigned long data_type, time_t *timestamp) {
 
 	/* write the buffer to the log file */
 	fprintf(fp, "[%lu] %s\n", log_time, buffer);
-
-	fclose(fp);
+	fflush(fp);
 
 #ifdef USE_EVENT_BROKER
 	/* send data to the event broker */
@@ -284,10 +366,8 @@ int write_to_syslog(char *buffer, unsigned long data_type) {
 /* write a service problem/recovery to the icinga log file */
 int log_service_event(service *svc) {
 	char *temp_buffer = NULL;
-	char *processed_buffer = NULL;
 	unsigned long log_options = 0L;
 	host *temp_host = NULL;
-	icinga_macros mac;
 
 	/* don't log soft errors if the user doesn't want to */
 	if (svc->state_type == SOFT_STATE && !log_service_retries)
@@ -307,27 +387,28 @@ int log_service_event(service *svc) {
 	if ((temp_host = svc->host_ptr) == NULL)
 		return ERROR;
 
-	/* grab service macros */
-	memset(&mac, 0, sizeof(mac));
-	grab_host_macros_r(&mac, temp_host);
-	grab_service_macros_r(&mac, svc);
-
-	/* XXX: replace the macro madness with some simple helpers instead */
 	/* either log only the output, or if enabled, add long_output */
 	if (log_long_plugin_output == TRUE && svc->long_plugin_output != NULL) {
-		dummy = asprintf(&temp_buffer, "SERVICE ALERT: %s;%s;$SERVICESTATE$;$SERVICESTATETYPE$;$SERVICEATTEMPT$;%s\\n%s\n", svc->host_name, svc->description, (svc->plugin_output == NULL) ? "" : svc->plugin_output, svc->long_plugin_output);
+		dummy = asprintf(&temp_buffer, "SERVICE ALERT: %s;%s;%s;%s;%d;%s\\n%s\n",
+				svc->host_name, svc->description,
+				service_state_name(svc->current_state),
+				state_type_name(svc->state_type),
+				svc->current_attempt,
+				(svc->plugin_output == NULL) ? "" : svc->plugin_output,
+				svc->long_plugin_output
+				);
 	} else {
-		dummy = asprintf(&temp_buffer, "SERVICE ALERT: %s;%s;$SERVICESTATE$;$SERVICESTATETYPE$;$SERVICEATTEMPT$;%s\n", svc->host_name, svc->description, (svc->plugin_output == NULL) ? "" : svc->plugin_output);
+		dummy = asprintf(&temp_buffer, "SERVICE ALERT: %s;%s;%s;%s;%d;%s\n",
+				svc->host_name, svc->description,
+				service_state_name(svc->current_state),
+				state_type_name(svc->state_type),
+				svc->current_attempt,
+				(svc->plugin_output == NULL) ? "" : svc->plugin_output
+				);
 	}
 
-	process_macros_r(&mac, temp_buffer, &processed_buffer, 0);
-	clear_host_macros_r(&mac);
-	clear_service_macros_r(&mac);
-
-	write_to_all_logs(processed_buffer, log_options);
-
+	write_to_all_logs(temp_buffer, log_options);
 	my_free(temp_buffer);
-	my_free(processed_buffer);
 
 	return OK;
 }
@@ -336,13 +417,7 @@ int log_service_event(service *svc) {
 /* write a host problem/recovery to the log file */
 int log_host_event(host *hst) {
 	char *temp_buffer = NULL;
-	char *processed_buffer = NULL;
 	unsigned long log_options = 0L;
-	icinga_macros mac;
-
-	/* grab the host macros */
-	memset(&mac, 0, sizeof(mac));
-	grab_host_macros_r(&mac, hst);
 
 	/* get the log options */
 	if (hst->current_state == HOST_DOWN)
@@ -352,21 +427,28 @@ int log_host_event(host *hst) {
 	else
 		log_options = NSLOG_HOST_UP;
 
-	/* XXX: replace the macro madness with some simple helpers instead */
 	/* either log only the output, or if enabled, add long_output */
 	if (log_long_plugin_output == TRUE && hst->long_plugin_output != NULL) {
-		dummy = asprintf(&temp_buffer, "HOST ALERT: %s;$HOSTSTATE$;$HOSTSTATETYPE$;$HOSTATTEMPT$;%s\\n%s\n", hst->name, (hst->plugin_output == NULL) ? "" : hst->plugin_output, hst->long_plugin_output);
+		dummy = asprintf(&temp_buffer, "HOST ALERT: %s;%s;%s;%d;%s\\n%s\n",
+				hst->name,
+				host_state_name(hst->current_state),
+				state_type_name(hst->state_type),
+				hst->current_attempt,
+				(hst->plugin_output == NULL) ? "" : hst->plugin_output,
+				hst->long_plugin_output
+				);
 	} else {
-		dummy = asprintf(&temp_buffer, "HOST ALERT: %s;$HOSTSTATE$;$HOSTSTATETYPE$;$HOSTATTEMPT$;%s\n", hst->name, (hst->plugin_output == NULL) ? "" : hst->plugin_output);
+		dummy = asprintf(&temp_buffer, "HOST ALERT: %s;%s;%s;%d;%s\n",
+				hst->name,
+				host_state_name(hst->current_state),
+				state_type_name(hst->state_type),
+				hst->current_attempt,
+				(hst->plugin_output == NULL) ? "" : hst->plugin_output
+				);
 	}
 
-	process_macros_r(&mac, temp_buffer, &processed_buffer, 0);
-
-	write_to_all_logs(processed_buffer, log_options);
-
-	clear_host_macros_r(&mac);
+	write_to_all_logs(temp_buffer, log_options);
 	my_free(temp_buffer);
-	my_free(processed_buffer);
 
 	return OK;
 }
@@ -375,30 +457,26 @@ int log_host_event(host *hst) {
 /* logs host states */
 int log_host_states(int type, time_t *timestamp) {
 	char *temp_buffer = NULL;
-	char *processed_buffer = NULL;
 	host *temp_host = NULL;
-	icinga_macros mac;
 
 	/* bail if we shouldn't be logging initial states */
 	if (type == INITIAL_STATES && log_initial_states == FALSE)
 		return OK;
 
-	memset(&mac, 0, sizeof(mac));
-
 	for (temp_host = host_list; temp_host != NULL; temp_host = temp_host->next) {
 
-		/* grab the host macros */
-		grab_host_macros_r(&mac, temp_host);
+		dummy = asprintf(&temp_buffer, "%s HOST STATE: %s;%s;%s;%d;%s\n",
+				(type == INITIAL_STATES) ? "INITIAL" : "CURRENT",
+				temp_host->name,
+				host_state_name(temp_host->current_state),
+				state_type_name(temp_host->state_type),
+				temp_host->current_attempt,
+				(temp_host->plugin_output == NULL) ? "" : temp_host->plugin_output
+				);
 
-		dummy = asprintf(&temp_buffer, "%s HOST STATE: %s;$HOSTSTATE$;$HOSTSTATETYPE$;$HOSTATTEMPT$;%s\n", (type == INITIAL_STATES) ? "INITIAL" : "CURRENT", temp_host->name, (temp_host->plugin_output == NULL) ? "" : temp_host->plugin_output);
-		process_macros_r(&mac, temp_buffer, &processed_buffer, 0);
-
-		write_to_all_logs_with_timestamp(processed_buffer, NSLOG_INFO_MESSAGE, timestamp);
-
-		clear_host_macros_r(&mac);
+		write_to_all_logs_with_timestamp(temp_buffer, NSLOG_INFO_MESSAGE, timestamp);
 
 		my_free(temp_buffer);
-		my_free(processed_buffer);
 	}
 
 	return OK;
@@ -408,16 +486,12 @@ int log_host_states(int type, time_t *timestamp) {
 /* logs service states */
 int log_service_states(int type, time_t *timestamp) {
 	char *temp_buffer = NULL;
-	char *processed_buffer = NULL;
 	service *temp_service = NULL;
 	host *temp_host = NULL;
-	icinga_macros mac;
 
 	/* bail if we shouldn't be logging initial states */
 	if (type == INITIAL_STATES && log_initial_states == FALSE)
 		return OK;
-
-	memset(&mac, 0, sizeof(mac));
 
 	for (temp_service = service_list; temp_service != NULL; temp_service = temp_service->next) {
 
@@ -425,21 +499,19 @@ int log_service_states(int type, time_t *timestamp) {
 		if ((temp_host = temp_service->host_ptr) == NULL)
 			continue;
 
-		/* grab service macros */
-		grab_host_macros_r(&mac, temp_host);
-		grab_service_macros_r(&mac, temp_service);
+		dummy = asprintf(&temp_buffer, "%s SERVICE STATE: %s;%s;%s;%s;%d;%s\n",
+				(type == INITIAL_STATES) ? "INITIAL" : "CURRENT",
+				temp_service->host_name,
+				temp_service->description,
+				service_state_name(temp_service->current_state),
+				state_type_name(temp_service->state_type),
+				temp_service->current_attempt,
+				temp_service->plugin_output
+				);
 
-		/* XXX: macro madness */
-		dummy = asprintf(&temp_buffer, "%s SERVICE STATE: %s;%s;$SERVICESTATE$;$SERVICESTATETYPE$;$SERVICEATTEMPT$;%s\n", (type == INITIAL_STATES) ? "INITIAL" : "CURRENT", temp_service->host_name, temp_service->description, temp_service->plugin_output);
-		process_macros_r(&mac, temp_buffer, &processed_buffer, 0);
-
-		write_to_all_logs_with_timestamp(processed_buffer, NSLOG_INFO_MESSAGE, timestamp);
-
-		clear_host_macros_r(&mac);
-		clear_service_macros_r(&mac);
+		write_to_all_logs_with_timestamp(temp_buffer, NSLOG_INFO_MESSAGE, timestamp);
 
 		my_free(temp_buffer);
-		my_free(processed_buffer);
 	}
 
 	return OK;
@@ -477,11 +549,15 @@ int rotate_log_file(time_t rotation_time) {
 
 	stat_result = stat(log_file, &log_file_stat);
 
+	close_log_file();
+
 	/* get the archived filename to use */
 	dummy = asprintf(&log_archive, "%s%sicinga-%02d-%02d-%d-%02d.log", log_archive_path, (log_archive_path[strlen(log_archive_path)-1] == '/') ? "" : "/", t->tm_mon + 1, t->tm_mday, t->tm_year + 1900, t->tm_hour);
 
 	/* rotate the log file */
 	rename_result = my_rename(log_file, log_archive);
+
+	log_fp = open_log_file();
 
 	if (rename_result) {
 		my_free(log_archive);
@@ -541,9 +617,10 @@ int open_debug_log(void) {
 	if ((debug_file_fp = fopen(debug_file, "a+")) == NULL)
 		return ERROR;
 
+	(void)fcntl(fileno(debug_file_fp), F_SETFD, FD_CLOEXEC);
+
 	return OK;
 }
-
 
 /* closes the debug log */
 int close_debug_log(void) {

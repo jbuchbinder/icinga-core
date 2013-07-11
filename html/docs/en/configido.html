@@ -1,32 +1,38 @@
 <html>
 <head>
-<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
-<title>Configuration of IDOUtils</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<title>12.3. Configuration of IDOUtils</title>
+<link rel="stylesheet" href="../stylesheets/icinga-docs.css" type="text/css">
 <meta name="generator" content="DocBook XSL Stylesheets V1.75.1">
 <meta name="keywords" content="Supervision, Icinga, Nagios, Linux">
-<link rel="home" href="index.html" title="Icinga Version 1.6 Documentation">
-<link rel="up" href="ch12.html" title="Chapter�12.�IDOUtils">
-<link rel="prev" href="db_components.html" title="Components">
-<link rel="next" href="db_example-configs.html" title="Example Configurations">
+<link rel="home" href="index.html" title="Icinga Version 1.9 Documentation">
+<link rel="up" href="ch12.html" title="Chapter 12. IDOUtils">
+<link rel="prev" href="db_components.html" title="12.2. Components">
+<link rel="next" href="db_example-configs.html" title="12.4. Example Configurations">
+<script src="../js/jquery-min.js" type="text/javascript"></script><script src="../js/icinga-docs.js" type="text/javascript"></script>
 </head>
 <body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
 <CENTER><IMG src="../images/logofullsize.png" border="0" alt="Icinga" title="Icinga"></CENTER>
 <div class="navheader">
 <table width="100%" summary="Navigation header">
-<tr><th colspan="3" align="center">Configuration of IDOUtils</th></tr>
+<tr><th colspan="3" align="center">12.3. Configuration of IDOUtils</th></tr>
 <tr>
 <td width="20%" align="left">
-<a accesskey="p" href="db_components.html">Prev</a>�</td>
-<th width="60%" align="center">Chapter�12.�IDOUtils</th>
-<td width="20%" align="right">�<a accesskey="n" href="db_example-configs.html">Next</a>
+<a accesskey="p" href="db_components.html">Prev</a> </td>
+<th width="60%" align="center">Chapter 12. IDOUtils</th>
+<td width="20%" align="right"> <a accesskey="n" href="db_example-configs.html">Next</a>
 </td>
 </tr>
 </table>
 <hr>
 </div>
-<div class="section" title="Configuration of IDOUtils">
+<div class="section" title="12.3. Configuration of IDOUtils">
 <div class="titlepage"><div><div><h2 class="title" style="clear: both">
-<a name="configido"></a><a name="configido_"></a>Configuration of IDOUtils</h2></div></div></div>
+<a name="configido"></a>12.3. <a name="configido_"></a>Configuration of IDOUtils</h2></div></div></div>
+<div class="toc"><dl>
+<dt><span class="section">12.3.1. <a href="configido.html#idomodoptions">IDOMOD config options</a></span></dt>
+<dt><span class="section">12.3.2. <a href="configido.html#ido2dboptions">IDO2DB config options</a></span></dt>
+</dl></div>
   
 
   <div class="note" title="Note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note">
@@ -47,9 +53,9 @@
 
   <p><a class="link" href="configido.html#configido-ido2db">Changes in ido2db.cfg</a></p>
 
-  <p><a class="link" href="configido.html#configido-idomod_options">idomod.cfg config options</a></p>
+  <p><a class="link" href="configido.html#idomodoptions" title="12.3.1. IDOMOD config options">idomod.cfg config options</a></p>
 
-  <p><a class="link" href="configido.html#configido-ido2db_options">ido2db.cfg config options</a></p>
+  <p><a class="link" href="configido.html#ido2dboptions" title="12.3.2. IDO2DB config options">ido2db.cfg config options</a></p>
 
   <p><span class="bold"><strong>Core</strong></span></p>
 
@@ -74,7 +80,7 @@
 
   <pre class="programlisting"> define module {
     module_name   ido_mod
-    path          /usr/local/icinga/bin/idomod.o
+    path          /usr/local/icinga/lib/idomod.so
     module_type   neb
     args          config_file=/usr/local/icinga/etc/idomod.cfg
  }</pre>
@@ -339,9 +345,9 @@
     </li>
 </ul></div>
 
-  <div class="section" title="IDOMOD config options">
+  <div class="section" title="12.3.1. IDOMOD config options">
 <div class="titlepage"><div><div><h3 class="title">
-<a name="idp15733232"></a><a name="configido-idomod_options"></a>IDOMOD config options</h3></div></div></div>
+<a name="idomodoptions"></a>12.3.1. IDOMOD config options</h3></div></div></div>
     
 
     <p><a name="configido-instance_name"></a><span class="bold"><strong>Instance name</strong></span></p>
@@ -920,9 +926,9 @@
     disk space usage doesn't get out of control when debugging.</p>
   </div>
 
-  <div class="section" title="IDO2DB config options">
+  <div class="section" title="12.3.2. IDO2DB config options">
 <div class="titlepage"><div><div><h3 class="title">
-<a name="idp15733488"></a><a name="configido-ido2db_options"></a>IDO2DB config options</h3></div></div></div>
+<a name="ido2dboptions"></a>12.3.2. IDO2DB config options</h3></div></div></div>
     
 
     <p><a name="configido-lock_file"></a> <span class="bold"><strong>Lock file</strong></span></p>
@@ -962,19 +968,8 @@
 <tr>
 <td><p>Format:</p></td>
 <td>
-<p>
-                 
-
-                <span class="bold"><strong>ido2db_user=&lt;user name&gt;</strong></span>
-
-                 
-              </p> <p>
-                 
-
-                <span class="bold"><strong>ido2db_group=&lt;group name&gt;</strong></span>
-
-                 
-              </p>
+<p><span class="bold"><strong>ido2db_user=&lt;user name&gt;</strong></span> </p>
+<p><span class="bold"><strong>ido2db_group=&lt;group name&gt;</strong></span></p>
 </td>
 </tr>
 <tr>
@@ -1036,6 +1031,30 @@
     <p>This option determines the name and path of the UNIX domain socket that the daemon will create and accept connections from. This
     option is only valid if the socket type specified above is "unix".</p>
 
+    <p><a name="configido-socket_perm"></a><span class="bold"><strong>Socket Permissions</strong></span></p>
+
+    <div class="informaltable">
+      <table border="0">
+<colgroup>
+<col>
+<col>
+</colgroup>
+<tbody>
+<tr>
+<td><p>Format:</p></td>
+<td><p><span class="bold"><strong>socket_perm=&lt;n&gt;</strong></span></p></td>
+</tr>
+<tr>
+<td><p>Example:</p></td>
+<td><p><span class="color"><font color="red"><span class="bold"><strong>socket_perm=0755</strong></span> </font></span></p></td>
+</tr>
+</tbody>
+</table>
+    </div>
+
+    <p>This option determines the permissons of the Unix domain socket. This option is only valid if the socket type specified above is
+    "unix". Default permissions are set to 0755.</p>
+
     <p><a name="configido-tcp_port2"></a><span class="bold"><strong>TCP-port</strong></span></p>
 
     <div class="informaltable">
@@ -1086,6 +1105,39 @@
 
     <p>This option is only valid if the output type option specified above is "tcp".</p>
 
+    <p><a name="configido-libdbi_driver_directory"></a><span class="bold"><strong>Libdbi Driver Directory</strong></span></p>
+
+    <div class="informaltable">
+      <table border="0">
+<colgroup>
+<col>
+<col>
+</colgroup>
+<tbody>
+<tr>
+<td><p>Format:</p></td>
+<td><p><span class="bold"><strong>libdbi_driver_dir=@LIBDBIDRIVERDIR@</strong></span></p></td>
+</tr>
+<tr>
+<td><p>Example:</p></td>
+<td><p><span class="bold"><strong>libdbi_driver_dir=/usr/local/lib/dbd</strong></span></p></td>
+</tr>
+</tbody>
+</table>
+    </div>
+
+    <div class="note" title="Note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note">
+<tr>
+<td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="../images/note.png"></td>
+<th align="left">Note</th>
+</tr>
+<tr><td align="left" valign="top">
+      <p>!!!EXPERIMENTAL!!! This option is only valid when using libdbi as database abstraction layer (so not oracle) on compile time. By
+      default, libdbi will figure out the correct path itself. If you want to change it, enable and change the value. Default: not in
+      use.</p>
+    </td></tr>
+</table></div>
+
     <p><a name="configido-db_servertype"></a> <span class="bold"><strong>Database server type</strong></span></p>
 
     <div class="informaltable">
@@ -1117,7 +1169,7 @@
           <p>mysql (uses libdbi)</p>
         </li>
 <li class="listitem">
-          <p>pqsql (uses libdbi)</p>
+          <p>pgsql (uses libdbi)</p>
         </li>
 <li class="listitem">
           <p>oracle (uses ocilib)</p>
@@ -1146,8 +1198,16 @@
 </table>
     </div>
 
-    <p>This option specifies what host the DB server is running on. <span class="bold"><strong>Note:</strong></span> Oracle will ignore this
-    setting.</p>
+    <p>This option specifies what host the DB server is running on.</p>
+
+    <p><span class="bold"><strong>MySQL: </strong></span>The hostname or IP address of the MySQL database server. Use empty string or
+    "localhost" to connect to a MySQL server running on the local machine.</p>
+
+    <p><span class="bold"><strong>PostgreSQL: </strong></span>If this begins with a slash, it speciﬁes Unix-domain communication rather than
+    TCP/IP communication; the value is the name of the directory in which the socket ﬁle is stored. The default behaviour when host is not
+    speciﬁed is to connect to a Unix-domain socket in /tmp (or whatever socket directory was speciﬁed when PostgreSQL was built).</p>
+
+    <p><span class="bold"><strong>Oracle: </strong></span>This setting will be ignored.</p>
 
     <p><a name="configido-db_port"></a> <span class="bold"><strong>Database port</strong></span></p>
 
@@ -1186,15 +1246,14 @@
       </li>
 </ul></div>
 
-    <div class="note" title="Note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note">
-<tr>
-<td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="../images/note.png"></td>
-<th align="left">Note</th>
-</tr>
-<tr><td align="left" valign="top">
-      <p>ocilib will ignore this, you have to modify your <code class="filename">tnsnames.ora</code>.</p>
-    </td></tr>
-</table></div>
+    <p><span class="bold"><strong>MySQL: </strong></span>The port used to remotely connect to the MySQL database server over TCP. Use "0"
+    (zero) to accept the default socket.</p>
+
+    <p><span class="bold"><strong>PostgreSQL: </strong></span>Port number to connect to at the server host, or socket ﬁle name extension for
+    Unix-domain connections.</p>
+
+    <p><span class="bold"><strong>Oracle: </strong></span>ocilib will ignore this, you have to modify your
+    <code class="filename">tnsnames.ora</code>.</p>
 
     <p><a name="configido-db_socket"></a> <span class="bold"><strong>Database socket</strong></span></p>
 
@@ -1577,7 +1636,8 @@
         </li>
 </ul></div>
 
-    <p><a name="configido-enable_sla"></a> <span class="bold"><strong>Enable SLA data collection</strong></span></p>
+    <p><a name="configido-enable_sla"></a> <span class="bold"><strong>Enable SLA data collection (deprecated since Icinga
+    1.9)</strong></span></p>
 
     <div class="informaltable">
       <table border="0">
@@ -1610,199 +1670,218 @@
         </li>
 </ul></div>
 
+    <div class="important" title="Important" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Important">
+<tr>
+<td rowspan="2" align="center" valign="top" width="25"><img alt="[Important]" src="../images/important.png"></td>
+<th align="left">Important</th>
+</tr>
+<tr><td align="left" valign="top">
+      <p>This setting is highly experimental and may harm your systems performance. Enable at your own risk, and if any problems occur,
+      remark that you are explicitly using it. <span class="bold"><strong>You've been warned</strong></span><span class="bold"><strong>.</strong></span></p>
+    </td></tr>
+</table></div>
+
     <div class="note" title="Note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note">
 <tr>
 <td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="../images/note.png"></td>
 <th align="left">Note</th>
 </tr>
 <tr><td align="left" valign="top">
-      <p>This option is available starting with Icinga 1.6</p>
+      <p>This option was available starting with Icinga 1.6 and is deprecated since Icinga 1.9.</p>
     </td></tr>
 </table></div>
 
-    <a class="indexterm" name="idp16210544"></a>
+    <a class="indexterm" name="idp17339200"></a>
 
-    <a class="indexterm" name="idp16212240"></a>
+    <a class="indexterm" name="idp17340976"></a>
 
-    <a class="indexterm" name="idp16213856"></a>
+    <a class="indexterm" name="idp17342560"></a>
 
-    <a class="indexterm" name="idp16215472"></a>
+    <a class="indexterm" name="idp17344192"></a>
 
-    <a class="indexterm" name="idp16217088"></a>
+    <a class="indexterm" name="idp17345824"></a>
 
-    <a class="indexterm" name="idp16218400"></a>
+    <a class="indexterm" name="idp17347456"></a>
 
-    <a class="indexterm" name="idp16220160"></a>
+    <a class="indexterm" name="idp17349056"></a>
 
-    <a class="indexterm" name="idp16221808"></a>
+    <a class="indexterm" name="idp17350704"></a>
 
-    <a class="indexterm" name="idp16223632"></a>
+    <a class="indexterm" name="idp17352528"></a>
 
-    <a class="indexterm" name="idp16225200"></a>
+    <a class="indexterm" name="idp17354096"></a>
 
-    <a class="indexterm" name="idp16227024"></a>
+    <a class="indexterm" name="idp17355920"></a>
 
-    <a class="indexterm" name="idp16228688"></a>
+    <a class="indexterm" name="idp17357536"></a>
 
-    <a class="indexterm" name="idp16230352"></a>
+    <a class="indexterm" name="idp17359056"></a>
 
-    <a class="indexterm" name="idp16232016"></a>
+    <a class="indexterm" name="idp17360528"></a>
 
-    <a class="indexterm" name="idp16233680"></a>
+    <a class="indexterm" name="idp17360656"></a>
 
-    <a class="indexterm" name="idp16235248"></a>
+    <a class="indexterm" name="idp17363696"></a>
 
-    <a class="indexterm" name="idp16237008"></a>
+    <a class="indexterm" name="idp17363824"></a>
 
-    <a class="indexterm" name="idp16238640"></a>
+    <a class="indexterm" name="idp17367120"></a>
 
-    <a class="indexterm" name="idp16240272"></a>
+    <a class="indexterm" name="idp17367248"></a>
 
-    <a class="indexterm" name="idp16241904"></a>
+    <a class="indexterm" name="idp17370416"></a>
 
-    <a class="indexterm" name="idp16243536"></a>
+    <a class="indexterm" name="idp17371888"></a>
 
-    <a class="indexterm" name="idp16245168"></a>
+    <a class="indexterm" name="idp17373696"></a>
 
-    <a class="indexterm" name="idp16246656"></a>
+    <a class="indexterm" name="idp17375232"></a>
 
-    <a class="indexterm" name="idp16248288"></a>
+    <a class="indexterm" name="idp17376864"></a>
 
-    <a class="indexterm" name="idp16249952"></a>
+    <a class="indexterm" name="idp17378560"></a>
 
-    <a class="indexterm" name="idp16251520"></a>
+    <a class="indexterm" name="idp17380080"></a>
 
-    <a class="indexterm" name="idp16253184"></a>
+    <a class="indexterm" name="idp17381712"></a>
 
-    <a class="indexterm" name="idp16254752"></a>
+    <a class="indexterm" name="idp17383344"></a>
 
-    <a class="indexterm" name="idp16256384"></a>
+    <a class="indexterm" name="idp17384992"></a>
 
-    <a class="indexterm" name="idp16258048"></a>
+    <a class="indexterm" name="idp17386656"></a>
 
-    <a class="indexterm" name="idp16259712"></a>
+    <a class="indexterm" name="idp17388256"></a>
 
-    <a class="indexterm" name="idp16261376"></a>
+    <a class="indexterm" name="idp17389888"></a>
 
-    <a class="indexterm" name="idp16263040"></a>
+    <a class="indexterm" name="idp17391584"></a>
 
-    <a class="indexterm" name="idp16264704"></a>
+    <a class="indexterm" name="idp17393200"></a>
 
-    <a class="indexterm" name="idp16266368"></a>
+    <a class="indexterm" name="idp17394816"></a>
 
-    <a class="indexterm" name="idp16268032"></a>
+    <a class="indexterm" name="idp17396432"></a>
 
-    <a class="indexterm" name="idp16269664"></a>
+    <a class="indexterm" name="idp17398016"></a>
 
-    <a class="indexterm" name="idp16271328"></a>
+    <a class="indexterm" name="idp17399648"></a>
 
-    <a class="indexterm" name="idp16272992"></a>
+    <a class="indexterm" name="idp17401312"></a>
 
-    <a class="indexterm" name="idp16274656"></a>
+    <a class="indexterm" name="idp17402944"></a>
 
-    <a class="indexterm" name="idp16276320"></a>
+    <a class="indexterm" name="idp17404576"></a>
 
-    <a class="indexterm" name="idp16277984"></a>
+    <a class="indexterm" name="idp17406208"></a>
 
-    <a class="indexterm" name="idp16279648"></a>
+    <a class="indexterm" name="idp17407840"></a>
 
-    <a class="indexterm" name="idp16281312"></a>
+    <a class="indexterm" name="idp17409472"></a>
 
-    <a class="indexterm" name="idp16282976"></a>
+    <a class="indexterm" name="idp17411104"></a>
 
-    <a class="indexterm" name="idp16284544"></a>
+    <a class="indexterm" name="idp17412672"></a>
 
-    <a class="indexterm" name="idp16286304"></a>
+    <a class="indexterm" name="idp17414368"></a>
 
-    <a class="indexterm" name="idp16287792"></a>
+    <a class="indexterm" name="idp17415888"></a>
 
-    <a class="indexterm" name="idp16289360"></a>
+    <a class="indexterm" name="idp17417520"></a>
 
-    <a class="indexterm" name="idp16290752"></a>
+    <a class="indexterm" name="idp17419168"></a>
 
-    <a class="indexterm" name="idp16292320"></a>
+    <a class="indexterm" name="idp17420832"></a>
 
-    <a class="indexterm" name="idp16293888"></a>
+    <a class="indexterm" name="idp17422528"></a>
 
-    <a class="indexterm" name="idp16295360"></a>
+    <a class="indexterm" name="idp17424112"></a>
 
-    <a class="indexterm" name="idp16295488"></a>
+    <a class="indexterm" name="idp17425776"></a>
 
-    <a class="indexterm" name="idp16298624"></a>
+    <a class="indexterm" name="idp17427408"></a>
 
-    <a class="indexterm" name="idp16300096"></a>
+    <a class="indexterm" name="idp17429072"></a>
 
-    <a class="indexterm" name="idp16300224"></a>
+    <a class="indexterm" name="idp17430704"></a>
 
-    <a class="indexterm" name="idp16303280"></a>
+    <a class="indexterm" name="idp17432400"></a>
 
-    <a class="indexterm" name="idp16303408"></a>
+    <a class="indexterm" name="idp17433952"></a>
 
-    <a class="indexterm" name="idp16306528"></a>
+    <a class="indexterm" name="idp17435648"></a>
 
-    <a class="indexterm" name="idp16308352"></a>
+    <a class="indexterm" name="idp17437136"></a>
 
-    <a class="indexterm" name="idp16309984"></a>
+    <a class="indexterm" name="idp17438768"></a>
 
-    <a class="indexterm" name="idp16311456"></a>
+    <a class="indexterm" name="idp17440400"></a>
 
-    <a class="indexterm" name="idp16311584"></a>
+    <a class="indexterm" name="idp17442032"></a>
 
-    <a class="indexterm" name="idp16313376"></a>
+    <a class="indexterm" name="idp17443632"></a>
 
-    <a class="indexterm" name="idp16314768"></a>
+    <a class="indexterm" name="idp17445024"></a>
 
-    <a class="indexterm" name="idp16318160"></a>
+    <a class="indexterm" name="idp17445152"></a>
 
-    <a class="indexterm" name="idp16319760"></a>
+    <a class="indexterm" name="idp17448560"></a>
 
-    <a class="indexterm" name="idp16321456"></a>
+    <a class="indexterm" name="idp17450224"></a>
 
-    <a class="indexterm" name="idp16323040"></a>
+    <a class="indexterm" name="idp17451824"></a>
 
-    <a class="indexterm" name="idp16324640"></a>
+    <a class="indexterm" name="idp17453520"></a>
 
-    <a class="indexterm" name="idp16326272"></a>
+    <a class="indexterm" name="idp17455120"></a>
 
-    <a class="indexterm" name="idp16327936"></a>
+    <a class="indexterm" name="idp17456736"></a>
 
-    <a class="indexterm" name="idp16329568"></a>
+    <a class="indexterm" name="idp17458352"></a>
 
-    <a class="indexterm" name="idp16331200"></a>
+    <a class="indexterm" name="idp17459968"></a>
 
-    <a class="indexterm" name="idp16332832"></a>
+    <a class="indexterm" name="idp17461584"></a>
 
-    <a class="indexterm" name="idp16334464"></a>
+    <a class="indexterm" name="idp17463200"></a>
 
-    <a class="indexterm" name="idp16336096"></a>
+    <a class="indexterm" name="idp17464816"></a>
 
-    <a class="indexterm" name="idp16337728"></a>
+    <a class="indexterm" name="idp17466272"></a>
 
-    <a class="indexterm" name="idp16339360"></a>
+    <a class="indexterm" name="idp17468048"></a>
 
-    <a class="indexterm" name="idp16340992"></a>
+    <a class="indexterm" name="idp17469680"></a>
 
-    <a class="indexterm" name="idp16342624"></a>
+    <a class="indexterm" name="idp17471344"></a>
 
-    <a class="indexterm" name="idp16344256"></a>
+    <a class="indexterm" name="idp17472976"></a>
 
-    <a class="indexterm" name="idp16345888"></a>
+    <a class="indexterm" name="idp17474608"></a>
 
-    <a class="indexterm" name="idp16347520"></a>
+    <a class="indexterm" name="idp17476240"></a>
 
-    <a class="indexterm" name="idp16349152"></a>
+    <a class="indexterm" name="idp17477872"></a>
 
-    <a class="indexterm" name="idp16350848"></a>
+    <a class="indexterm" name="idp17479504"></a>
 
-    <a class="indexterm" name="idp16352400"></a>
+    <a class="indexterm" name="idp17481136"></a>
 
-    <a class="indexterm" name="idp16354096"></a>
+    <a class="indexterm" name="idp17482832"></a>
 
-    <a class="indexterm" name="idp16355584"></a>
+    <a class="indexterm" name="idp17484384"></a>
 
-    <a class="indexterm" name="idp16357216"></a>
+    <a class="indexterm" name="idp17486080"></a>
 
-    <a class="indexterm" name="idp16358848"></a>
+    <a class="indexterm" name="idp17487568"></a>
+
+    <a class="indexterm" name="idp17489200"></a>
+
+    <a class="indexterm" name="idp17490832"></a>
+
+    <a class="indexterm" name="idp17492528"></a>
+
+    <a class="indexterm" name="idp17494112"></a>
   </div>
 </div>
 <div class="navfooter">
@@ -1810,18 +1889,18 @@
 <table width="100%" summary="Navigation footer">
 <tr>
 <td width="40%" align="left">
-<a accesskey="p" href="db_components.html">Prev</a>�</td>
+<a accesskey="p" href="db_components.html">Prev</a> </td>
 <td width="20%" align="center"><a accesskey="u" href="ch12.html">Up</a></td>
-<td width="40%" align="right">�<a accesskey="n" href="db_example-configs.html">Next</a>
+<td width="40%" align="right"> <a accesskey="n" href="db_example-configs.html">Next</a>
 </td>
 </tr>
 <tr>
-<td width="40%" align="left" valign="top">Components�</td>
+<td width="40%" align="left" valign="top">12.2. Components </td>
 <td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td>
-<td width="40%" align="right" valign="top">�Example Configurations</td>
+<td width="40%" align="right" valign="top"> 12.4. Example Configurations</td>
 </tr>
 </table>
 </div>
-<P class="copyright">� 2009-2011 Icinga Development Team, http://www.icinga.org</P>
+<P class="copyright">© 2009-2013 Icinga Development Team, http://www.icinga.org</P>
 </body>
 </html>

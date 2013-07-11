@@ -1,32 +1,38 @@
 <html>
 <head>
-<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
-<title>Konfiguration der IDOUtils</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<title>12.3. Konfiguration der IDOUtils</title>
+<link rel="stylesheet" href="../stylesheets/icinga-docs.css" type="text/css">
 <meta name="generator" content="DocBook XSL Stylesheets V1.75.1">
 <meta name="keywords" content="Supervision, Icinga, Nagios, Linux">
-<link rel="home" href="index.html" title="Icinga Version 1.6 Dokumentation">
+<link rel="home" href="index.html" title="Icinga Version 1.9 Dokumentation">
 <link rel="up" href="ch12.html" title="Kapitel 12. IDOUtils">
-<link rel="prev" href="components.html" title="Komponenten">
-<link rel="next" href="example-configs.html" title="Beispielkonfigurationen">
+<link rel="prev" href="components.html" title="12.2. Komponenten">
+<link rel="next" href="example-configs.html" title="12.4. Beispielkonfigurationen">
+<script src="../js/jquery-min.js" type="text/javascript"></script><script src="../js/icinga-docs.js" type="text/javascript"></script>
 </head>
 <body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
 <CENTER><IMG src="../images/logofullsize.png" border="0" alt="Icinga" title="Icinga"></CENTER>
 <div class="navheader">
 <table width="100%" summary="Navigation header">
-<tr><th colspan="3" align="center">Konfiguration der IDOUtils</th></tr>
+<tr><th colspan="3" align="center">12.3. Konfiguration der IDOUtils</th></tr>
 <tr>
 <td width="20%" align="left">
-<a accesskey="p" href="components.html">Zurück</a> </td>
+<a accesskey="p" href="components.html">ZurÃ¼ck</a>Â </td>
 <th width="60%" align="center">Kapitel 12. IDOUtils</th>
-<td width="20%" align="right"> <a accesskey="n" href="example-configs.html">Weiter</a>
+<td width="20%" align="right">Â <a accesskey="n" href="example-configs.html">Weiter</a>
 </td>
 </tr>
 </table>
 <hr>
 </div>
-<div class="section" title="Konfiguration der IDOUtils">
+<div class="section" title="12.3. Konfiguration der IDOUtils">
 <div class="titlepage"><div><div><h2 class="title" style="clear: both">
-<a name="configido"></a><a name="configido_"></a>Konfiguration der IDOUtils</h2></div></div></div>
+<a name="configido"></a>12.3. <a name="configido_"></a>Konfiguration der IDOUtils</h2></div></div></div>
+<div class="toc"><dl>
+<dt><span class="section">12.3.1. <a href="configido.html#idomodoptions">IDOMOD Konfigurationsoptionen</a></span></dt>
+<dt><span class="section">12.3.2. <a href="configido.html#ido2dboptions">IDO2DB Konfigurationsoptionen</a></span></dt>
+</dl></div>
   
 
   <div class="note" title="Anmerkung" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note">
@@ -39,22 +45,22 @@
   </td></tr>
 </table></div>
 
-  <p><a class="link" href="configido.html#configido_">Änderungen an den Core-Dateien</a></p>
+  <p><a class="link" href="configido.html#configido_">Ã„nderungen an den Core-Dateien</a></p>
 
-  <p><a class="link" href="configido.html#configido-idomod">Änderungen in idomod.cfg </a></p>
+  <p><a class="link" href="configido.html#configido-idomod">Ã„nderungen in idomod.cfg </a></p>
 
   <p><a class="link" href="configido.html#configido-hints">Hinweise zu Performance und Fehlersuche</a></p>
 
-  <p><a class="link" href="configido.html#configido-ido2db">Änderungen in ido2db.cfg</a></p>
+  <p><a class="link" href="configido.html#configido-ido2db">Ã„nderungen in ido2db.cfg</a></p>
 
-  <p><a class="link" href="configido.html#configido-idomod_options">idomod.cfg Konfigurationsoptionen</a></p>
+  <p><a class="link" href="configido.html#idomodoptions" title="12.3.1. IDOMOD Konfigurationsoptionen">idomod.cfg Konfigurationsoptionen</a></p>
 
-  <p><a class="link" href="configido.html#configido-ido2db_options">ido2db.cfg Konfigurationsoptionen</a></p>
+  <p><a class="link" href="configido.html#ido2dboptions" title="12.3.2. IDO2DB Konfigurationsoptionen">ido2db.cfg Konfigurationsoptionen</a></p>
 
   <p><span class="bold"><strong>Core</strong></span></p>
 
-  <p>Die Konfiguration beginnt mit dem Setzen der Direktive "broker_options" in <code class="filename">icinga.cfg</code>. In den meisten Fällen
-  ist dieser Wert in der Datei bereits vorhanden, muss aber ggf. aktiviert werden (durch das Entfernen des führenden Hash-Zeichens).</p>
+  <p>Die Konfiguration beginnt mit dem Setzen der Direktive "broker_options" in <code class="filename">icinga.cfg</code>. In den meisten FÃ¤llen
+  ist dieser Wert in der Datei bereits vorhanden, muss aber ggf. aktiviert werden (durch das Entfernen des fÃ¼hrenden Hash-Zeichens).</p>
 
   <div class="important" title="Wichtig" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Important">
 <tr>
@@ -67,15 +73,15 @@
   </td></tr>
 </table></div>
 
-  <p>Aktivieren Sie das idomod-Event-Broker-Modul. Bitte beachten Sie, dass die folgende Modul-Definition unter normalen Umständen
+  <p>Aktivieren Sie das idomod-Event-Broker-Modul. Bitte beachten Sie, dass die folgende Modul-Definition unter normalen UmstÃ¤nden
   bereits im <code class="filename">modules</code>-Unterverzeichnis existiert, so dass keine Notwendigkeit besteht, die Hauptkonfigurationsdatei zu
-  ändern.</p>
+  Ã¤ndern.</p>
 
-  <p>Falls nicht, dann kann die Definition des Broker-Moduls mit Hilfe einer <a class="link" href="objectdefinitions.html#objectdefinitions-module">module-Definition</a> erfolgen, die der folgenden ähnelt:</p>
+  <p>Falls nicht, dann kann die Definition des Broker-Moduls mit Hilfe einer <a class="link" href="objectdefinitions.html#objectdefinitions-module">module-Definition</a> erfolgen, die der folgenden Ã¤hnelt:</p>
 
   <pre class="programlisting"> define module {
     module_name   ido_mod
-    path          /usr/local/icinga/bin/idomod.o
+    path          /usr/local/icinga/lib/idomod.so
     module_type   neb
     args          config_file=/usr/local/icinga/etc/idomod.cfg
  }</pre>
@@ -86,18 +92,18 @@
 <th align="left">Anmerkung</th>
 </tr>
 <tr><td align="left" valign="top">
-    <p>Das bedeutet auch, dass ein broker_module-Eintrag für idomod in <code class="filename">icinga.cfg</code> nicht gleichzeitig aktiviert
-    werden darf! "define module" ist verfügbar ab Icinga 1.4.</p>
+    <p>Das bedeutet auch, dass ein broker_module-Eintrag fÃ¼r idomod in <code class="filename">icinga.cfg</code> nicht gleichzeitig aktiviert
+    werden darf! "define module" ist verfÃ¼gbar ab Icinga 1.4.</p>
   </td></tr>
 </table></div>
 
   <p><a name="configido-idomod"></a><span class="bold"><strong>idomod.cfg</strong></span></p>
 
-  <p>Bitte überprüfen Sie die Einstellungen, bevor Sie Icinga (neu)starten.</p>
+  <p>Bitte Ã¼berprÃ¼fen Sie die Einstellungen, bevor Sie Icinga (neu)starten.</p>
 
-  <p>Die Direktive "output_type" sollte auf "unixsocket" (default) oder "tcpsocket" gesetzt werden, abhängig davon, ob der IDO2DB-Daemon
-  auf einen lokalen oder entfernten Rechner läuft. Bitte setzen Sie den Wert von "output" entsprechend (und außerdem "tcp_port", falls
-  zutreffend). Die anderen Optionen sind auf Werte gesetzt, die für einen ersten Betrieb funktionieren. Falls es während der Laufzeit
+  <p>Die Direktive "output_type" sollte auf "unixsocket" (default) oder "tcpsocket" gesetzt werden, abhÃ¤ngig davon, ob der IDO2DB-Daemon
+  auf einen lokalen oder entfernten Rechner lÃ¤uft. Bitte setzen Sie den Wert von "output" entsprechend (und auÃŸerdem "tcp_port", falls
+  zutreffend). Die anderen Optionen sind auf Werte gesetzt, die fÃ¼r einen ersten Betrieb funktionieren. Falls es wÃ¤hrend der Laufzeit
   Schwierigkeiten gibt, dann sollten Sie einen Blick auf die folgenden Zeilen werfen:</p>
 
   <p><a name="configido-hints"></a><span class="bold"><strong>Hinweise zu Performance und Fehlersuche</strong></span></p>
@@ -106,10 +112,10 @@
 <li class="listitem">
       <p><span class="emphasis"><em>Puffer</em></span></p>
 
-      <p>Das Erhöhen der Puffergröße wird in Fällen helfen, wo es "Aussetzer" durch einen langsamen ido2db-Daemon oder eine Datenbank auf
-      der anderen Seite gibt. Bedenken Sie aber, dass ein zu hoher Wert für mehr Core-Last durch die Bearbeitung von aktuellen und die
-      Synchronisierung von zwischengespeicherten Daten sorgt. Aus Performance-Gründen ist es eine gute Idee, den Puffer auf eine RAM-Disk
-      zulegen, um File-I/O zu reduzieren. Bei einer virtuellen Umgebung ist es nicht ratsam, den Puffer und die Prüfergebnisse
+      <p>Das ErhÃ¶hen der PuffergrÃ¶ÃŸe wird in FÃ¤llen helfen, wo es "Aussetzer" durch einen langsamen ido2db-Daemon oder eine Datenbank auf
+      der anderen Seite gibt. Bedenken Sie aber, dass ein zu hoher Wert fÃ¼r mehr Core-Last durch die Bearbeitung von aktuellen und die
+      Synchronisierung von zwischengespeicherten Daten sorgt. Aus Performance-GrÃ¼nden ist es eine gute Idee, den Puffer auf eine RAM-Disk
+      zulegen, um File-I/O zu reduzieren. Bei einer virtuellen Umgebung ist es nicht ratsam, den Puffer und die PrÃ¼fergebnisse
       (checkresults-Verzeichnis) / Protokolldateien auf das gleiche Volume zu legen, zusammen mit der <code class="filename">status.dat</code> wird
       ggf. funktionieren.</p>
 
@@ -120,15 +126,15 @@
       <p><span class="emphasis"><em>Reconnect</em></span></p>
 
       <p>Es kann passieren, dass ein langsamer ido2db-Daemon oder ein RDBMS die Verbindung zum Client wegen Timeout abbricht. Der
-      Output-Puffer wird dann gefüllt, während auf ein Reconnect gewartet wird. Um einen schnelleren Reconnect zu erreichen, können Sie den
-      Default-Wert des Reconnect verringern. Bitte beachten Sie dabei, dass ein zu geringer bzw. ein zu großer Wert zu
-      Performance-Beeinträchtigungen führen kann. Dies erfordert ein wenig Ausprobieren. </p>
+      Output-Puffer wird dann gefÃ¼llt, wÃ¤hrend auf ein Reconnect gewartet wird. Um einen schnelleren Reconnect zu erreichen, kÃ¶nnen Sie den
+      Default-Wert des Reconnect verringern. Bitte beachten Sie dabei, dass ein zu geringer bzw. ein zu groÃŸer Wert zu
+      Performance-BeeintrÃ¤chtigungen fÃ¼hren kann. Dies erfordert ein wenig Ausprobieren. </p>
 <pre class="programlisting"> reconnect_interval=15
  reconnect_warning_interval=15</pre>
 <p><span class="emphasis"><em>Datenverarbeitungsoptionen</em></span></p>
 
-      <p>Entscheiden Sie, was Sie benötigen. Möchten Sie historische Daten behalten oder ist es lediglich eine Datenbank, die aktuelle
-      Werte enthält?</p>
+      <p>Entscheiden Sie, was Sie benÃ¶tigen. MÃ¶chten Sie historische Daten behalten oder ist es lediglich eine Datenbank, die aktuelle
+      Werte enthÃ¤lt?</p>
 
       <div class="itemizedlist"><ul class="itemizedlist" type="circle">
 <li class="listitem">
@@ -189,7 +195,7 @@
 
               <div class="itemizedlist"><ul class="itemizedlist" type="disc">
 <li class="listitem">
-                  <p>ältere, statische Daten in separate Tabellen auslagern</p>
+                  <p>Ã¤ltere, statische Daten in separate Tabellen auslagern</p>
                 </li>
 <li class="listitem">
                   <p>die "Housekeeping"-Zyklen in <code class="filename">ido2db.cfg</code> verwenden</p>
@@ -215,24 +221,24 @@
       <p>Benutzen Sie den <a class="link" href="http://labs.consol.de/nagios/ndo-data-processing-options" target="_top">Rechner von Consol</a>, um den
       richtigen Wert auf einfache Weise zu berechnen.</p>
 
-      <p>Für Einzelheiten werfen Sie einen Blick auf die <a class="link" href="configido.html#configido-data_processing_options">"data_processing_options"</a>-Direktive.</p>
+      <p>FÃ¼r Einzelheiten werfen Sie einen Blick auf die <a class="link" href="configido.html#configido-data_processing_options">"data_processing_options"</a>-Direktive.</p>
     </li>
 <li class="listitem">
       <p><span class="emphasis"><em>Konfigurationsausgabeoptionen</em></span></p>
 
       <p>Diese Optionen legen fest, in welchem Umfang die Konfiguration bei einem Start/Restart/Reload des Core ausgegeben wird (Haupt-
-      und Objektkonfiguration, abhängig von den "data processing options"). Bitte bedenken Sie, dass ein "reload" lediglich ein "SIGHUP
+      und Objektkonfiguration, abhÃ¤ngig von den "data processing options"). Bitte bedenken Sie, dass ein "reload" lediglich ein "SIGHUP
       restart" ist, bei dem weder Speicher noch Werte verworfen (bzw. neu geladen) werden. Intern wird das IDOMOD auf die gleiche Weise
       handeln, indem die Daten durch die NEB-API geholt werden.</p>
 
       <p>Wenn Sie Icinga-Web benutzen, dann ist der Standard momentan "2" ("aufbewahrte Konfigurationsdaten"), so dass Datenaufbewahrung
-      (retention data) aktiviert sein muss (Standard) und die Werte mindestens einmal gelesen werden mussten (also starten Sie und führen
-      Sie "reload" durch, um die Konfigurationsdaten zu diesem Zeitpunkt auszugeben). Dies wird nicht so lange dauern wie die ursprüngliche
+      (retention data) aktiviert sein muss (Standard) und die Werte mindestens einmal gelesen werden mussten (also starten Sie und fÃ¼hren
+      Sie "reload" durch, um die Konfigurationsdaten zu diesem Zeitpunkt auszugeben). Dies wird nicht so lange dauern wie die ursprÃ¼ngliche
       Ausgabe der Konfiguration, weil die Konfiguration bereits kompiliert/zusammengestellt wurde in die resultierenden Objektdaten.</p>
 
-      <p>Ausgehend von der originalen Konfiguration wird dies einen "Hook" an den Core-Config-Parser anhängen und jede einzelne
-      Direktive auch zu IDOMOD hinzufügen und dadurch zusätzliche CPU-Zyklen benötigen und viele Daten während des (Neu-)Starts erzeugen.
-      Icinga-Web kann angewiesen werden, diese Daten ebenfalls zu nutzen.</p>
+      <p>Ausgehend von der originalen Konfiguration wird dies einen "Hook" an den Core-Config-Parser anhÃ¤ngen und jede einzelne Direktive
+      auch zu IDOMOD hinzufÃ¼gen und dadurch zusÃ¤tzliche CPU-Zyklen benÃ¶tigen und viele Daten wÃ¤hrend des (Neu-)Starts erzeugen. Icinga-Web
+      kann angewiesen werden, diese Daten ebenfalls zu nutzen.</p>
 
       <p>Innerhalb der Datenbank gibt es in den Tabellen icinga_hosts und icinga_services die Spalte config_type, wobei</p>
 
@@ -245,15 +251,15 @@
         </li>
 </ul></div>
 
-      <p>config_type selbst kann für die Icinga-Web-Konfiguration als XML-Attribut genutzt werden.</p>
+      <p>config_type selbst kann fÃ¼r die Icinga-Web-Konfiguration als XML-Attribut genutzt werden.</p>
 
-      <p>Für Einzelheiten werfen Sie einen Blick auf die <a class="link" href="configido.html#configido-config_output_options">"config_output_options"</a>-Direktive.</p>
+      <p>FÃ¼r Einzelheiten werfen Sie einen Blick auf die <a class="link" href="configido.html#configido-config_output_options">"config_output_options"</a>-Direktive.</p>
     </li>
 <li class="listitem">
       <p><span class="emphasis"><em>Debug</em></span></p>
 
       <p>Bitte bedenken Sie, dass das Schreiben einer Debug-Datei das Modul verlangsamen kann. Allerdings wird es helfen, um zu
-      analysieren, welche Daten vom Core durch idomod über den Socket zu ido2db laufen.</p>
+      analysieren, welche Daten vom Core durch idomod Ã¼ber den Socket zu ido2db laufen.</p>
     </li>
 </ul></div>
 
@@ -263,15 +269,15 @@
 <li class="listitem">
       <p><span class="emphasis"><em>Tabellenbereinigungsoptionen</em></span></p>
 
-      <p>Per Default werden "timed events" nicht verarbeitet, weil die verbleibenden Daten ziemlich nutzlos wären. Der Rest kann bis auf
-      aktuelle Daten bereinigt werden, wobei die Aktualität durch das maximale Alter festgelegt wird.</p>
+      <p>Per Default werden "timed events" nicht verarbeitet, weil die verbleibenden Daten ziemlich nutzlos wÃ¤ren. Der Rest kann bis auf
+      aktuelle Daten bereinigt werden, wobei die AktualitÃ¤t durch das maximale Alter festgelegt wird.</p>
 
-      <p>Es scheint eine gute Idee zu sein, dies insbesondere für die Tabelle logentries zu tun, weil diese schnell sehr groß werden
+      <p>Es scheint eine gute Idee zu sein, dies insbesondere fÃ¼r die Tabelle logentries zu tun, weil diese schnell sehr groÃŸ werden
       kann.</p>
 
       <p><span class="bold"><strong>Bitte bedenken Sie:</strong></span> Wenn Sie den Wert von instance_name in <code class="filename">idomod.cfg</code>
-      ändern, verbleiben die historischen weiterhin in der Datenbank. Der Aufräumprozess wird lediglich Spalten mit der gerade aktiven
-      instance_id bearbeiten (die von IDOMOD und DB während des ido2db-Starts gelesen wurde).</p>
+      Ã¤ndern, verbleiben die historischen weiterhin in der Datenbank. Der AufrÃ¤umprozess wird lediglich Spalten mit der gerade aktiven
+      instance_id bearbeiten (die von IDOMOD und DB wÃ¤hrend des ido2db-Starts gelesen wurde).</p>
 
       <pre class="programlisting"> ## TABLE TRIMMING OPTIONS
  # Several database tables containing Icinga event data can become quite large
@@ -313,7 +319,7 @@
  max_acknowledgements_age=44640</pre>
 
       <p>Beginnend mit Icinga 1.6 wurde die Bereinigung um die Benachrichtigungstabellen erweitert, so dass die folgenden
-      Direktiven verfügbar sind.</p>
+      Direktiven verfÃ¼gbar sind.</p>
 
       <pre class="programlisting"> # Keep notifications for 31 days
  max_notifications_age=44640
@@ -325,32 +331,32 @@
  max_contactnotificationmethods_age=44640</pre>
     </li>
 <li class="listitem">
-      <p><span class="emphasis"><em>Datenbankaufräumintervall</em></span></p>
+      <p><span class="emphasis"><em>DatenbankaufrÃ¤umintervall</em></span></p>
 
-      <p>Diese Option kann genutzt werden, um das allgemeine Aufräumintervall anzupassen (die Zeit zwischen den Zeitpunkten, zu denen die
-      Löschbefehle tatsächlich gegen die Datenbank laufen). Dieser Wert wurde mit Icinga 1.4 aus Performance-Gründen von 60 auf 3600
-      Sekunden erhöht (also nicht mehr minütlich, sondern stündlich).</p>
+      <p>Diese Option kann genutzt werden, um das allgemeine AufrÃ¤umintervall anzupassen (die Zeit zwischen den Zeitpunkten, zu denen die
+      LÃ¶schbefehle tatsÃ¤chlich gegen die Datenbank laufen). Dieser Wert wurde mit Icinga 1.4 aus Performance-GrÃ¼nden von 60 auf 3600
+      Sekunden erhÃ¶ht (also nicht mehr minÃ¼tlich, sondern stÃ¼ndlich).</p>
 
       <p>Bitte beachten Sie, dass die Tabellenbereinigungsoptionen Hand in Hand mit diesem Wert gehen. Das bedeutet z.B., dass durch das
-      Setzen von max_logentries_age auf 30 Minute auch das Aufräumintervall auf einen Wert von weniger als 30*60 Sekunden gesetzt werden
+      Setzen von max_logentries_age auf 30 Minute auch das AufrÃ¤umintervall auf einen Wert von weniger als 30*60 Sekunden gesetzt werden
       muss.</p>
 
       <pre class="programlisting"> trim_db_interval=3600</pre>
     </li>
 <li class="listitem">
-      <p><span class="emphasis"><em>Tabellen beim Start löschen</em></span></p>
+      <p><span class="emphasis"><em>Tabellen beim Start lÃ¶schen</em></span></p>
 
-      <p>Per Default sind Host/Service-Zustände und Ausfallzeiten (downtimes) nicht von diesen Werten betroffen, da sie in der Datenbank
-      bleiben. Der Rest wird in jedem Fall bereinigt. Falls Sie verschiedene Daten über einen Core-Restart/Reload benötigen, dann
+      <p>Per Default sind Host/Service-ZustÃ¤nde und Ausfallzeiten (downtimes) nicht von diesen Werten betroffen, da sie in der Datenbank
+      bleiben. Der Rest wird in jedem Fall bereinigt. Falls Sie verschiedene Daten Ã¼ber einen Core-Restart/Reload benÃ¶tigen, dann
       deaktivieren Sie diese Einstellungen:</p>
 <pre class="programlisting"> clean_realtime_tables_on_core_startup=1
  clean_config_tables_on_core_startup=1</pre>
     </li>
 </ul></div>
 
-  <div class="section" title="IDOMOD Konfigurationsoptionen">
+  <div class="section" title="12.3.1. IDOMOD Konfigurationsoptionen">
 <div class="titlepage"><div><div><h3 class="title">
-<a name="idp15523072"></a><a name="configido-idomod_options"></a>IDOMOD Konfigurationsoptionen</h3></div></div></div>
+<a name="idomodoptions"></a>12.3.1. IDOMOD Konfigurationsoptionen</h3></div></div></div>
     
 
     <p><a name="configido-instance_name"></a><span class="bold"><strong>Instanzname</strong></span></p>
@@ -376,7 +382,7 @@
     </div>
 
     <p>Diese Option legt den "Namen" fest, der mit dieser Icinga-Instanz verbunden ist und wird benutzt, um Daten von mehreren Instanzen
-    zu unterscheiden. Standard ist 'default' (ohne Anführungszeichen).</p>
+    zu unterscheiden. Standard ist 'default' (ohne AnfÃ¼hrungszeichen).</p>
 
     <p><a name="configido-output_type"></a><span class="bold"><strong>Ausgabetyp</strong></span></p>
 
@@ -399,9 +405,9 @@
 </table>
     </div>
 
-    <p>Diese Option legt fest, welchen Typ von "Abfluss" das IDO-NEB-Modul für die Datenausgabe nutzen soll.</p>
+    <p>Diese Option legt fest, welchen Typ von "Abfluss" das IDO-NEB-Modul fÃ¼r die Datenausgabe nutzen soll.</p>
 
-    <p>Mögliche Werte sind:</p>
+    <p>MÃ¶gliche Werte sind:</p>
 
     <div class="itemizedlist"><ul class="itemizedlist" type="disc">
 <li class="listitem">
@@ -463,10 +469,10 @@
 </table>
     </div>
 
-    <p>Diese Option legt fest, mit welchem Port sich das Modul verbinden soll, um die Daten zu senden. Diese Option ist nur gültig, wenn
+    <p>Diese Option legt fest, mit welchem Port sich das Modul verbinden soll, um die Daten zu senden. Diese Option ist nur gÃ¼ltig, wenn
     als Ausgabetype "tcpsocket" angegeben wurde.</p>
 
-    <p><a name="configido-use_ssl"></a><span class="bold"><strong>Verschlüsselung benutzen</strong></span></p>
+    <p><a name="configido-use_ssl"></a><span class="bold"><strong>VerschlÃ¼sselung benutzen</strong></span></p>
 
     <div class="informaltable">
       <table border="0">
@@ -487,12 +493,12 @@
 </table>
     </div>
 
-    <p>Diese Option legt fest, ob das Modul SSL benutzen wird, um den Netzwerkverkehr zwischen Modul und ido2db-Daemon zu verschlüsseln.
-    Beide Seiten müssen dieses Feature aktivieren, das von SSL-Bibliotheken wie openssl oder Kerberos abhängt.</p>
+    <p>Diese Option legt fest, ob das Modul SSL benutzen wird, um den Netzwerkverkehr zwischen Modul und ido2db-Daemon zu verschlÃ¼sseln.
+    Beide Seiten mÃ¼ssen dieses Feature aktivieren, das von SSL-Bibliotheken wie openssl oder Kerberos abhÃ¤ngt.</p>
 
-    <p>Diese Option ist nur gültig, wenn als Ausgabetype "tcpsocket" angegeben wurde.</p>
+    <p>Diese Option ist nur gÃ¼ltig, wenn als Ausgabetype "tcpsocket" angegeben wurde.</p>
 
-    <p><a name="configido-output_buffer_items"></a><span class="bold"><strong>Größe des Ausgabepuffers</strong></span></p>
+    <p><a name="configido-output_buffer_items"></a><span class="bold"><strong>GrÃ¶ÃŸe des Ausgabepuffers</strong></span></p>
 
     <div class="informaltable">
       <table border="0">
@@ -514,8 +520,8 @@
 </table>
     </div>
 
-    <p>Diese Option legt die Größe des Ausgabepuffers fest, der verhindern soll, dass Daten bei einem vorübergehenden Verbindungsabbruch
-    zum "Abfluss" verlorengehen. Die angegebene Zahl gibt die Zahl von Zeilen (jeweils mit variabler Länge) an, die gepuffert werden.</p>
+    <p>Diese Option legt die GrÃ¶ÃŸe des Ausgabepuffers fest, der verhindern soll, dass Daten bei einem vorÃ¼bergehenden Verbindungsabbruch
+    zum "Abfluss" verlorengehen. Die angegebene Zahl gibt die Zahl von Zeilen (jeweils mit variabler LÃ¤nge) an, die gepuffert werden.</p>
 
     <p><a name="configido-buffer_file"></a><span class="bold"><strong>Pufferdatei</strong></span></p>
 
@@ -539,8 +545,8 @@
     </div>
 
     <p>Diese Option legt den Namen einer Datei fest, die zur Speicherung von gepufferten Daten benutzt wird, die nicht an den
-    IDO2DB-Daemon gesendet werden konnten, während Icinga heruntergefahren wird. Vor dem Ende wird das IDO-NEB-Modul alle gepufferten
-    Daten in diese Datei schreiben, damit sie später verarbeitet werden können. Wenn Icinga (neu)startet, wird das IDO-NEB-Modul den
+    IDO2DB-Daemon gesendet werden konnten, wÃ¤hrend Icinga heruntergefahren wird. Vor dem Ende wird das IDO-NEB-Modul alle gepufferten
+    Daten in diese Datei schreiben, damit sie spÃ¤ter verarbeitet werden kÃ¶nnen. Wenn Icinga (neu)startet, wird das IDO-NEB-Modul den
     Inhalt dieser Datei lesen und ihn an den IDO2DB-Daemon zur weiteren Verarbeitung senden.</p>
 
     <p><a name="configido-file_rotation_interval"></a><span class="bold"><strong>Datenrotationsintervall</strong></span></p>
@@ -566,7 +572,7 @@
     </div>
 
     <p>Diese Option legt fest, wie oft (in Sekunden) die Datei von Icinga rotiert wird. Dateirotation wird von Icinga
-    erledigt, indem der durch die "file_rotation_command"-Option angegebene Befehl ausgeführt wird. Diese Option hat keine Auswirkung, wenn
+    erledigt, indem der durch die "file_rotation_command"-Option angegebene Befehl ausgefÃ¼hrt wird. Diese Option hat keine Auswirkung, wenn
     als Ausgabetyp ein Socket angegeben wurde.</p>
 
     <p><a name="configido-file_rotation_command"></a><span class="bold"><strong>Dateirotationsbefehl</strong></span></p>
@@ -595,7 +601,7 @@
     Intervall, das durch die Option "file_rotation_interval" angegeben wurde. Diese Option hat keine Auswirkung, wenn als Ausgabetyp ein
     Socket angegeben wurde.</p>
 
-    <p>Die Datei 'misccommands.cfg' enthält eine Beispiel-command-Definition, die Sie zur Rotation der Log-Datei nutzen können.</p>
+    <p>Die Datei 'misccommands.cfg' enthÃ¤lt eine Beispiel-command-Definition, die Sie zur Rotation der Log-Datei nutzen kÃ¶nnen.</p>
 
     <p><a name="configido-file_rotation_timeout"></a><span class="bold"><strong>Dateirotations-Timeout</strong></span></p>
 
@@ -644,7 +650,7 @@
     </div>
 
     <p>Diese Option legt fest, in welchem Intervall (in Sekunden) das IDO-NEB-Modul versuchen wird, einen Verbindungsaufbau
-    durchzuführen, wenn die Verbindung zur Ausgabedatei oder zum Socket verloren gegangen ist.</p>
+    durchzufÃ¼hren, wenn die Verbindung zur Ausgabedatei oder zum Socket verloren gegangen ist.</p>
 
     <p><a name="configido-reconnect_warning_interval"></a><span class="bold"><strong>Reconnect-Warnintervall</strong></span></p>
 
@@ -699,7 +705,7 @@
 <th align="left">Achtung</th>
 </tr>
 <tr><td align="left" valign="top">
-      <p>Ändern Sie nicht den Wert dieser Option, wenn Sie die Auswirkungen nicht kennen!!!</p>
+      <p>Ã„ndern Sie nicht den Wert dieser Option, wenn Sie die Auswirkungen nicht kennen!!!</p>
     </td></tr>
 </table></div>
 
@@ -708,10 +714,10 @@
     <p>Lesen Sie den Source-Code (<code class="filename">module/idoutils/include/idomod.h</code>) und suchen Sie nach "IDOMOD_PROCESS_", um
     festzulegen, welche Werte hier zu benutzen sind.</p>
 
-    <p>Die Werte aus dem Source-Code sollten addiert werden, um den benötigten Wert zu ermitteln. Der Wert "-1" bewirkt, dass alle Daten
+    <p>Die Werte aus dem Source-Code sollten addiert werden, um den benÃ¶tigten Wert zu ermitteln. Der Wert "-1" bewirkt, dass alle Daten
     verarbeitet werden.</p>
 
-    <p>Generell stehen die folgenden Werte zur Berechnung zur Verfügung:</p>
+    <p>Generell stehen die folgenden Werte zur Berechnung zur VerfÃ¼gung:</p>
 
     <pre class="programlisting"> #define IDOMOD_PROCESS_PROCESS_DATA                   1
  #define IDOMOD_PROCESS_TIMED_EVENT_DATA               2
@@ -786,7 +792,7 @@
     <p>Diese Option legt fest, welche Arten der Icinga-Konfigurationsdaten vom IDO-NEB-Modul ausgegeben werden. Die Werte werden
     addiert. Hinweis: "2" ist der bevorzugte Wert.</p>
 
-    <p>Mögliche Werte sind:</p>
+    <p>MÃ¶gliche Werte sind:</p>
 <div class="itemizedlist"><ul class="itemizedlist" type="disc">
 <li class="listitem">
           <p>0 = Keine Konfigurationsinformationen ausgeben</p>
@@ -823,10 +829,10 @@
 </table>
     </div>
 
-    <p>Diese Option legt fest, wieviel (falls überhaupt) Debugging-Informationen in die Debug-Datei geschrieben werden. Addieren Sie die
+    <p>Diese Option legt fest, wieviel (falls Ã¼berhaupt) Debugging-Informationen in die Debug-Datei geschrieben werden. Addieren Sie die
     Werte, um mehrere Arten von Informationen zu erhalten.</p>
 
-    <p>Mögliche Werte sind:</p>
+    <p>MÃ¶gliche Werte sind:</p>
 <div class="itemizedlist"><ul class="itemizedlist" type="disc">
 <li class="listitem">
           <p>-1 = Alles</p>
@@ -842,7 +848,7 @@
         </li>
 </ul></div>
 
-    <p><a name="configido-debug_verbosity"></a> <span class="bold"><strong>Debug-Ausführlichkeit</strong></span></p>
+    <p><a name="configido-debug_verbosity"></a> <span class="bold"><strong>Debug-AusfÃ¼hrlichkeit</strong></span></p>
 
     <div class="informaltable">
       <table border="0">
@@ -864,9 +870,9 @@
 </table>
     </div>
 
-    <p>Diese Option legt fest, wie ausführlich die Debug-Protokollausgaben sein werden.</p>
+    <p>Diese Option legt fest, wie ausfÃ¼hrlich die Debug-Protokollausgaben sein werden.</p>
 
-    <p>Mögliche Werte sind:</p>
+    <p>MÃ¶gliche Werte sind:</p>
 <div class="itemizedlist"><ul class="itemizedlist" type="disc">
 <li class="listitem">
           <p>0 = Kurze Ausgaben</p>
@@ -902,7 +908,7 @@
 
     <p>Diese Option legt fest, an welche Stelle der Daemon die Debugging-Informationen schreiben soll.</p>
 
-    <p><a name="configido-max_debug_file_size"></a> <span class="bold"><strong>Maximale Größe der Debug-Datei</strong></span></p>
+    <p><a name="configido-max_debug_file_size"></a> <span class="bold"><strong>Maximale GrÃ¶ÃŸe der Debug-Datei</strong></span></p>
 
     <div class="informaltable">
       <table border="0">
@@ -924,14 +930,14 @@
 </table>
     </div>
 
-    <p>Diese Option legt die maximale Größe (in Bytes) der Debug-Protokolldatei fest. Falls die Datei diese Größe überschreitet, wird sie
+    <p>Diese Option legt die maximale GrÃ¶ÃŸe (in Bytes) der Debug-Protokolldatei fest. Falls die Datei diese GrÃ¶ÃŸe Ã¼berschreitet, wird sie
     in eine Datei mit der Endung <code class="filename">.old</code> umbenannt. Eine bereits bestehende Datei mit dieser Endung wird automatisch
-    gelöscht. Dies soll dazu beitragen, dass die Dateisystemauslastung während des Debugging nicht außer Kontrolle gerät.</p>
+    gelÃ¶scht. Dies soll dazu beitragen, dass die Dateisystemauslastung wÃ¤hrend des Debugging nicht auÃŸer Kontrolle gerÃ¤t.</p>
   </div>
 
-  <div class="section" title="IDO2DB Konfigurationsoptionen">
+  <div class="section" title="12.3.2. IDO2DB Konfigurationsoptionen">
 <div class="titlepage"><div><div><h3 class="title">
-<a name="idp15524016"></a><a name="configido-ido2db_options"></a>IDO2DB Konfigurationsoptionen</h3></div></div></div>
+<a name="ido2dboptions"></a>12.3.2. IDO2DB Konfigurationsoptionen</h3></div></div></div>
     
 
     <p><a name="configido-lock_file"></a> <span class="bold"><strong>Sperrdatei</strong></span></p>
@@ -956,7 +962,7 @@
 </table>
     </div>
 
-    <p>Dies ist die Sperrdatei, die IDO2DB benutzen wird, um die PID-Nummer zu speichern, wenn es im Daemon-Modus läuft.</p>
+    <p>Dies ist die Sperrdatei, die IDO2DB benutzen wird, um die PID-Nummer zu speichern, wenn es im Daemon-Modus lÃ¤uft.</p>
 
     <p><a name="configido-ido2db_user"></a><a name="configido-ido2db_group"></a> <span class="bold"><strong>IDO2DB-Benutzer/Gruppe</strong></span></p>
 
@@ -993,7 +999,7 @@
 </table>
     </div>
 
-    <p>Diese Optionen legen Benutzer/Gruppe fest, mit denen der Daemon läuft. Sie können für jede Option jeweils eine Zahl (uid/gid) oder
+    <p>Diese Optionen legen Benutzer/Gruppe fest, mit denen der Daemon lÃ¤uft. Sie kÃ¶nnen fÃ¼r jede Option jeweils eine Zahl (uid/gid) oder
     einen Namen angeben.</p>
 
     <p><a name="configido-socket_type"></a> <span class="bold"><strong>Socket-Typ</strong></span></p>
@@ -1042,7 +1048,31 @@
     </div>
 
     <p>Diese Option legt den Namen und Pfad des UNIX-Domain-Socket fest, den der Daemon anlegt, um Verbindungen zu akzeptieren. Diese
-    Option ist nur gültig, wenn der Socket-Typ den Wert "unix" hat.</p>
+    Option ist nur gÃ¼ltig, wenn der Socket-Typ den Wert "unix" hat.</p>
+
+    <p><a name="configido-socket_perm"></a><span class="bold"><strong>Socket Permissions</strong></span></p>
+
+    <div class="informaltable">
+      <table border="0">
+<colgroup>
+<col>
+<col>
+</colgroup>
+<tbody>
+<tr>
+<td><p>Format:</p></td>
+<td><p><span class="bold"><strong>socket_perm=&lt;n&gt;</strong></span></p></td>
+</tr>
+<tr>
+<td><p>Beispiel:</p></td>
+<td><p><span class="color"><font color="red"><span class="bold"><strong>socket_perm=0755</strong></span> </font></span></p></td>
+</tr>
+</tbody>
+</table>
+    </div>
+
+    <p>Diese Option setzt die Berechtigungen auf den UNIX-Domain- Socket. Sie ist nur gÃ¼ltig wenn als Socket-Typ "unix" gewÃ¤hlt wurde.
+    StandardmÃ¤ÃŸig werden die Berechtigungen auf 0755 gesetzt.</p>
 
     <p><a name="configido-tcp_port2"></a><span class="bold"><strong>TCP-Port</strong></span></p>
 
@@ -1065,10 +1095,10 @@
 </table>
     </div>
 
-    <p>Diese Option legt fest, mit welchem Port sich das Modul verbindet, um Ausgaben zu senden. Diese Option ist nur gültig, wenn der
+    <p>Diese Option legt fest, mit welchem Port sich das Modul verbindet, um Ausgaben zu senden. Diese Option ist nur gÃ¼ltig, wenn der
     Socket-Typ den Wert "tcp" hat.</p>
 
-    <p><a name="configido-use_ssl2"></a> <span class="bold"><strong>Verschlüsselung benutzen</strong></span></p>
+    <p><a name="configido-use_ssl2"></a> <span class="bold"><strong>VerschlÃ¼sselung benutzen</strong></span></p>
 
     <div class="informaltable">
       <table border="0">
@@ -1089,10 +1119,43 @@
 </table>
     </div>
 
-    <p>Diese Option legt fest, ob das Modul SSL benutzen wird, um den Netzwerkverkehr zwischen Modul und ido2db-Daemon zu verschlüsseln.
-    Beide Seiten müssen dieses Feature aktivieren, das von SSL-Bibliotheken wie openssl oder Kerberos abhängt.</p>
+    <p>Diese Option legt fest, ob das Modul SSL benutzen wird, um den Netzwerkverkehr zwischen Modul und ido2db-Daemon zu verschlÃ¼sseln.
+    Beide Seiten mÃ¼ssen dieses Feature aktivieren, das von SSL-Bibliotheken wie openssl oder Kerberos abhÃ¤ngt.</p>
 
-    <p>Diese Option ist nur gültig, wenn als Ausgabetype "tcp" angegeben wurde.</p>
+    <p>Diese Option ist nur gÃ¼ltig, wenn als Ausgabetype "tcp" angegeben wurde.</p>
+
+    <p><a name="configido-libdbi_driver_directory"></a><span class="bold"><strong>Libdbi- Treiber Verzeichnis</strong></span></p>
+
+    <div class="informaltable">
+      <table border="0">
+<colgroup>
+<col>
+<col>
+</colgroup>
+<tbody>
+<tr>
+<td><p>Format:</p></td>
+<td><p><span class="bold"><strong>libdbi_driver_dir=@LIBDBIDRIVERDIR@</strong></span></p></td>
+</tr>
+<tr>
+<td><p>Beispiel:</p></td>
+<td><p><span class="bold"><strong>libdbi_driver_dir=/usr/local/lib/dbd</strong></span></p></td>
+</tr>
+</tbody>
+</table>
+    </div>
+
+    <div class="note" title="Anmerkung" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note">
+<tr>
+<td rowspan="2" align="center" valign="top" width="25"><img alt="[Anmerkung]" src="../images/note.png"></td>
+<th align="left">Anmerkung</th>
+</tr>
+<tr><td align="left" valign="top">
+      <p>!!!EXPERIMENTAL!!! Diese Option ist nur valid wenn libdbi als Datenbankabstraktionsschicht einkompiliert wurde (also nicht
+      Oracle!). Normalerweise findet libdbi den richtigen Pfad wÃ¤hrend der Kompilierung. Wenn Sie den Pfad Ã¤ndern mÃ¶chten, aktivieren Sie
+      diese Option und Ã¤ndern Sie die Pfadangabe.</p>
+    </td></tr>
+</table></div>
 
     <p><a name="configido-db_servertype"></a> <span class="bold"><strong>Datenbank-Server-Typ</strong></span></p>
 
@@ -1116,16 +1179,16 @@
 </table>
     </div>
 
-    <p>Diese Option legt fest, mit welchem Typ von DB-Server sich der Daemon verbinden soll. Unterstützte Datenbanken sind MySQL,
+    <p>Diese Option legt fest, mit welchem Typ von DB-Server sich der Daemon verbinden soll. UnterstÃ¼tzte Datenbanken sind MySQL,
     PostgreSQL und Oracle</p>
 
-    <p>Mögliche Werte sind:</p>
+    <p>MÃ¶gliche Werte sind:</p>
 <div class="itemizedlist"><ul class="itemizedlist" type="disc">
 <li class="listitem">
           <p>mysql (benutzt libdbi)</p>
         </li>
 <li class="listitem">
-          <p>pqsql (benutzt libdbi)</p>
+          <p>pgsql (benutzt libdbi)</p>
         </li>
 <li class="listitem">
           <p>oracle (benutzt ocilib)</p>
@@ -1154,8 +1217,17 @@
 </table>
     </div>
 
-    <p>Diese Option legt fest, auf welchem Host der DB-Server läuft. <span class="bold"><strong>Note:</strong></span> Oracle wird diese
-    Einstellung ignorieren.</p>
+    <p>Diese Option legt fest, auf welchem Host der DB-Server lÃ¤uft.</p>
+
+    <p><span class="bold"><strong>MySQL: </strong></span>Der Hostname oder die IP-Adresse des MySQL-Datenbank-Servers. Benutzen Sie eine
+    leere Zeichenkette oder "localhost", um mit einem MySQL-Server auf der lokalen Maschine zu verbinden.</p>
+
+    <p><span class="bold"><strong>PostgreSQL: </strong></span>Wenn dies mit einem Slash (/) beginnt, dann handelt es sich um
+    Unix-Domain-Kommunikation anstatt um TCP/IP-Kommunikation; der Wert ist der Name des Verzeichnisses, in dem die Socket-Datei angelegt
+    wird. Das Standardverhalten, wenn kein Host angegeben ist, besteht darin, sich mit einem Unix-Domain-Socket in /tmp zu verbinden (bzw.
+    das Verzeichnis, das bei der Erstellung von PostgreSQL angegeben wurde).</p>
+
+    <p><span class="bold"><strong>Oracle: </strong></span>Diese Einstellung wird ignoriert.</p>
 
     <p><a name="configido-db_port"></a> <span class="bold"><strong>Datenbank-Port</strong></span></p>
 
@@ -1178,9 +1250,9 @@
 </table>
     </div>
 
-    <p>Diese Option gibt den Port an, auf dem der DB-Server läuft.</p>
+    <p>Diese Option gibt den Port an, auf dem der DB-Server lÃ¤uft.</p>
 
-    <p>Übliche Werte sind:</p>
+    <p>Ãœbliche Werte sind:</p>
 
     <div class="itemizedlist"><ul class="itemizedlist" type="disc">
 <li class="listitem">
@@ -1194,15 +1266,13 @@
       </li>
 </ul></div>
 
-    <div class="note" title="Anmerkung" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note">
-<tr>
-<td rowspan="2" align="center" valign="top" width="25"><img alt="[Anmerkung]" src="../images/note.png"></td>
-<th align="left">Anmerkung</th>
-</tr>
-<tr><td align="left" valign="top">
-      <p>Die ocilib wird diesen Wert ignorieren, Sie müssen daher die <code class="filename">tnsnames.ora</code> anpassen.</p>
-    </td></tr>
-</table></div>
+    <p><span class="bold"><strong>MySQL: </strong></span>Der Port auf der entfernten Maschine, zu dem verbunden werden soll.</p>
+
+    <p><span class="bold"><strong>PostgreSQL: </strong></span>Der Port auf dem Datenbank-Host, oder die Namenserweiterung der Socket-Datei bei
+    Unix-Domain-Verbindungen.</p>
+
+    <p><span class="bold"><strong>Oracle: </strong></span>Die ocilib wird diesen Wert ignorieren, Sie mÃ¼ssen daher die
+    <code class="filename">tnsnames.ora</code> anpassen.</p>
 
     <p><a name="configido-db_socket"></a> <span class="bold"><strong>Datenbank-Socket</strong></span></p>
 
@@ -1227,7 +1297,7 @@
     </div>
 
     <p>Die Direktive "db_socket" erlaubt es, eine abweichende Socket-Position anzugeben. Diese wird an libdbi-MySQL als
-    mysql_unix_socket weitergeben, während PostgreSQL den Port überschreibt und ocilib-Oracle diese Einstellung
+    mysql_unix_socket weitergeben, wÃ¤hrend PostgreSQL den Port Ã¼berschreibt und ocilib-Oracle diese Einstellung
     ignoriert.</p>
 
     <div class="note" title="Anmerkung" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note">
@@ -1236,7 +1306,7 @@
 <th align="left">Anmerkung</th>
 </tr>
 <tr><td align="left" valign="top">
-      <p>Diese Einstellung überschreibt db_port und macht den Wert dadurch nutzlos!</p>
+      <p>Diese Einstellung Ã¼berschreibt db_port und macht den Wert dadurch nutzlos!</p>
     </td></tr>
 </table></div>
 
@@ -1269,8 +1339,8 @@
 <th align="left">Anmerkung</th>
 </tr>
 <tr><td align="left" valign="top">
-      <p>Oracle mit ocilib setzt voraus, dass <code class="filename">tnsnames.ora</code> mit Host, Port und Datenbankinformation gefüllt
-      ist. Dann können Sie eins der folgenden benutzen: </p>
+      <p>Oracle mit ocilib setzt voraus, dass <code class="filename">tnsnames.ora</code> mit Host, Port und Datenbankinformation gefÃ¼llt
+      ist. Dann kÃ¶nnen Sie eins der folgenden benutzen: </p>
 <div class="itemizedlist"><ul class="itemizedlist" type="disc">
 <li class="listitem">
             <p>//DBSERVER/SID</p>
@@ -1282,7 +1352,7 @@
     </td></tr>
 </table></div>
 
-    <p><a name="configido-db_prefix"></a> <span class="bold"><strong>Datenbank-Präfix</strong></span></p>
+    <p><a name="configido-db_prefix"></a> <span class="bold"><strong>Datenbank-PrÃ¤fix</strong></span></p>
 
     <div class="informaltable">
       <table border="0">
@@ -1304,8 +1374,8 @@
 </table>
     </div>
 
-    <p>Legt den Präfix fest (falls überhaupt), der Tabellennamen vorangesetzt werden soll. Wenn Sie den Tabellenpräfix ändert, dann
-    müssen SIe auch das SQL-Skript zur Erzeugung der Datenbank anpassen!</p>
+    <p>Legt den PrÃ¤fix fest (falls Ã¼berhaupt), der Tabellennamen vorangesetzt werden soll. Wenn Sie den TabellenprÃ¤fix Ã¤ndert, dann
+    mÃ¼ssen SIe auch das SQL-Skript zur Erzeugung der Datenbank anpassen!</p>
 
     <div class="note" title="Anmerkung" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note">
 <tr>
@@ -1313,7 +1383,7 @@
 <th align="left">Anmerkung</th>
 </tr>
 <tr><td align="left" valign="top">
-      <p>Oracle wird diesen Präfix ignorieren, weil die Länge von Tabellennamen auf 30 Stellen begrenzt ist.</p>
+      <p>Oracle wird diesen PrÃ¤fix ignorieren, weil die LÃ¤nge von Tabellennamen auf 30 Stellen begrenzt ist.</p>
     </td></tr>
 </table></div>
 
@@ -1352,7 +1422,7 @@
 </table>
     </div>
 
-    <p>Dies sind Benutzername/Passwort, die für die Authenfizierung an der DB verwendet werden. Der Benutzer benötigt mindestens SELECT-,
+    <p>Dies sind Benutzername/Passwort, die fÃ¼r die Authenfizierung an der DB verwendet werden. Der Benutzer benÃ¶tigt mindestens SELECT-,
     INSERT-, UPDATE- und DELETE-Privilegien auf der Datenbank.</p>
 
     <p><a name="configido-debug_level2"></a> <span class="bold"><strong>Debug level</strong></span></p>
@@ -1376,10 +1446,10 @@
 </table>
     </div>
 
-    <p>Diese Option legt fest, wieviel (falls überhaupt) Debugging-Informatioen in die Debug-Datei geschrieben werden. Addieren Sie die
+    <p>Diese Option legt fest, wieviel (falls Ã¼berhaupt) Debugging-Informatioen in die Debug-Datei geschrieben werden. Addieren Sie die
     Werte, um mehrere Arten von Informationen zu erhalten.</p>
 
-    <p>Mögliche Werte sind:</p>
+    <p>MÃ¶gliche Werte sind:</p>
 <div class="itemizedlist"><ul class="itemizedlist" type="disc">
 <li class="listitem">
           <p>-1 = Alles</p>
@@ -1417,9 +1487,9 @@
 </table>
     </div>
 
-    <p>Diese Option legt fest, wie ausführlich die Debug-Protokollausgaben sein werden.</p>
+    <p>Diese Option legt fest, wie ausfÃ¼hrlich die Debug-Protokollausgaben sein werden.</p>
 
-    <p>Mögliche Werte sind:</p>
+    <p>MÃ¶gliche Werte sind:</p>
 <div class="itemizedlist"><ul class="itemizedlist" type="disc">
 <li class="listitem">
           <p>0 = Kurze Ausgaben</p>
@@ -1477,9 +1547,9 @@
 </table>
     </div>
 
-    <p>Diese Option legt die maximale Größe (in Bytes) der Debug-Protokolldatei fest. Falls die Datei diese Größe überschreitet, wird sie
+    <p>Diese Option legt die maximale GrÃ¶ÃŸe (in Bytes) der Debug-Protokolldatei fest. Falls die Datei diese GrÃ¶ÃŸe Ã¼berschreitet, wird sie
     in eine Datei mit der Endung <code class="filename">.old</code> umbenannt. Eine bereits bestehende Datei mit dieser Endung wird automatisch
-    gelöscht. Dies soll dazu beitragen, dass die Dateisystemauslastung während des Debugging nicht außer Kontrolle gerät.</p>
+    gelÃ¶scht. Dies soll dazu beitragen, dass die Dateisystemauslastung wÃ¤hrend des Debugging nicht auÃŸer Kontrolle gerÃ¤t.</p>
 
     <p><a name="configido-debug_readable_timestamp"></a> <span class="bold"><strong>Lesbarer Debug-Zeitstempel</strong></span></p>
 
@@ -1505,7 +1575,7 @@
 
     <p>Diese Option erlaubt Ihnen, einen (menschlich) lesbaren statt des Standard-Unix-Zeitstempels auszugeben.</p>
 
-    <p>Mögliche Werte sind:</p>
+    <p>MÃ¶gliche Werte sind:</p>
 <div class="itemizedlist"><ul class="itemizedlist" type="disc">
 <li class="listitem">
           <p>0 = deaktiviert (Unix-Zeitstempel)</p>
@@ -1563,11 +1633,11 @@
 </table>
     </div>
 
-    <p>Diese Einstellung aktiviert einen Oracle-Session-Trace für jede ido2db-Verbindung mit Hilfe von trace event. Der Wert muss einen
-    der momenten unterstützten Werte (1,4,8,12) oder 0 für ausgeschaltet. Dies erfordert explizit das "alter session"-Privileg,
+    <p>Diese Einstellung aktiviert einen Oracle-Session-Trace fÃ¼r jede ido2db-Verbindung mit Hilfe von trace event. Der Wert muss einen
+    der momenten unterstÃ¼tzten Werte (1,4,8,12) oder 0 fÃ¼r ausgeschaltet. Dies erfordert explizit das "alter session"-Privileg,
     Select-Rechte auf v$session und v$process werden empfohlen.</p>
 
-    <p>Mögliche Werte sind:</p>
+    <p>MÃ¶gliche Werte sind:</p>
 <div class="itemizedlist"><ul class="itemizedlist" type="disc">
 <li class="listitem">
           <p>0 = Pseudo level TRACE OFF</p>
@@ -1586,7 +1656,8 @@
         </li>
 </ul></div>
 
-    <p><a name="configido-enable_sla"></a> <span class="bold"><strong>SLA-Datensammlung aktivieren</strong></span></p>
+    <p><a name="configido-enable_sla"></a> <span class="bold"><strong>SLA-Datensammlung aktivieren (veraltet seit Icinga
+    1.9)</strong></span></p>
 
     <div class="informaltable">
       <table border="0">
@@ -1609,7 +1680,7 @@
 
     <p>Diese Einstellung steuert das Sammeln von SLA-Daten in der slahistory-Tabelle.</p>
 
-    <p>Mögliche Werte sind:</p>
+    <p>MÃ¶gliche Werte sind:</p>
 <div class="itemizedlist"><ul class="itemizedlist" type="disc">
 <li class="listitem">
           <p>0 = deaktiviert (keine Sammlung)</p>
@@ -1619,199 +1690,219 @@
         </li>
 </ul></div>
 
+    <div class="important" title="Wichtig" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Important">
+<tr>
+<td rowspan="2" align="center" valign="top" width="25"><img alt="[Wichtig]" src="../images/important.png"></td>
+<th align="left">Wichtig</th>
+</tr>
+<tr><td align="left" valign="top">
+      <p>Diese Einstellung ist hochgradig experimentell und kann Ihre System-Performance beeintrÃ¤chtigen. Aktivieren Sie auf eigenes
+      Risiko, und - falls Probleme auftreten - geben Sie an, dass Sie diese Einstellung verÃ¤ndert haben. <span class="bold"><strong>Wir haben Sie
+      gewarnt</strong></span><span class="bold"><strong>.</strong></span></p>
+    </td></tr>
+</table></div>
+
     <div class="note" title="Anmerkung" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note">
 <tr>
 <td rowspan="2" align="center" valign="top" width="25"><img alt="[Anmerkung]" src="../images/note.png"></td>
 <th align="left">Anmerkung</th>
 </tr>
 <tr><td align="left" valign="top">
-      <p>Diese Option ist verfügbar ab Icinga 1.6</p>
+      <p>Diese Option war verfÃ¼gbar ab Icinga 1.6 und ist veraltet seit Icinga 1.9</p>
     </td></tr>
 </table></div>
 
-    <a class="indexterm" name="idp16003952"></a>
+    <a class="indexterm" name="idp17628112"></a>
 
-    <a class="indexterm" name="idp16005584"></a>
+    <a class="indexterm" name="idp17628240"></a>
 
-    <a class="indexterm" name="idp16007248"></a>
+    <a class="indexterm" name="idp17631600"></a>
 
-    <a class="indexterm" name="idp16008912"></a>
+    <a class="indexterm" name="idp17633264"></a>
 
-    <a class="indexterm" name="idp16010576"></a>
+    <a class="indexterm" name="idp17634896"></a>
 
-    <a class="indexterm" name="idp16012208"></a>
+    <a class="indexterm" name="idp17636592"></a>
 
-    <a class="indexterm" name="idp16013840"></a>
+    <a class="indexterm" name="idp17638080"></a>
 
-    <a class="indexterm" name="idp16015504"></a>
+    <a class="indexterm" name="idp17639776"></a>
 
-    <a class="indexterm" name="idp16017296"></a>
+    <a class="indexterm" name="idp17641424"></a>
 
-    <a class="indexterm" name="idp16018928"></a>
+    <a class="indexterm" name="idp17643008"></a>
 
-    <a class="indexterm" name="idp15955856"></a>
+    <a class="indexterm" name="idp17644640"></a>
 
-    <a class="indexterm" name="idp16021648"></a>
+    <a class="indexterm" name="idp17646304"></a>
 
-    <a class="indexterm" name="idp16023040"></a>
+    <a class="indexterm" name="idp17647936"></a>
 
-    <a class="indexterm" name="idp16024432"></a>
+    <a class="indexterm" name="idp17649568"></a>
 
-    <a class="indexterm" name="idp16026064"></a>
+    <a class="indexterm" name="idp17651200"></a>
 
-    <a class="indexterm" name="idp16027552"></a>
+    <a class="indexterm" name="idp17652768"></a>
 
-    <a class="indexterm" name="idp16028944"></a>
+    <a class="indexterm" name="idp17654464"></a>
 
-    <a class="indexterm" name="idp16029072"></a>
+    <a class="indexterm" name="idp17656048"></a>
 
-    <a class="indexterm" name="idp16032112"></a>
+    <a class="indexterm" name="idp17657648"></a>
 
-    <a class="indexterm" name="idp16032240"></a>
+    <a class="indexterm" name="idp17659280"></a>
 
-    <a class="indexterm" name="idp16035424"></a>
+    <a class="indexterm" name="idp17660912"></a>
 
-    <a class="indexterm" name="idp16035552"></a>
+    <a class="indexterm" name="idp17662544"></a>
 
-    <a class="indexterm" name="idp16037152"></a>
+    <a class="indexterm" name="idp17664176"></a>
 
-    <a class="indexterm" name="idp16038784"></a>
+    <a class="indexterm" name="idp17665776"></a>
 
-    <a class="indexterm" name="idp16040416"></a>
+    <a class="indexterm" name="idp17667472"></a>
 
-    <a class="indexterm" name="idp16043504"></a>
+    <a class="indexterm" name="idp17669024"></a>
 
-    <a class="indexterm" name="idp16045248"></a>
+    <a class="indexterm" name="idp17670656"></a>
 
-    <a class="indexterm" name="idp16046880"></a>
+    <a class="indexterm" name="idp17672304"></a>
 
-    <a class="indexterm" name="idp16048528"></a>
+    <a class="indexterm" name="idp17673952"></a>
 
-    <a class="indexterm" name="idp16050192"></a>
+    <a class="indexterm" name="idp17675616"></a>
 
-    <a class="indexterm" name="idp16051792"></a>
+    <a class="indexterm" name="idp17677216"></a>
 
-    <a class="indexterm" name="idp16053424"></a>
+    <a class="indexterm" name="idp17678848"></a>
 
-    <a class="indexterm" name="idp16055120"></a>
+    <a class="indexterm" name="idp17680544"></a>
 
-    <a class="indexterm" name="idp16056736"></a>
+    <a class="indexterm" name="idp17682160"></a>
 
-    <a class="indexterm" name="idp16058352"></a>
+    <a class="indexterm" name="idp17683776"></a>
 
-    <a class="indexterm" name="idp16059968"></a>
+    <a class="indexterm" name="idp17685392"></a>
 
-    <a class="indexterm" name="idp16061552"></a>
+    <a class="indexterm" name="idp17686976"></a>
 
-    <a class="indexterm" name="idp16063184"></a>
+    <a class="indexterm" name="idp17688608"></a>
 
-    <a class="indexterm" name="idp16064848"></a>
+    <a class="indexterm" name="idp17690272"></a>
 
-    <a class="indexterm" name="idp16066480"></a>
+    <a class="indexterm" name="idp17691904"></a>
 
-    <a class="indexterm" name="idp16068112"></a>
+    <a class="indexterm" name="idp17693536"></a>
 
-    <a class="indexterm" name="idp16069744"></a>
+    <a class="indexterm" name="idp17695168"></a>
 
-    <a class="indexterm" name="idp16071376"></a>
+    <a class="indexterm" name="idp17696800"></a>
 
-    <a class="indexterm" name="idp16073008"></a>
+    <a class="indexterm" name="idp17698432"></a>
 
-    <a class="indexterm" name="idp16074640"></a>
+    <a class="indexterm" name="idp17700064"></a>
 
-    <a class="indexterm" name="idp16076208"></a>
+    <a class="indexterm" name="idp17701632"></a>
 
-    <a class="indexterm" name="idp16077904"></a>
+    <a class="indexterm" name="idp17703328"></a>
 
-    <a class="indexterm" name="idp16079424"></a>
+    <a class="indexterm" name="idp17704848"></a>
 
-    <a class="indexterm" name="idp16081056"></a>
+    <a class="indexterm" name="idp17706480"></a>
 
-    <a class="indexterm" name="idp16082704"></a>
+    <a class="indexterm" name="idp17708128"></a>
 
-    <a class="indexterm" name="idp16084368"></a>
+    <a class="indexterm" name="idp17709792"></a>
 
-    <a class="indexterm" name="idp16086064"></a>
+    <a class="indexterm" name="idp17711488"></a>
 
-    <a class="indexterm" name="idp16087648"></a>
+    <a class="indexterm" name="idp17713072"></a>
 
-    <a class="indexterm" name="idp16089312"></a>
+    <a class="indexterm" name="idp17714736"></a>
 
-    <a class="indexterm" name="idp16090944"></a>
+    <a class="indexterm" name="idp17716368"></a>
 
-    <a class="indexterm" name="idp16092608"></a>
+    <a class="indexterm" name="idp17718032"></a>
 
-    <a class="indexterm" name="idp16094432"></a>
+    <a class="indexterm" name="idp17719664"></a>
 
-    <a class="indexterm" name="idp16096064"></a>
+    <a class="indexterm" name="idp17721360"></a>
 
-    <a class="indexterm" name="idp16097728"></a>
+    <a class="indexterm" name="idp17722912"></a>
 
-    <a class="indexterm" name="idp16099360"></a>
+    <a class="indexterm" name="idp17724608"></a>
 
-    <a class="indexterm" name="idp16100992"></a>
+    <a class="indexterm" name="idp17726096"></a>
 
-    <a class="indexterm" name="idp16102624"></a>
+    <a class="indexterm" name="idp17727728"></a>
 
-    <a class="indexterm" name="idp16104256"></a>
+    <a class="indexterm" name="idp17729360"></a>
 
-    <a class="indexterm" name="idp16105888"></a>
+    <a class="indexterm" name="idp17730992"></a>
 
-    <a class="indexterm" name="idp16107456"></a>
+    <a class="indexterm" name="idp17732592"></a>
 
-    <a class="indexterm" name="idp16109088"></a>
+    <a class="indexterm" name="idp17733984"></a>
 
-    <a class="indexterm" name="idp16110752"></a>
+    <a class="indexterm" name="idp17734112"></a>
 
-    <a class="indexterm" name="idp16112384"></a>
+    <a class="indexterm" name="idp17737520"></a>
 
-    <a class="indexterm" name="idp16114048"></a>
+    <a class="indexterm" name="idp17739184"></a>
 
-    <a class="indexterm" name="idp16115680"></a>
+    <a class="indexterm" name="idp17740784"></a>
 
-    <a class="indexterm" name="idp16117344"></a>
+    <a class="indexterm" name="idp17742480"></a>
 
-    <a class="indexterm" name="idp16119008"></a>
+    <a class="indexterm" name="idp17744080"></a>
 
-    <a class="indexterm" name="idp16120672"></a>
+    <a class="indexterm" name="idp17745696"></a>
 
-    <a class="indexterm" name="idp16122336"></a>
+    <a class="indexterm" name="idp17747312"></a>
 
-    <a class="indexterm" name="idp16124000"></a>
+    <a class="indexterm" name="idp17748928"></a>
 
-    <a class="indexterm" name="idp16125664"></a>
+    <a class="indexterm" name="idp17750544"></a>
 
-    <a class="indexterm" name="idp16127328"></a>
+    <a class="indexterm" name="idp17752160"></a>
 
-    <a class="indexterm" name="idp16128992"></a>
+    <a class="indexterm" name="idp17753776"></a>
 
-    <a class="indexterm" name="idp16130656"></a>
+    <a class="indexterm" name="idp17755232"></a>
 
-    <a class="indexterm" name="idp16132320"></a>
+    <a class="indexterm" name="idp17757008"></a>
 
-    <a class="indexterm" name="idp16133984"></a>
+    <a class="indexterm" name="idp17758640"></a>
 
-    <a class="indexterm" name="idp16135648"></a>
+    <a class="indexterm" name="idp17760304"></a>
 
-    <a class="indexterm" name="idp16137312"></a>
+    <a class="indexterm" name="idp17761936"></a>
 
-    <a class="indexterm" name="idp16138976"></a>
+    <a class="indexterm" name="idp17763568"></a>
 
-    <a class="indexterm" name="idp16140640"></a>
+    <a class="indexterm" name="idp17765200"></a>
 
-    <a class="indexterm" name="idp16142304"></a>
+    <a class="indexterm" name="idp17766832"></a>
 
-    <a class="indexterm" name="idp16143936"></a>
+    <a class="indexterm" name="idp17768464"></a>
 
-    <a class="indexterm" name="idp16145600"></a>
+    <a class="indexterm" name="idp17770096"></a>
 
-    <a class="indexterm" name="idp16147232"></a>
+    <a class="indexterm" name="idp17771792"></a>
 
-    <a class="indexterm" name="idp16148864"></a>
+    <a class="indexterm" name="idp17773344"></a>
 
-    <a class="indexterm" name="idp16150432"></a>
+    <a class="indexterm" name="idp17775040"></a>
 
-    <a class="indexterm" name="idp16152016"></a>
+    <a class="indexterm" name="idp17776528"></a>
+
+    <a class="indexterm" name="idp17778160"></a>
+
+    <a class="indexterm" name="idp17779792"></a>
+
+    <a class="indexterm" name="idp17781488"></a>
+
+    <a class="indexterm" name="idp17783072"></a>
   </div>
 </div>
 <div class="navfooter">
@@ -1819,18 +1910,18 @@
 <table width="100%" summary="Navigation footer">
 <tr>
 <td width="40%" align="left">
-<a accesskey="p" href="components.html">Zurück</a> </td>
+<a accesskey="p" href="components.html">ZurÃ¼ck</a>Â </td>
 <td width="20%" align="center"><a accesskey="u" href="ch12.html">Nach oben</a></td>
-<td width="40%" align="right"> <a accesskey="n" href="example-configs.html">Weiter</a>
+<td width="40%" align="right">Â <a accesskey="n" href="example-configs.html">Weiter</a>
 </td>
 </tr>
 <tr>
-<td width="40%" align="left" valign="top">Komponenten </td>
+<td width="40%" align="left" valign="top">12.2. KomponentenÂ </td>
 <td width="20%" align="center"><a accesskey="h" href="index.html">Zum Anfang</a></td>
-<td width="40%" align="right" valign="top"> Beispielkonfigurationen</td>
+<td width="40%" align="right" valign="top">Â 12.4. Beispielkonfigurationen</td>
 </tr>
 </table>
 </div>
-<P class="copyright">© 2009-2011 Icinga Development Team, http://www.icinga.org</P>
+<P class="copyright">Â© 2009-2013 Icinga Development Team, http://www.icinga.org</P>
 </body>
 </html>

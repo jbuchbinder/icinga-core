@@ -18,7 +18,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  *****************************************************************************/
 
@@ -353,23 +353,41 @@ void strip(char *buffer) {
 /**************************************************
  *************** HASH FUNCTIONS *******************
  **************************************************/
+unsigned long sdbm(const char *str) {
+	unsigned long hash = 0;
+	int c;
+
+	while ((c = *str++) != '\0')
+		hash = c + (hash << 6) + (hash << 16) - hash;
+
+	return hash;
+}
+
 /* dual hash function */
 int hashfunc(const char *name1, const char *name2, int hashslots) {
-	unsigned int i, result;
-
-	result = 0;
+	unsigned int result = 0;
 
 	if (name1)
-		for (i = 0; i < strlen(name1); i++)
-			result += name1[i];
+		result += sdbm(name1);
 
 	if (name2)
-		for (i = 0; i < strlen(name2); i++)
-			result += name2[i];
+		result += sdbm(name2);
 
 	result = result % hashslots;
 
 	return result;
+}
+
+int hc_compare(const char *field1, unsigned long hash1,
+	       const char *field2, unsigned long hash2)
+{
+	if (field1 == field2)
+		return 0;
+
+	if (hash1 == hash2)
+		return strcmp(field1, field2);
+	else
+		return hash2 - hash1;
 }
 
 /* dual hash data comparison */
@@ -403,6 +421,7 @@ int compare_hashdata(const char *val1a, const char *val1b, const char *val2a,
 
 	return result;
 }
+
 /*
  * given a date/time in time_t format, produce a corresponding
  * date/time string, including timezone

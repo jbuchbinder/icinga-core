@@ -2,15 +2,19 @@
 #
 ### BEGIN INIT INFO
 # Provides:          ido2db
-# Required-Start:
-# Required-Stop:
+# Required-Start:    $remote_fs $syslog $named $network $time
+# Required-Stop:     $remote_fs $syslog $named $network
+# X-Start-Before:    icinga
+# X-Stop-After:      icinga
+# Should-Start:      mysql postgresql
+# Should-Stop:       mysql postgresql
 # Default-Start:     2 3 4 5
 # Default-Stop:      0 1 6
 # Short-Description: Icinga IDO2DB Initscript
 # Description: 	     Icinga Data Out Daemon
 ### END INIT INFO
 
-# chkconfig: 345 99 01
+# chkconfig: 345 98 01
 #
 # File : ido2db
 #
@@ -43,9 +47,8 @@ prefix=@prefix@
 exec_prefix=${prefix}
 Ido2dbBin=@bindir@/@ido2db_name@
 Ido2dbCfgFile=@sysconfdir@/ido2db.cfg
-Ido2dbVarDir=@localstatedir@
-Ido2dbRunFile=$Ido2dbVarDir/ido2db.lock
-Ido2dbSockFile=$Ido2dbVarDir/ido.sock
+Ido2dbRunFile=@IDO2DBLOCKFILE@
+Ido2dbSockFile=@IDOSOCKFILE@
 Ido2dbLockDir=/var/lock/subsys
 Ido2dbLockFile=@ido2db_name@
 Ido2dbUser=@icinga_user@

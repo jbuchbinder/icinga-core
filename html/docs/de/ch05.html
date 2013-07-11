@@ -1,13 +1,15 @@
 <html>
 <head>
-<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
 <title>Kapitel 5. Die Grundlagen</title>
+<link rel="stylesheet" href="../stylesheets/icinga-docs.css" type="text/css">
 <meta name="generator" content="DocBook XSL Stylesheets V1.75.1">
 <meta name="keywords" content="Supervision, Icinga, Nagios, Linux">
-<link rel="home" href="index.html" title="Icinga Version 1.6 Dokumentation">
-<link rel="up" href="index.html" title="Icinga Version 1.6 Dokumentation">
-<link rel="prev" href="startstop.html" title="Icinga starten und stoppen">
-<link rel="next" href="plugins.html" title="Icinga Plugins">
+<link rel="home" href="index.html" title="Icinga Version 1.9 Dokumentation">
+<link rel="up" href="index.html" title="Icinga Version 1.9 Dokumentation">
+<link rel="prev" href="startstop.html" title="4.2. Icinga starten und stoppen">
+<link rel="next" href="plugins.html" title="5.1. Icinga Plugins">
+<script src="../js/jquery-min.js" type="text/javascript"></script><script src="../js/icinga-docs.js" type="text/javascript"></script>
 </head>
 <body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
 <CENTER><IMG src="../images/logofullsize.png" border="0" alt="Icinga" title="Icinga"></CENTER>
@@ -16,9 +18,9 @@
 <tr><th colspan="3" align="center">Kapitel 5. Die Grundlagen</th></tr>
 <tr>
 <td width="20%" align="left">
-<a accesskey="p" href="startstop.html">Zur�ck</a>�</td>
-<th width="60%" align="center">�</th>
-<td width="20%" align="right">�<a accesskey="n" href="plugins.html">Weiter</a>
+<a accesskey="p" href="startstop.html">Zurück</a> </td>
+<th width="60%" align="center"> </th>
+<td width="20%" align="right"> <a accesskey="n" href="plugins.html">Weiter</a>
 </td>
 </tr>
 </table>
@@ -30,17 +32,122 @@
 <div class="toc">
 <p><b>Inhaltsverzeichnis</b></p>
 <dl>
-<dt><span class="section"><a href="plugins.html">Icinga Plugins</a></span></dt>
-<dt><span class="section"><a href="macros.html">Makros verstehen und wie sie arbeiten</a></span></dt>
-<dt><span class="section"><a href="macrolist.html">Standard-Makros in Icinga</a></span></dt>
-<dt><span class="section"><a href="hostchecks.html">Host-Pr�fungen (Host checks)</a></span></dt>
-<dt><span class="section"><a href="servicechecks.html">Service-Pr�fungen (Service Checks)</a></span></dt>
-<dt><span class="section"><a href="activechecks.html">Aktive Pr�fungen (Active Checks)</a></span></dt>
-<dt><span class="section"><a href="passivechecks.html">Passive Pr�fungen (Passive Checks)</a></span></dt>
-<dt><span class="section"><a href="statetypes.html">Statustypen</a></span></dt>
-<dt><span class="section"><a href="timeperiods.html">Zeitfenster</a></span></dt>
-<dt><span class="section"><a href="networkreachability.html">Ermitteln des Zustands und der Erreichbarkeit von Netzwerk-Hosts</a></span></dt>
-<dt><span class="section"><a href="notifications.html">Benachrichtigungen</a></span></dt>
+<dt><span class="section">5.1. <a href="plugins.html">Icinga Plugins</a></span></dt>
+<dd><dl>
+<dt><span class="section">5.1.1. <a href="plugins.html#introduction">Einführung</a></span></dt>
+<dt><span class="section">5.1.2. <a href="plugins.html#overview">Was sind Plugins?</a></span></dt>
+<dt><span class="section">5.1.3. <a href="plugins.html#abstractionlayer">Plugins als eine Abstraktionsschicht</a></span></dt>
+<dt><span class="section">5.1.4. <a href="plugins.html#available">Welche Plugins sind verfügbar?</a></span></dt>
+<dt><span class="section">5.1.5. <a href="plugins.html#obtaining">Plugins beschaffen</a></span></dt>
+<dt><span class="section">5.1.6. <a href="plugins.html#hints">Zum Icinga-Benutzer wechseln</a></span></dt>
+<dt><span class="section">5.1.7. <a href="plugins.html#extending">Anpassen der Umgebung</a></span></dt>
+<dt><span class="section">5.1.8. <a href="plugins.html#howto">Wie benutze ich Plugin X?</a></span></dt>
+<dt><span class="section">5.1.9. <a href="plugins.html#newplugins">Integration eines neuen Plugins</a></span></dt>
+<dt><span class="section">5.1.10. <a href="plugins.html#rawcommandline">Raw command line</a></span></dt>
+<dt><span class="section">5.1.11. <a href="plugins.html#thresholdranges">Schwellwert und Bereiche</a></span></dt>
+<dt><span class="section">5.1.12. <a href="plugins.html#errors">Aktivieren der Definition</a></span></dt>
+<dt><span class="section">5.1.13. <a href="plugins.html#pluginsapi">Plugin API</a></span></dt>
+</dl></dd>
+<dt><span class="section">5.2. <a href="macros.html">Makros verstehen und wie sie arbeiten</a></span></dt>
+<dd><dl>
+<dt><span class="section">5.2.1. <a href="macros.html#introduction">Makros</a></span></dt>
+<dt><span class="section">5.2.2. <a href="macros.html#howitworks">Makroersetzungen - wie Makros arbeiten</a></span></dt>
+<dt><span class="section">5.2.3. <a href="macros.html#hostaddressexample">Beispiel 1: Host-Address Makro</a></span></dt>
+<dt><span class="section">5.2.4. <a href="macros.html#commandargexample">Beispiel 2: Befehlsargument-Makros</a></span></dt>
+<dt><span class="section">5.2.5. <a href="macros.html#ondemand">On-Demand-Makros</a></span></dt>
+<dt><span class="section">5.2.6. <a href="macros.html#ondemandgroup">On-Demand-Gruppen-Makros</a></span></dt>
+<dt><span class="section">5.2.7. <a href="macros.html#customvar">Benutzervariablen-Makros</a></span></dt>
+<dt><span class="section">5.2.8. <a href="macros.html#cleaning">Makrobereinigung</a></span></dt>
+<dt><span class="section">5.2.9. <a href="macros.html#environmentvars">Makros als Umgebungsvariablen</a></span></dt>
+<dt><span class="section">5.2.10. <a href="macros.html#availablelist">Verfügbare Makros</a></span></dt>
+</dl></dd>
+<dt><span class="section">5.3. <a href="macrolist.html">Standard-Makros in Icinga</a></span></dt>
+<dd><dl>
+<dt><span class="section">5.3.1. <a href="macrolist.html#validity">Makro-Geltungsbereich</a></span></dt>
+<dt><span class="section">5.3.2. <a href="macrolist.html#availabilitychart">Makroverfügbarkeits-Aufstellung</a></span></dt>
+</dl></dd>
+<dt><span class="section">5.4. <a href="hostchecks.html">Host-Prüfungen (Host checks)</a></span></dt>
+<dd><dl>
+<dt><span class="section">5.4.1. <a href="hostchecks.html#introduction">Einführung</a></span></dt>
+<dt><span class="section">5.4.2. <a href="hostchecks.html#whenrun">Wann werden Host-Prüfungen durchgeführt?</a></span></dt>
+<dt><span class="section">5.4.3. <a href="hostchecks.html#caching">zwischengespeicherte Host-Prüfungen (cached host checks)</a></span></dt>
+<dt><span class="section">5.4.4. <a href="hostchecks.html#dependencieschecks">Abhängigkeiten und Prüfungen</a></span></dt>
+<dt><span class="section">5.4.5. <a href="hostchecks.html#parallelization">Parallelisierung von Host-Prüfungen</a></span></dt>
+<dt><span class="section">5.4.6. <a href="hostchecks.html#hoststates">Host-Zustände</a></span></dt>
+<dt><span class="section">5.4.7. <a href="hostchecks.html#hoststatedetermination">Host-Statusermittlung</a></span></dt>
+<dt><span class="section">5.4.8. <a href="hostchecks.html#hoststatechanges">Host-Statusänderungen</a></span></dt>
+</dl></dd>
+<dt><span class="section">5.5. <a href="servicechecks.html">Service-Prüfungen (Service Checks)</a></span></dt>
+<dd><dl>
+<dt><span class="section">5.5.1. <a href="servicechecks.html#introduction">Einführung</a></span></dt>
+<dt><span class="section">5.5.2. <a href="servicechecks.html#when">Wann werden Service-Prüfungen durchgeführt?</a></span></dt>
+<dt><span class="section">5.5.3. <a href="servicechecks.html#dependencieschecks">Abhängigkeiten und Prüfungen</a></span></dt>
+<dt><span class="section">5.5.4. <a href="servicechecks.html#parallelization">Parallelisierung von Service-Prüfungen</a></span></dt>
+<dt><span class="section">5.5.5. <a href="servicechecks.html#servicestates">Service-Zustände</a></span></dt>
+<dt><span class="section">5.5.6. <a href="servicechecks.html#servicestatedetermination">Service-Statusermittlung</a></span></dt>
+<dt><span class="section">5.5.7. <a href="servicechecks.html#servicestatechanges">Service-Statusänderungen</a></span></dt>
+</dl></dd>
+<dt><span class="section">5.6. <a href="activechecks.html">Aktive Prüfungen (Active Checks)</a></span></dt>
+<dd><dl>
+<dt><span class="section">5.6.1. <a href="activechecks.html#introduction">Einführung</a></span></dt>
+<dt><span class="section">5.6.2. <a href="activechecks.html#performed">Wie werden aktive Prüfungen durchgeführt?</a></span></dt>
+<dt><span class="section">5.6.3. <a href="activechecks.html#executed">Wann werden aktive Prüfungen ausgeführt?</a></span></dt>
+</dl></dd>
+<dt><span class="section">5.7. <a href="passivechecks.html">Passive Prüfungen (Passive Checks)</a></span></dt>
+<dd><dl>
+<dt><span class="section">5.7.1. <a href="passivechecks.html#introduction">Einführung</a></span></dt>
+<dt><span class="section">5.7.2. <a href="passivechecks.html#usecases">Einsatzmöglichkeiten für passive Prüfungen</a></span></dt>
+<dt><span class="section">5.7.3. <a href="passivechecks.html#howitworks">Wie passive Prüfungen arbeiten</a></span></dt>
+<dt><span class="section">5.7.4. <a href="passivechecks.html#enable">Passive Prüfungen aktivieren</a></span></dt>
+<dt><span class="section">5.7.5. <a href="passivechecks.html#servicecheckresults">Übermitteln von passiven Service-Prüfungsergebnissen</a></span></dt>
+<dt><span class="section">5.7.6. <a href="passivechecks.html#hostcheckresults">Übermitteln von passiven Host-Prüfungsergebnissen</a></span></dt>
+<dt><span class="section">5.7.7. <a href="passivechecks.html#hoststates">Passive Prüfungen und Host-Zustände</a></span></dt>
+<dt><span class="section">5.7.8. <a href="passivechecks.html#checkresultsfromremotehosts">Übermitteln von passiven Prüfungsergebnissen von entfernten Hosts</a></span></dt>
+</dl></dd>
+<dt><span class="section">5.8. <a href="statetypes.html">Statustypen</a></span></dt>
+<dd><dl>
+<dt><span class="section">5.8.1. <a href="statetypes.html#introduction">Einführung</a></span></dt>
+<dt><span class="section">5.8.2. <a href="statetypes.html#checkretries">Service- und Host-Prüfungswiederholungen</a></span></dt>
+<dt><span class="section">5.8.3. <a href="statetypes.html#softretries">Soft-Zustände</a></span></dt>
+<dt><span class="section">5.8.4. <a href="statetypes.html#hoststates">Hard-Zustände</a></span></dt>
+<dt><span class="section">5.8.5. <a href="statetypes.html#example">Beispiel</a></span></dt>
+</dl></dd>
+<dt><span class="section">5.9. <a href="timeperiods.html">Zeitfenster</a></span></dt>
+<dd><dl>
+<dt><span class="section">5.9.1. <a href="timeperiods.html#introduction">Einführung</a></span></dt>
+<dt><span class="section">5.9.2. <a href="timeperiods.html#precedence">Vorrang bei Zeitfenstern</a></span></dt>
+<dt><span class="section">5.9.3. <a href="timeperiods.html#hostservicechecks">Wie Zeitfenster mit Host- und Service-Prüfungen arbeiten</a></span></dt>
+<dt><span class="section">5.9.4. <a href="timeperiods.html#contactnotifications">Wie Zeitfenster mit Kontakt-Benachrichtigungen arbeiten</a></span></dt>
+<dt><span class="section">5.9.5. <a href="timeperiods.html#notificationescalations">Wie Zeitfenster mit Benachrichtigungs-Eskalationen arbeiten</a></span></dt>
+<dt><span class="section">5.9.6. <a href="timeperiods.html#dependenciestimeperiods">Wie Zeitfenster mit Abhängigkeiten arbeiten</a></span></dt>
+</dl></dd>
+<dt><span class="section">5.10. <a href="networkreachability.html">Ermitteln des Zustands und der Erreichbarkeit von Netzwerk-Hosts</a></span></dt>
+<dd><dl>
+<dt><span class="section">5.10.1. <a href="networkreachability.html#introduction">Einführung</a></span></dt>
+<dt><span class="section">5.10.2. <a href="networkreachability.html#examplenetwork">Beispiel-Netzwerk</a></span></dt>
+<dt><span class="section">5.10.3. <a href="networkreachability.html#parentchildrelations">Definieren von Eltern/Kind-Beziehungen</a></span></dt>
+<dt><span class="section">5.10.4. <a href="networkreachability.html#logicinaction">Erreichbarkeits-Logik in Aktion</a></span></dt>
+<dt><span class="section">5.10.5. <a href="networkreachability.html#unreachableandnotifications">UNREACHABLE Zustände und Benachrichtigungen</a></span></dt>
+</dl></dd>
+<dt><span class="section">5.11. <a href="notifications.html">Benachrichtigungen</a></span></dt>
+<dd><dl>
+<dt><span class="section">5.11.1. <a href="notifications.html#introduction">Einführung</a></span></dt>
+<dt><span class="section">5.11.2. <a href="notifications.html#when">Wann erfolgen Benachrichtigungen?</a></span></dt>
+<dt><span class="section">5.11.3. <a href="notifications.html#who">Wer wird benachrichtigt?</a></span></dt>
+<dt><span class="section">5.11.4. <a href="notifications.html#whatfilters">Welche Filter müssen durchlaufen werden, damit Benachrichtigungen versandt werden?</a></span></dt>
+<dt><span class="section">5.11.5. <a href="notifications.html#programwidefilters">Programmweite Filter:</a></span></dt>
+<dt><span class="section">5.11.6. <a href="notifications.html#servicehostfilters">Service- und Host-Filter:</a></span></dt>
+<dt><span class="section">5.11.7. <a href="notifications.html#contactfilters">Kontakt-Filter:</a></span></dt>
+<dt><span class="section">5.11.8. <a href="notifications.html#methods">Benachrichtigungs-Methoden</a></span></dt>
+<dt><span class="section">5.11.9. <a href="notifications.html#typemacro">Benachrichtigungstyp-Makro</a></span></dt>
+<dt><span class="section">5.11.10. <a href="notifications.html#helpfulresources">Hilfreiche Quellen</a></span></dt>
+</dl></dd>
+<dt><span class="section">5.12. <a href="notifications2.html">Benachrichtigungen: Beispiele und Fehlersuche</a></span></dt>
+<dd><dl>
+<dt><span class="section">5.12.1. <a href="notifications2.html#introduction">Einführung</a></span></dt>
+<dt><span class="section">5.12.2. <a href="notifications2.html#examples">Einige Beispiele</a></span></dt>
+<dt><span class="section">5.12.3. <a href="notifications2.html#troubleshooting">Fehlersuche</a></span></dt>
+</dl></dd>
 </dl>
 </div>
     
@@ -66,24 +173,25 @@
     
 
     
+    
   </div>
 <div class="navfooter">
 <hr>
 <table width="100%" summary="Navigation footer">
 <tr>
 <td width="40%" align="left">
-<a accesskey="p" href="startstop.html">Zur�ck</a>�</td>
-<td width="20%" align="center">�</td>
-<td width="40%" align="right">�<a accesskey="n" href="plugins.html">Weiter</a>
+<a accesskey="p" href="startstop.html">Zurück</a> </td>
+<td width="20%" align="center"> </td>
+<td width="40%" align="right"> <a accesskey="n" href="plugins.html">Weiter</a>
 </td>
 </tr>
 <tr>
-<td width="40%" align="left" valign="top">Icinga starten und stoppen�</td>
+<td width="40%" align="left" valign="top">4.2. Icinga starten und stoppen </td>
 <td width="20%" align="center"><a accesskey="h" href="index.html">Zum Anfang</a></td>
-<td width="40%" align="right" valign="top">�Icinga Plugins</td>
+<td width="40%" align="right" valign="top"> 5.1. Icinga Plugins</td>
 </tr>
 </table>
 </div>
-<P class="copyright">� 2009-2011 Icinga Development Team, http://www.icinga.org</P>
+<P class="copyright">© 2009-2013 Icinga Development Team, http://www.icinga.org</P>
 </body>
 </html>

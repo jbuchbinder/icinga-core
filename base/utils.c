@@ -3,8 +3,8 @@
  * UTILS.C - Miscellaneous utility functions for Icinga
  *
  * Copyright (c) 1999-2009 Ethan Galstad (egalstad@nagios.org)
- * Copyright (c) 2009-2011 Nagios Core Development Team and Community Contributors
- * Copyright (c) 2009-2011 Icinga Development Team (http://www.icinga.org)
+ * Copyright (c) 2009-2013 Nagios Core Development Team and Community Contributors
+ * Copyright (c) 2009-2013 Icinga Development Team (http://www.icinga.org)
  *
  * License:
  *
@@ -19,7 +19,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  *****************************************************************************/
 
@@ -107,7 +107,6 @@ extern int      log_service_retries;
 extern int      log_host_retries;
 extern int      log_event_handlers;
 extern int      log_external_commands;
-extern int      log_external_commands_user;
 extern int      log_passive_checks;
 
 extern unsigned long      logging_options;
@@ -237,6 +236,8 @@ extern int      stalking_notifications_for_services;
 
 extern int      date_format;
 
+extern int 	keep_unknown_macros;
+
 extern contact		*contact_list;
 extern contactgroup	*contactgroup_list;
 extern host             *host_list;
@@ -279,6 +280,8 @@ extern int             debug_level;
 extern int             debug_verbosity;
 extern unsigned long   max_debug_file_size;
 
+extern unsigned long   max_check_result_list_items;
+
 /* from GNU defines errno as a macro, since it's a per-thread variable */
 #ifndef errno
 extern int errno;
@@ -297,7 +300,6 @@ int my_system_r(icinga_macros *mac, char *cmd, int timeout, int *early_timeout, 
 	int status = 0;
 	int result = 0;
 	char buffer[MAX_INPUT_BUFFER] = "";
-	char *temp_buffer = NULL;
 	int fd[2];
 	FILE *fp = NULL;
 	int bytes_read = 0;
@@ -306,9 +308,11 @@ int my_system_r(icinga_macros *mac, char *cmd, int timeout, int *early_timeout, 
 	int dbuf_chunk = 1024;
 	int flags;
 #ifdef EMBEDDEDPERL
+	char *temp_buffer = NULL;
 	char fname[512] = "";
 	char *args[5] = {"", DO_CLEAN, "", "", NULL };
 	SV *plugin_hndlr_cr = NULL; /* perl.h holds typedef struct */
+	STRLEN n_a;
 	char *perl_output = NULL;
 	int count;
 	int use_epn = FALSE;
@@ -579,7 +583,6 @@ int my_system_r(icinga_macros *mac, char *cmd, int timeout, int *early_timeout, 
 
 		/* check for possibly missing scripts/binaries/etc */
 		if (result == 126 || result == 127) {
-			temp_buffer = "\163\157\151\147\141\156\040\145\144\151\163\156\151";
 			logit(NSLOG_RUNTIME_WARNING, TRUE, "Warning: Attempting to execute the command \"%s\" resulted in a return code of %d.  Make sure the script or binary you are trying to execute actually exists...\n", cmd, result);
 		}
 
@@ -849,7 +852,6 @@ int check_time_against_period(time_t test_time, timeperiod *tperiod) {
 	time_t day_range_end = (time_t)0L;
 	int test_time_year = 0;
 	int test_time_mon = 0;
-	int test_time_mday = 0;
 	int test_time_wday = 0;
 	int year = 0;
 	int shift;
@@ -876,7 +878,6 @@ int check_time_against_period(time_t test_time, timeperiod *tperiod) {
 	t = localtime_r(&test_time, &tm_s);
 	test_time_year = t->tm_year;
 	test_time_mon = t->tm_mon;
-	test_time_mday = t->tm_mday;
 	test_time_wday = t->tm_wday;
 
 	/* calculate the start of the day (midnight, 00:00 hours) when the specified test time occurs */
@@ -2567,16 +2568,7 @@ int drop_privileges(char *user, char *group) {
 		else
 			gid = (gid_t)atoi(group);
 
-		/* set effective group ID if other than current EGID */
-		if (gid != getegid()) {
-
-			if (setgid(gid) == -1) {
-				logit(NSLOG_RUNTIME_WARNING, TRUE, "Warning: Could not set effective GID=%d", (int)gid);
-				result = ERROR;
-			}
-		}
 	}
-
 
 	/* set effective user ID */
 	if (user != NULL) {
@@ -2593,26 +2585,39 @@ int drop_privileges(char *user, char *group) {
 		/* else we were passed the UID */
 		else
 			uid = (uid_t)atoi(user);
+	}
+
+	/* now that we know what to change to, we fix log file permissions */
+	fix_log_file_owner(uid, gid);
+
+	/* set effective group ID if other than current EGID */
+	if (gid != getegid()) {
+
+		if (setgid(gid) == -1) {
+			logit(NSLOG_RUNTIME_WARNING, TRUE, "Warning: Could not set effective GID=%d", (int)gid);
+			result = ERROR;
+		}
+	}
 
 #ifdef HAVE_INITGROUPS
 
-		if (uid != geteuid()) {
+	if (uid != geteuid()) {
 
-			/* initialize supplementary groups */
-			if (initgroups(user, gid) == -1) {
-				if (errno == EPERM)
-					logit(NSLOG_RUNTIME_WARNING, TRUE, "Warning: Unable to change supplementary groups using initgroups() -- I hope you know what you're doing");
-				else {
-					logit(NSLOG_RUNTIME_WARNING, TRUE, "Warning: Possibly root user failed dropping privileges with initgroups()");
-					return ERROR;
-				}
+		/* initialize supplementary groups */
+		if (initgroups(user, gid) == -1) {
+			if (errno == EPERM)
+				logit(NSLOG_RUNTIME_WARNING, TRUE, "Warning: Unable to change supplementary groups using initgroups() -- I hope you know what you're doing");
+			else {
+				logit(NSLOG_RUNTIME_WARNING, TRUE, "Warning: Possibly root user failed dropping privileges with initgroups()");
+				return ERROR;
 			}
 		}
+	}
 #endif
-		if (setuid(uid) == -1) {
-			logit(NSLOG_RUNTIME_WARNING, TRUE, "Warning: Could not set effective UID=%d", (int)uid);
-			result = ERROR;
-		}
+
+	if (setuid(uid) == -1) {
+		logit(NSLOG_RUNTIME_WARNING, TRUE, "Warning: Could not set effective UID=%d", (int)uid);
+		result = ERROR;
 	}
 
 	log_debug_info(DEBUGL_PROCESS, 0, "New UID/GID: %d/%d\n", (int)getuid(), (int)getgid());
@@ -2700,6 +2705,31 @@ int process_check_result_queue(char *dirname) {
 	char *temp_buffer = NULL;
 	int result = OK;
 
+	unsigned long list_length = 0;
+	check_result *current = check_result_list;
+
+	if (max_check_result_list_items != 0) {
+		/* get the number of items currently to-be-processed
+		 * already on the checkresult list
+		 */
+		while (current != NULL) {
+			list_length++;
+			current = current->next;
+		}
+
+		log_debug_info(DEBUGL_CHECKS, 1, "check_result_list has %lu items\n", list_length);
+
+		/* on larger setups, the list in memory might have grown
+		 * large, and we would just stash too much results into
+		 * the list, so bail early here, letting checkresults
+		 * being processed first, then reaping again.
+		 */
+		if (list_length > max_check_result_list_items) {
+			log_debug_info(DEBUGL_CHECKS, 1, "Skipping check result queue as there are %lu/%lu results not handled by the reaper\n", list_length, max_check_result_list_items);
+			return OK;
+		}
+	}
+
 	/* make sure we have what we need */
 	if (dirname == NULL) {
 		logit(NSLOG_CONFIG_ERROR, TRUE, "Error: No check result queue directory specified.\n");
@@ -2730,21 +2760,23 @@ int process_check_result_queue(char *dirname) {
 				continue;
 			}
 
-			switch (stat_buf.st_mode & S_IFMT) {
-
-			case S_IFREG:
-				/* don't process symlinked files */
-				if (!S_ISREG(stat_buf.st_mode))
-					continue;
-				break;
-
-			default:
-				/* everything else we ignore */
+			/*
+			 * don't process symlinked files, we only care
+			 * about real files
+			 */
+			if (!S_ISREG(stat_buf.st_mode))
 				continue;
-				break;
-			}
 
 			/* at this point we have a regular file... */
+
+			/*
+			 * if the file is too old, we delete it
+			 * otherwise we will leave old files there
+			 */
+			if (stat_buf.st_mtime + max_check_result_file_age < time(NULL)) {
+				delete_check_result_file(file);
+				continue;
+			}
 
 			/* can we find the associated ok-to-go file ? */
 			dummy = asprintf(&temp_buffer, "%s.ok", file);
@@ -2778,7 +2810,6 @@ int process_check_result_file(char *fname) {
 	char *var = NULL;
 	char *val = NULL;
 	char *v1 = NULL, *v2 = NULL;
-	int delete_file = FALSE;
 	time_t current_time;
 	check_result *new_cr = NULL;
 
@@ -2848,7 +2879,6 @@ int process_check_result_file(char *fname) {
 			/* file is too old - ignore check results it contains and delete it */
 			/* this will only work as intended if file_time comes before check results */
 			if (max_check_result_file_age > 0 && (current_time - (strtoul(val, NULL, 0)) > max_check_result_file_age)) {
-				delete_file = TRUE;
 				break;
 			}
 		}
@@ -3207,16 +3237,13 @@ char *get_next_string_from_buf(char *buf, int *start_index, int bufsize) {
 int contains_illegal_object_chars(char *name) {
 	register int x = 0;
 	register int y = 0;
-	register int ch = 0;
 
-	if (name == NULL)
+	if (name == NULL || illegal_object_chars == NULL)
 		return FALSE;
 
 	x = (int)strlen(name) - 1;
 
 	for (; x >= 0; x--) {
-
-		ch = (int)name[x];
 
 		/* illegal user-specified characters */
 		if (illegal_object_chars != NULL)
@@ -3581,72 +3608,56 @@ int deinit_embedded_perl(void) {
 
 /* checks to see if we should run a script using the embedded Perl interpreter */
 int file_uses_embedded_perl(char *fname) {
-	int use_epn = FALSE;
-#ifdef EMBEDDEDPERL
+#ifndef EMBEDDEDPERL
+	return FALSE;
+#else
+	int line, use_epn = FALSE;
 	FILE *fp = NULL;
-	char line1[80] = "";
-	char linen[80] = "";
-	int line = 0;
-	char *ptr = NULL;
-	int found_epn_directive = FALSE;
+	char buf[256] = "";
 
-	if (enable_embedded_perl == TRUE) {
+	if (enable_embedded_perl != TRUE)
+		return FALSE;
 
-		/* open the file, check if its a Perl script and see if we can use epn  */
-		fp = fopen(fname, "r");
-		if (fp != NULL) {
 
-			/* grab the first line - we should see Perl */
-			fgets(line1, 80, fp);
+	/* open the file, check if its a Perl script and see if we can use epn  */
+	fp = fopen(fname, "r");
+	if (fp == NULL)
+		return FALSE;
 
-			/* yep, its a Perl script... */
-			if (strstr(line1, "/bin/perl") != NULL) {
+	/* grab the first line - we should see Perl. go home if not */
+	if (fgets(buf, 80, fp) == NULL || strstr(buf, "/bin/perl") == NULL) {
+		fclose(fp);
+		return FALSE;
+	}
 
-				/* epn directives must be found in first ten lines of plugin */
-				for (line = 1; line < 10; line++) {
+	/* epn directives must be found in first ten lines of plugin */
+	for (line = 1; line < 10; line++) {
+		if (fgets(buf, sizeof(buf) - 1, fp) == NULL)
+			break;
 
-					if (fgets(linen, 80, fp)) {
+		buf[sizeof(buf) - 1] = '\0';
 
-						/* line contains Icinga directives - keep Nagios compatibility */
-						if (strstr(linen, "# nagios:") || strstr(linen, "# icinga:")) {
+		/* line contains Icinga directives - keep Nagios compatibility */
+		if (strstr(buf, "# nagios:") || strstr(buf, "# icinga:")) {
+			char *p;
+			p = strstr(buf + 8, "epn");
+			if (!p)
+				continue;
 
-							ptr = strtok(linen, ":");
-
-							/* process each directive */
-							for (ptr = strtok(NULL, ","); ptr != NULL; ptr = strtok(NULL, ",")) {
-
-								strip(ptr);
-
-								if (!strcmp(ptr, "+epn")) {
-									use_epn = TRUE;
-									found_epn_directive = TRUE;
-								} else if (!strcmp(ptr, "-epn")) {
-									use_epn = FALSE;
-									found_epn_directive = TRUE;
-								}
-							}
-						}
-
-						if (found_epn_directive == TRUE)
-							break;
-					}
-
-					/* EOF */
-					else
-						break;
-				}
-
-				/* if the plugin didn't tell us whether or not to use embedded Perl, use implicit value */
-				if (found_epn_directive == FALSE)
-					use_epn = (use_embedded_perl_implicitly == TRUE) ? TRUE : FALSE;
-			}
-
+			/*
+			 * we found it, so close the file and return
+			 * whatever it shows. '+epn' means yes. everything
+			 * else means no.
+			 */
 			fclose(fp);
+			return *(p - 1) == '+' ? TRUE : FALSE;
 		}
 	}
-#endif
 
-	return use_epn;
+	fclose(fp);
+
+	return use_embedded_perl_implicitly;
+#endif
 }
 
 
@@ -4243,6 +4254,9 @@ void cleanup(void) {
 	/* free all allocated memory - including macros */
 	free_memory(get_global_macros());
 
+	/* close the log file */
+	close_log_file();
+
 	return;
 }
 
@@ -4264,6 +4278,8 @@ void free_memory(icinga_macros *mac) {
 	/* free memory for the high priority event list */
 	this_event = event_list_high;
 	while (this_event != NULL) {
+		if (this_event->event_type == EVENT_SCHEDULED_DOWNTIME)
+			my_free(this_event->event_data);
 		next_event = this_event->next;
 		my_free(this_event);
 		this_event = next_event;
@@ -4275,6 +4291,8 @@ void free_memory(icinga_macros *mac) {
 	/* free memory for the low priority event list */
 	this_event = event_list_low;
 	while (this_event != NULL) {
+		if (this_event->event_type == EVENT_SCHEDULED_DOWNTIME)
+			my_free(this_event->event_data);
 		next_event = this_event->next;
 		my_free(this_event);
 		this_event = next_event;
@@ -4381,7 +4399,6 @@ int reset_variables(void) {
 	log_notifications = DEFAULT_NOTIFICATION_LOGGING;
 	log_event_handlers = DEFAULT_LOG_EVENT_HANDLERS;
 	log_external_commands = DEFAULT_LOG_EXTERNAL_COMMANDS;
-	log_external_commands_user = DEFAULT_LOG_EXTERNAL_COMMANDS_USER;
 	log_passive_checks = DEFAULT_LOG_PASSIVE_CHECKS;
 
 	logging_options = NSLOG_RUNTIME_ERROR | NSLOG_RUNTIME_WARNING | NSLOG_VERIFICATION_ERROR | NSLOG_VERIFICATION_WARNING | NSLOG_CONFIG_ERROR | NSLOG_CONFIG_WARNING | NSLOG_PROCESS_INFO | NSLOG_HOST_NOTIFICATION | NSLOG_SERVICE_NOTIFICATION | NSLOG_EVENT_HANDLER | NSLOG_EXTERNAL_COMMAND | NSLOG_PASSIVE_CHECK | NSLOG_HOST_UP | NSLOG_HOST_DOWN | NSLOG_HOST_UNREACHABLE | NSLOG_SERVICE_OK | NSLOG_SERVICE_WARNING | NSLOG_SERVICE_UNKNOWN | NSLOG_SERVICE_CRITICAL | NSLOG_INFO_MESSAGE;
@@ -4499,11 +4516,14 @@ int reset_variables(void) {
 	stalking_notifications_for_hosts = DEFAULT_STALKING_NOTIFICATIONS_FOR_HOSTS;
 	stalking_notifications_for_services = DEFAULT_STALKING_NOTIFICATIONS_FOR_SERVICES;
 
+	keep_unknown_macros = FALSE;
 	external_command_buffer_slots = DEFAULT_EXTERNAL_COMMAND_BUFFER_SLOTS;
 
 	debug_level = DEFAULT_DEBUG_LEVEL;
 	debug_verbosity = DEFAULT_DEBUG_VERBOSITY;
 	max_debug_file_size = DEFAULT_MAX_DEBUG_FILE_SIZE;
+
+	max_check_result_list_items = DEFAULT_MAX_CHECK_RESULT_LIST_ITEMS;
 
 	date_format = DATE_FORMAT_US;
 

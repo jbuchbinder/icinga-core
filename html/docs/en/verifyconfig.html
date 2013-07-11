@@ -1,32 +1,34 @@
 <html>
 <head>
-<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
-<title>Verifying Your Configuration</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<title>4.1.Â Verifying Your Configuration</title>
+<link rel="stylesheet" href="../stylesheets/icinga-docs.css" type="text/css">
 <meta name="generator" content="DocBook XSL Stylesheets V1.75.1">
 <meta name="keywords" content="Supervision, Icinga, Nagios, Linux">
-<link rel="home" href="index.html" title="Icinga Version 1.6 Documentation">
-<link rel="up" href="ch04.html" title="Chapter 4. Running Icinga">
-<link rel="prev" href="ch04.html" title="Chapter 4. Running Icinga">
-<link rel="next" href="startstop.html" title="Starting and Stopping Icinga">
+<link rel="home" href="index.html" title="Icinga Version 1.9 Documentation">
+<link rel="up" href="ch04.html" title="ChapterÂ 4.Â Running Icinga">
+<link rel="prev" href="ch04.html" title="ChapterÂ 4.Â Running Icinga">
+<link rel="next" href="startstop.html" title="4.2.Â Starting and Stopping Icinga">
+<script src="../js/jquery-min.js" type="text/javascript"></script><script src="../js/icinga-docs.js" type="text/javascript"></script>
 </head>
 <body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
 <CENTER><IMG src="../images/logofullsize.png" border="0" alt="Icinga" title="Icinga"></CENTER>
 <div class="navheader">
 <table width="100%" summary="Navigation header">
-<tr><th colspan="3" align="center">Verifying Your Configuration</th></tr>
+<tr><th colspan="3" align="center">4.1.Â Verifying Your Configuration</th></tr>
 <tr>
 <td width="20%" align="left">
-<a accesskey="p" href="ch04.html">Prev</a> </td>
-<th width="60%" align="center">Chapter 4. Running Icinga</th>
-<td width="20%" align="right"> <a accesskey="n" href="startstop.html">Next</a>
+<a accesskey="p" href="ch04.html">Prev</a>Â </td>
+<th width="60%" align="center">ChapterÂ 4.Â Running Icinga</th>
+<td width="20%" align="right">Â <a accesskey="n" href="startstop.html">Next</a>
 </td>
 </tr>
 </table>
 <hr>
 </div>
-<div class="section" title="Verifying Your Configuration">
+<div class="section" title="4.1.Â Verifying Your Configuration">
 <div class="titlepage"><div><div><h2 class="title" style="clear: both">
-<a name="verifyconfig"></a><a name="verify_config"></a>Verifying Your Configuration</h2></div></div></div>
+<a name="verifyconfig"></a>4.1.Â <a name="verify_config"></a>Verifying Your Configuration</h2></div></div></div>
   
 
   <p>Every time you modify your configuration files, you also have to restart Icinga. It is important to run a sanity check on
@@ -34,7 +36,7 @@
 
   <p>In order to verify your configuration, run Icinga using the <span class="bold"><strong>-v</strong></span> command line option:</p>
 
-  <pre class="programlisting"> #&gt; /usr/local/icinga/bin/icinga -v /usr/local/icinga/etc/icinga.cfg  </pre>
+  <pre class="screen"> #&gt; /usr/local/icinga/bin/icinga -v /usr/local/icinga/etc/icinga.cfg</pre>
 
   <p>If you've forgotten to enter some critical data or misconfigured things, Icinga will show a warning or error message that
   should point you to the location of the problem.</p>
@@ -50,45 +52,45 @@
   <span class="emphasis"><em>generally</em></span> be safely ignored, since they are only recommendations and not requirements.</p>
 
   <p>Instead of specifying the paths to binary and config file you can issue </p>
-<pre class="programlisting"> #&gt; /etc/init.d/icinga checkconfig</pre>
+<pre class="screen"> #&gt; /etc/init.d/icinga checkconfig</pre>
 <p>which
   results in just a non-zero return code if your config contains any errors. This might be useful if you want to restart Icinga
   automatically.</p>
 
   <p>Using </p>
-<pre class="programlisting"> #&gt; /etc/init.d/icinga show-errors</pre>
-<p>the command will create a file containing the errors found.
-  If there are any the contents of the file is shown ("show-errors" starting with Icinga 1.0.2).</p>
+<pre class="screen"> #&gt; /etc/init.d/icinga show-errors</pre>
+<p>the command will create a file containing the errors found. If there are
+  any the contents of the file is shown ("show-errors" starting with Icinga 1.0.2).</p>
 
-  <p>Once you've verified your configuration files and fixed possible errors you can go ahead with <a class="xref" href="startstop.html" title="Starting and Stopping Icinga">&#8220;Starting and Stopping Icinga&#8221;</a>.</p>
+  <p>Once you've verified your configuration files and fixed possible errors you can go ahead with <a class="xref" href="startstop.html" title="4.2.Â Starting and Stopping Icinga">SectionÂ 4.2, â€œStarting and Stopping Icingaâ€</a>.</p>
 
-  <a class="indexterm" name="idp6658160"></a>
+  <a class="indexterm" name="idp7132032"></a>
 
-  <a class="indexterm" name="idp6659408"></a>
+  <a class="indexterm" name="idp7133296"></a>
 
-  <a class="indexterm" name="idp6660928"></a>
+  <a class="indexterm" name="idp7134896"></a>
 
-  <a class="indexterm" name="idp6662560"></a>
+  <a class="indexterm" name="idp7136528"></a>
 
-  <a class="indexterm" name="idp6664224"></a>
+  <a class="indexterm" name="idp7138224"></a>
 </div>
 <div class="navfooter">
 <hr>
 <table width="100%" summary="Navigation footer">
 <tr>
 <td width="40%" align="left">
-<a accesskey="p" href="ch04.html">Prev</a> </td>
+<a accesskey="p" href="ch04.html">Prev</a>Â </td>
 <td width="20%" align="center"><a accesskey="u" href="ch04.html">Up</a></td>
-<td width="40%" align="right"> <a accesskey="n" href="startstop.html">Next</a>
+<td width="40%" align="right">Â <a accesskey="n" href="startstop.html">Next</a>
 </td>
 </tr>
 <tr>
-<td width="40%" align="left" valign="top">Chapter 4. Running Icinga </td>
+<td width="40%" align="left" valign="top">ChapterÂ 4.Â Running IcingaÂ </td>
 <td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td>
-<td width="40%" align="right" valign="top"> Starting and Stopping Icinga</td>
+<td width="40%" align="right" valign="top">Â 4.2.Â Starting and Stopping Icinga</td>
 </tr>
 </table>
 </div>
-<P class="copyright">© 2009-2011 Icinga Development Team, http://www.icinga.org</P>
+<P class="copyright">Â© 2009-2013 Icinga Development Team, http://www.icinga.org</P>
 </body>
 </html>

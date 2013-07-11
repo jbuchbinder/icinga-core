@@ -3,8 +3,8 @@
  * NEBMODS.C - Event Broker Module Functions
  *
  * Copyright (c) 2002-2008 Ethan Galstad (egalstad@nagios.org)
- * Copyright (c) 2009-2011 Nagios Core Development Team and Community Contributors
- * Copyright (c) 2009-2011 Icinga Development Team (http://www.icinga.org)
+ * Copyright (c) 2009-2013 Nagios Core Development Team and Community Contributors
+ * Copyright (c) 2009-2013 Icinga Development Team (http://www.icinga.org)
  *
  * License:
  *
@@ -19,7 +19,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  *****************************************************************************/
 
@@ -39,8 +39,18 @@ nebcallback **neb_callback_list = NULL;
 extern char     *temp_path;
 
 
-/*#define DEBUG*/
-
+/* compat stuff for USE_LTDL */
+#ifdef USE_LTDL
+# define dlopen(p, flags) lt_dlopen(p)
+# define dlclose(p) lt_dlclose(p)
+# define dlerror(p) lt_dlerror(p)
+# define dlsym(hdl, sym) lt_dlsym(hdl, sym)
+# define RTLD_NOW 0
+# define RTLD_GLOBAL 0
+#else
+# define lt_dlinit() 0
+# define lt_dlexit() 0
+#endif
 
 /****************************************************************************/
 /****************************************************************************/
@@ -50,16 +60,10 @@ extern char     *temp_path;
 
 /* initialize module routines */
 int neb_init_modules(void) {
-#ifdef USE_LTDL
-	int result = OK;
-#endif
 
 	/* initialize library */
-#ifdef USE_LTDL
-	result = lt_dlinit();
-	if (result)
+	if (lt_dlinit())
 		return ERROR;
-#endif
 
 	return OK;
 }
@@ -67,16 +71,10 @@ int neb_init_modules(void) {
 
 /* deinitialize module routines */
 int neb_deinit_modules(void) {
-#ifdef USE_LTDL
-	int result = OK;
-#endif
 
 	/* deinitialize library */
-#ifdef USE_LTDL
-	result = lt_dlexit();
-	if (result)
+	if (lt_dlexit())
 		return ERROR;
-#endif
 
 	return OK;
 }
@@ -92,7 +90,7 @@ int neb_add_module(char *filename, char *args, int should_be_loaded) {
 		return ERROR;
 
 	/* allocate memory */
-	new_module = (nebmodule *)malloc(sizeof(nebmodule));
+	new_module = (nebmodule *)calloc(1, sizeof(nebmodule));
 	if (new_module == NULL)
 		return ERROR;
 
@@ -126,14 +124,13 @@ int neb_free_module_list(void) {
 	nebmodule *next_module = NULL;
 	int x = OK;
 
-	for (temp_module = neb_module_list; temp_module;) {
+	for (temp_module = neb_module_list; temp_module; temp_module = next_module) {
 		next_module = temp_module->next;
 		my_free(temp_module->filename);
 		my_free(temp_module->args);
 		for (x = 0; x < NEBMODULE_MODINFO_NUMITEMS; x++)
 			my_free(temp_module->info[x]);
 		my_free(temp_module);
-		temp_module = next_module;
 	}
 
 	neb_module_list = NULL;
@@ -154,12 +151,18 @@ int neb_free_module_list(void) {
 int neb_load_all_modules(void) {
 	nebmodule *temp_module = NULL;
 	int result = OK;
+    int errors = 0;
 
 	for (temp_module = neb_module_list; temp_module; temp_module = temp_module->next) {
 		result = neb_load_module(temp_module);
+
+        if (result != OK) {
+            logit(NSLOG_RUNTIME_ERROR, TRUE, "Error: Failed to load module '%s'.\n", temp_module->filename ? temp_module->filename : "(no file?)");
+            errors++;
+        }
 	}
 
-	return OK;
+	return errors ? ERROR : OK;
 }
 
 #ifndef PATH_MAX
@@ -204,28 +207,26 @@ int neb_load_module(nebmodule *mod) {
 	   many other installation-tools do). */
 
 	/* load the module (use the temp copy we just made) */
-#ifdef USE_LTDL
-	mod->module_handle = lt_dlopen(mod->filename);
-#else
-	mod->module_handle = (void *)dlopen(mod->filename, RTLD_NOW | RTLD_GLOBAL);
-#endif
+	mod->module_handle = dlopen(mod->filename, RTLD_NOW | RTLD_GLOBAL);
+
 	if (mod->module_handle == NULL) {
 
-#ifdef USE_LTDL
-		logit(NSLOG_RUNTIME_ERROR, FALSE, "Error: Could not load module '%s' -> %s\n", mod->filename, lt_dlerror());
-#else
 		logit(NSLOG_RUNTIME_ERROR, FALSE, "Error: Could not load module '%s' -> %s\n", mod->filename, dlerror());
-#endif
 
 		return ERROR;
 	}
 
+	/* add a compatibility check for 1.7 change of idomod.o -> idomod.so */
+	/* FIXME - drop in 1.8 */
+	if (strstr(mod->filename, "idomod.o") != NULL) {
+		logit(NSLOG_RUNTIME_ERROR, FALSE, "Error: trying to load module '%s' which has been moved to libdir/idomod.so in Icinga 1.7!\n", mod->filename);
+		logit(NSLOG_RUNTIME_ERROR, FALSE, "Check Changelog and upgrade docs to update the broker module entry!\n");
+		neb_unload_module(mod, NEBMODULE_FORCE_UNLOAD, NEBMODULE_ERROR_IDO_VERSION);
+		return ERROR;
+	}
+
 	/* find module API version */
-#ifdef USE_LTDL
-	module_version_ptr = (int *)lt_dlsym(mod->module_handle, "__neb_api_version");
-#else
 	module_version_ptr = (int *)dlsym(mod->module_handle, "__neb_api_version");
-#endif
 
 	/* mark the module as being loaded */
 	mod->is_currently_loaded = TRUE;
@@ -241,11 +242,7 @@ int neb_load_module(nebmodule *mod) {
 	}
 
 	/* locate the initialization function */
-#ifdef USE_LTDL
-	mod->init_func = lt_dlsym(mod->module_handle, "nebmodule_init");
-#else
 	mod->init_func = (void *)dlsym(mod->module_handle, "nebmodule_init");
-#endif
 
 	/* if the init function could not be located, unload the module */
 	if (mod->init_func == NULL) {
@@ -271,14 +268,27 @@ int neb_load_module(nebmodule *mod) {
 		return ERROR;
 	}
 
-	logit(NSLOG_INFO_MESSAGE, FALSE, "Event broker module '%s' initialized successfully.\n", mod->filename);
+	/* locate the specific modules we know about (idomod, ...) and require minimum version, after calling nebmodule_init, this should be set */
+	/* check if module exports its title? */
+	if(mod->info[NEBMODULE_MODINFO_TITLE] != NULL) {
+		/* check if we are going to load idomod, which we know about */
+		if(strstr(mod->info[NEBMODULE_MODINFO_TITLE], "IDOMOD") != NULL) {
+			/* check if the version complies with the core's version, as they are tied together */
+			if(strcmp(mod->info[NEBMODULE_MODINFO_VERSION], PROGRAM_VERSION) != 0) {
+				logit(NSLOG_RUNTIME_ERROR, FALSE, "Error: Module '%s' exports version '%s' different to core version '%s'.  Module will be unloaded.\n", mod->filename, mod->info[NEBMODULE_MODINFO_VERSION], PROGRAM_VERSION);
+				neb_unload_module(mod, NEBMODULE_FORCE_UNLOAD, NEBMODULE_ERROR_IDO_VERSION);
+				return ERROR;
+			}
+			logit(NSLOG_INFO_MESSAGE, FALSE, "Event broker module '%s' version '%s' from '%s' initialized successfully.\n", mod->info[NEBMODULE_MODINFO_TITLE], mod->info[NEBMODULE_MODINFO_VERSION], mod->filename);
+		} else {
+			logit(NSLOG_INFO_MESSAGE, FALSE, "Event broker module '%s' from '%s' initialized successfully.\n", mod->info[NEBMODULE_MODINFO_TITLE], mod->filename);
+		}
+	} else {
+		logit(NSLOG_INFO_MESSAGE, FALSE, "Event broker module '%s' initialized successfully.\n", mod->filename);
+	}
 
 	/* locate the de-initialization function (may or may not be present) */
-#ifdef USE_LTDL
-	mod->deinit_func = lt_dlsym(mod->module_handle, "nebmodule_deinit");
-#else
-	mod->deinit_func = (void *)dlsym(mod->module_handle, "nebmodule_deinit");
-#endif
+	mod->deinit_func = dlsym(mod->module_handle, "nebmodule_deinit");
 
 	log_debug_info(DEBUGL_EVENTBROKER, 0, "Module '%s' loaded with return code of '%d'\n", mod->filename, result);
 	if (mod->deinit_func != NULL)
@@ -338,11 +348,7 @@ int neb_unload_module(nebmodule *mod, int flags, int reason) {
 	neb_deregister_module_callbacks(mod);
 
 	/* unload the module */
-#ifdef USE_LTDL
-	result = lt_dlclose(mod->module_handle);
-#else
 	result = dlclose(mod->module_handle);
-#endif
 
 	/* mark the module as being unloaded */
 	mod->is_currently_loaded = FALSE;
@@ -376,7 +382,7 @@ int neb_set_module_info(void *handle, int type, char *data) {
 
 	/* find the module */
 	for (temp_module = neb_module_list; temp_module != NULL; temp_module = temp_module->next) {
-		if ((void *)temp_module->module_handle == (void *)handle)
+		if (temp_module->module_handle == handle)
 			break;
 	}
 	if (temp_module == NULL)
@@ -422,7 +428,7 @@ int neb_register_callback(int callback_type, void *mod_handle, int priority, int
 
 	/* make sure module handle is valid */
 	for (temp_module = neb_module_list; temp_module; temp_module = temp_module->next) {
-		if ((void *)temp_module->module_handle == (void *)mod_handle)
+		if (temp_module->module_handle == mod_handle)
 			break;
 	}
 	if (temp_module == NULL)
@@ -434,8 +440,8 @@ int neb_register_callback(int callback_type, void *mod_handle, int priority, int
 		return NEBERROR_NOMEM;
 
 	new_callback->priority = priority;
-	new_callback->module_handle = (void *)mod_handle;
-	new_callback->callback_func = (void *)callback_func;
+	new_callback->module_handle = mod_handle;
+	new_callback->callback_func = callback_func;
 
 	/* add new function to callback list, sorted by priority (first come, first served for same priority) */
 	new_callback->next = NULL;
@@ -480,7 +486,7 @@ int neb_deregister_module_callbacks(nebmodule *mod) {
 	for (callback_type = 0; callback_type < NEBCALLBACK_NUMITEMS; callback_type++) {
 		for (temp_callback = neb_callback_list[callback_type]; temp_callback != NULL; temp_callback = next_callback) {
 			next_callback = temp_callback->next;
-			if ((void *)temp_callback->module_handle == (void *)mod->module_handle)
+			if (temp_callback->module_handle == mod->module_handle)
 				neb_deregister_callback(callback_type, (int(*)(int, void*))temp_callback->callback_func);
 		}
 
@@ -511,7 +517,7 @@ int neb_deregister_callback(int callback_type, int (*callback_func)(int, void *)
 		next_callback = temp_callback->next;
 
 		/* we found it */
-		if (temp_callback->callback_func == (void *)callback_func)
+		if (temp_callback->callback_func == callback_func)
 			break;
 
 		last_callback = temp_callback;

@@ -3,7 +3,7 @@
 -- oracle.sql
 -- DB definition for Oracle
 --
--- Copyright (c) 2009-2011 Icinga Development Team (http://www.icinga.org)
+-- Copyright (c) 2009-2013 Icinga Development Team (http://www.icinga.org)
 --
 -- requires ocilib, oracle client (instantclient or full client/server) libs+sdk to work
 -- requires Oracle 10+ on server, 
@@ -16,12 +16,12 @@
 --
 -- initial version: 2008-02-20 David Schmidt
 -- 		    2011-01-17 Michael Friedrich <michael.friedrich(at)univie.ac.at>
--- current version: 2011-06-10 Thomas Dressler
+-- current version: 2012-03-03 Thomas Dressler
 --
 -- -- --------------------------------------------------------
 */
 
-DEFINE ICINGA_VERSION=1.6.0
+DEFINE ICINGA_VERSION=1.9.0
 
 -- -----------------------------------------
 -- set defines
@@ -63,7 +63,7 @@ SET ESCAPE \
 -- -----------------------------------------
 -- set dbversion
 -- -----------------------------------------
-INSERT INTO dbversion (id, name, version) VALUES ('1', 'idoutils', '&&ICINGA_VERSION');
+INSERT INTO dbversion (id, name, version, create_time, modify_time) VALUES ('1', 'idoutils', '&&ICINGA_VERSION', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
 commit;
 /*goodbye */
 exit;

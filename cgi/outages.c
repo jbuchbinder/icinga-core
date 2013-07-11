@@ -3,7 +3,7 @@
  * OUTAGES.C -  Icinga Network Outages CGI
  *
  * Copyright (c) 1999-2008 Ethan Galstad (egalstad@nagios.org)
- * Copyright (c) 2009-2011 Icinga Development Team (http://www.icinga.org)
+ * Copyright (c) 2009-2013 Icinga Development Team (http://www.icinga.org)
  *
  * License:
  *
@@ -18,7 +18,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *************************************************************************/
 
 #include "../include/config.h"
@@ -39,24 +39,7 @@ extern hoststatus *hoststatus_list;
 extern servicestatus *servicestatus_list;
 
 extern char main_config_file[MAX_FILENAME_LENGTH];
-extern char url_html_path[MAX_FILENAME_LENGTH];
-extern char url_stylesheets_path[MAX_FILENAME_LENGTH];
-extern char url_js_path[MAX_FILENAME_LENGTH];
 extern char url_images_path[MAX_FILENAME_LENGTH];
-extern char url_logo_images_path[MAX_FILENAME_LENGTH];
-extern char log_file[MAX_FILENAME_LENGTH];
-
-int display_type = DISPLAY_HOSTS;
-int show_all_hosts = TRUE;
-int show_all_hostgroups = TRUE;
-int show_all_servicegroups = TRUE;
-
-char *host_name = NULL;
-char *host_filter = NULL;
-char *hostgroup_name = NULL;
-char *servicegroup_name = NULL;
-char *service_desc = NULL;
-char *service_filter = NULL;
 
 /* AFFECTEDHOSTS structure */
 typedef struct affected_host {
@@ -125,7 +108,6 @@ int CGI_ID = OUTAGES_CGI_ID;
 int main(void) {
 	int result = OK;
 
-
 	/* get the arguments passed in the URL */
 	process_cgivars();
 
@@ -135,8 +117,8 @@ int main(void) {
 	/* read the CGI configuration file */
 	result = read_cgi_config_file(get_cgi_config_location());
 	if (result == ERROR) {
-		document_header(CGI_ID, FALSE);
-		print_error(get_cgi_config_location(), ERROR_CGI_CFG_FILE);
+		document_header(CGI_ID, FALSE, "Error");
+		print_error(get_cgi_config_location(), ERROR_CGI_CFG_FILE, FALSE);
 		document_footer(CGI_ID);
 		return ERROR;
 	}
@@ -144,8 +126,8 @@ int main(void) {
 	/* read the main configuration file */
 	result = read_main_config_file(main_config_file);
 	if (result == ERROR) {
-		document_header(CGI_ID, FALSE);
-		print_error(main_config_file, ERROR_CGI_MAIN_CFG);
+		document_header(CGI_ID, FALSE, "Error");
+		print_error(main_config_file, ERROR_CGI_MAIN_CFG, FALSE);
 		document_footer(CGI_ID);
 		return ERROR;
 	}
@@ -153,23 +135,23 @@ int main(void) {
 	/* read all object configuration data */
 	result = read_all_object_configuration_data(main_config_file, READ_ALL_OBJECT_DATA);
 	if (result == ERROR) {
-		document_header(CGI_ID, FALSE);
-		print_error(NULL, ERROR_CGI_OBJECT_DATA);
+		document_header(CGI_ID, FALSE, "Error");
+		print_error(NULL, ERROR_CGI_OBJECT_DATA, FALSE);
 		document_footer(CGI_ID);
 		return ERROR;
 	}
 
 	/* read all status data */
-	result = read_all_status_data(get_cgi_config_location(), READ_ALL_STATUS_DATA);
+	result = read_all_status_data(main_config_file, READ_ALL_STATUS_DATA);
 	if (result == ERROR && daemon_check == TRUE) {
-		document_header(CGI_ID, FALSE);
-		print_error(NULL, ERROR_CGI_STATUS_DATA);
+		document_header(CGI_ID, FALSE, "Error");
+		print_error(NULL, ERROR_CGI_STATUS_DATA, FALSE);
 		document_footer(CGI_ID);
 		free_memory();
 		return ERROR;
 	}
 
-	document_header(CGI_ID, TRUE);
+	document_header(CGI_ID, TRUE, "Network Outages");
 
 	/* get authentication information */
 	get_authentication_information(&current_authdata);
@@ -182,7 +164,7 @@ int main(void) {
 
 		/* left column of the first row */
 		printf("<td align=left valign=top width=33%%>\n");
-		display_info_table("Network Outages", TRUE, &current_authdata, daemon_check);
+		display_info_table("Network Outages", &current_authdata, daemon_check);
 		printf("</td>\n");
 
 		/* middle column of top row */
@@ -191,10 +173,6 @@ int main(void) {
 
 		/* right column of top row */
 		printf("<td align=right valign=bottom width=33%%>\n");
-
-		/* display context-sensitive help */
-		display_context_help(CONTEXTHELP_OUTAGES);
-
 		printf("</td>\n");
 
 		/* end of top table */
@@ -283,7 +261,6 @@ int process_cgivars(void) {
 
 /* shows all hosts that are causing network outages */
 void display_network_outages(void) {
-	char temp_buffer[MAX_INPUT_BUFFER];
 	int number_of_problem_hosts = 0;
 	int number_of_blocking_problem_hosts = 0;
 	hostoutagesort *temp_hostoutagesort;
@@ -332,8 +309,8 @@ void display_network_outages(void) {
 		printf("%sSERVICES_AFFECTED%s\n", csv_data_enclosure, csv_data_enclosure);
 	} else {
 		/* display the problem hosts... */
-		printf("<DIV ALIGN=CENTER>\n");
-		printf("<TABLE BORDER=0 CELLSPACING=0 CELLPADDING=0><TR><TD WIDTH='33%%'></TD><TD WIDTH='33%%'><DIV CLASS='dataTitle'>Blocking Outages</DIV><TD WIDTH='33%%'>");
+
+		printf("<TABLE BORDER=0 CELLSPACING=0 CELLPADDING=0 align='center'><TR><TD WIDTH='33%%'></TD><TD WIDTH='33%%'><DIV CLASS='dataTitle'>Blocking Outages</DIV><TD WIDTH='33%%'>");
 
 		/* add export to csv link */
 		printf("<DIV style='padding-right:6px;' class='csv_export_link'>");
@@ -388,11 +365,12 @@ void display_network_outages(void) {
 				printf(",\n");
 			json_start = FALSE;
 			printf("{ \"severity\": %d, ", temp_hostoutage->severity);
-			printf(" \"host\": \"%s\", ", (temp_hostoutage->hst->display_name != NULL) ? json_encode(temp_hostoutage->hst->display_name) : json_encode(temp_hostoutage->hst->name));
+			printf(" \"host_name\": \"%s\", ", json_encode(temp_hostoutage->hst->name));
+			printf(" \"host_display_name\": \"%s\", ", (temp_hostoutage->hst->display_name != NULL) ? json_encode(temp_hostoutage->hst->display_name) : json_encode(temp_hostoutage->hst->name));
 			printf(" \"state\": \"%s\", ", status);
 		} else if (content_type == CSV_CONTENT) {
 			printf("%s%d%s%s", csv_data_enclosure, temp_hostoutage->severity, csv_data_enclosure, csv_delimiter);
-			printf("%s%s%s%s", csv_data_enclosure, (temp_hostoutage->hst->display_name != NULL) ? temp_hostoutage->hst->display_name : temp_hostoutage->hst->name, csv_data_enclosure, csv_delimiter);
+			printf("%s%s%s%s", csv_data_enclosure, temp_hostoutage->hst->name, csv_data_enclosure, csv_delimiter);
 			printf("%s%s%s%s", csv_data_enclosure, status, csv_data_enclosure, csv_delimiter);
 		} else {
 			printf("<TR CLASS='%s'>\n", bg_class);
@@ -408,11 +386,9 @@ void display_network_outages(void) {
 		} else if (content_type == CSV_CONTENT) {
 			printf("%s%d%s%s", csv_data_enclosure, total_comments, csv_data_enclosure, csv_delimiter);
 		} else {
-			if (total_comments > 0) {
-				snprintf(temp_buffer, sizeof(temp_buffer) - 1, "This host has %d comment%s associated with it", total_comments, (total_comments == 1) ? "" : "s");
-				temp_buffer[sizeof(temp_buffer)-1] = '\x0';
-				printf("<TD CLASS='%s'><A HREF='%s?type=%d&host=%s#comments'><IMG SRC='%s%s' BORDER=0 ALT='%s' TITLE='%s'></A></TD>\n", bg_class, EXTINFO_CGI, DISPLAY_HOST_INFO, url_encode(temp_hostoutage->hst->name), url_images_path, COMMENT_ICON, temp_buffer, temp_buffer);
-			} else
+			if (total_comments > 0)
+				print_comment_icon(temp_hostoutage->hst->name, NULL);
+			else
 				printf("<TD CLASS='%s'>N/A</TD>\n", bg_class);
 		}
 
@@ -440,12 +416,9 @@ void display_network_outages(void) {
 			printf("<TD CLASS='%s'>%d</TD>\n", bg_class, temp_hostoutage->affected_child_services);
 
 			printf("<TD CLASS='%s'>", bg_class);
-			printf("<A HREF='%s?host=%s&nostatusheader'><IMG SRC='%s%s' BORDER=0 ALT='View status detail for this host' TITLE='View status detail for this host'></A>\n", STATUS_CGI, url_encode(temp_hostoutage->hst->name), url_images_path, STATUS_DETAIL_ICON);
+			printf("<A HREF='%s?host=%s'><IMG SRC='%s%s' BORDER=0 ALT='View status detail for this host' TITLE='View status detail for this host'></A>\n", STATUS_CGI, url_encode(temp_hostoutage->hst->name), url_images_path, STATUS_DETAIL_ICON);
 #ifdef USE_STATUSMAP
 			printf("<A HREF='%s?host=%s'><IMG SRC='%s%s' BORDER=0 ALT='View status map for this host and its children' TITLE='View status map for this host and its children'></A>\n", STATUSMAP_CGI, url_encode(temp_hostoutage->hst->name), url_images_path, STATUSMAP_ICON);
-#endif
-#ifdef USE_STATUSWRL
-			printf("<A HREF='%s?host=%s'><IMG SRC='%s%s' BORDER=0 ALT='View 3-D status map for this host and its children' TITLE='View 3-D status map for this host and its children'></A>\n", STATUSWRL_CGI, url_encode(temp_hostoutage->hst->name), url_images_path, STATUSWORLD_ICON);
 #endif
 #ifdef USE_TRENDS
 			printf("<A HREF='%s?host=%s'><IMG SRC='%s%s' BORDER=0 ALT='View trends for this host' TITLE='View trends for this host'></A>\n", TRENDS_CGI, url_encode(temp_hostoutage->hst->name), url_images_path, TRENDS_ICON);
@@ -467,8 +440,6 @@ void display_network_outages(void) {
 
 	if (content_type != CSV_CONTENT && content_type != JSON_CONTENT) {
 		printf("</TABLE>\n");
-
-		printf("</DIV></P>\n");
 
 		if (total_entries == 0)
 			printf("<DIV CLASS='itemTotalsTitle'>%d Blocking Outages Displayed</DIV>\n", total_entries);
@@ -732,7 +703,7 @@ void add_affected_host(char *host_name) {
 	if (new_affected_host == NULL)
 		return;
 
-	new_affected_host->host_name = host_name;
+	new_affected_host->host_name = strdup(host_name);
 
 	/* add the structure to the head of the list in memory */
 	new_affected_host->next = currently_checked_host->affected_hosts;

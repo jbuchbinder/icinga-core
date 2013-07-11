@@ -3,8 +3,8 @@
  * XODTEMPLATE.H - Template-based object configuration data header file
  *
  * Copyright (c) 1999-2009 Ethan Galstad (egalstad@nagios.org)
- * Copyright (c) 2009-2011 Nagios Core Development Team and Community Contributors
- * Copyright (c) 2009-2011 Icinga Development Team (http://www.icinga.org)
+ * Copyright (c) 2009-2013 Nagios Core Development Team and Community Contributors
+ * Copyright (c) 2009-2013 Icinga Development Team (http://www.icinga.org)
  *
  * License:
  *
@@ -19,7 +19,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  *****************************************************************************/
 
@@ -601,14 +601,6 @@ typedef struct xodtemplate_serviceescalation_struct{
 	char      *hostgroup_name;
 	int       first_notification;
 	int       last_notification;
-#ifdef USE_ST_BASED_ESCAL_RANGES
-	int       first_warning_notification;
-	int       last_warning_notification;
-	int       first_critical_notification;
-	int       last_critical_notification;
-	int       first_unknown_notification;
-	int       last_unknown_notification;
-#endif
 	double    notification_interval;
 	char      *escalation_period;
 	int       escalate_on_warning;
@@ -628,14 +620,6 @@ typedef struct xodtemplate_serviceescalation_struct{
 
 	int       have_first_notification;
 	int       have_last_notification;
-#ifdef USE_ST_BASED_ESCAL_RANGES
-	int       have_first_warning_notification;
-	int       have_last_warning_notification;
-	int       have_first_critical_notification;
-	int       have_last_critical_notification;
-	int       have_first_unknown_notification;
-	int       have_last_unknown_notification;
-#endif
 	int       have_notification_interval;
 	int       have_escalation_options;
 
@@ -644,6 +628,22 @@ typedef struct xodtemplate_serviceescalation_struct{
 
         xodtemplate_escalation_condition *condition;
 	struct xodtemplate_serviceescalation_struct *next;
+	/*
+	 * we'll use compiler tricks again, putting this at the end,
+	 * invisible, in order to stay compatible with neb modules
+	 */
+	int       first_warning_notification;
+	int       last_warning_notification;
+	int       first_critical_notification;
+	int       last_critical_notification;
+	int       first_unknown_notification;
+	int       last_unknown_notification;
+	int       have_first_warning_notification;
+	int       have_last_warning_notification;
+	int       have_first_critical_notification;
+	int       have_last_critical_notification;
+	int       have_first_unknown_notification;
+	int       have_last_unknown_notification;
         }xodtemplate_serviceescalation;
 
 
@@ -696,12 +696,6 @@ typedef struct xodtemplate_hostescalation_struct{
 	char      *hostgroup_name;
 	int       first_notification;
 	int       last_notification;
-#ifdef USE_ST_BASED_ESCAL_RANGES
-	int       first_down_notification;
-	int       last_down_notification;
-	int       first_unreachable_notification;
-	int       last_unreachable_notification;
-#endif
 	double    notification_interval;
 	char      *escalation_period;
 	int       escalate_on_down;
@@ -718,12 +712,6 @@ typedef struct xodtemplate_hostescalation_struct{
 
 	int       have_first_notification;
 	int       have_last_notification;
-#ifdef USE_ST_BASED_ESCAL_RANGES
-	int       have_first_down_notification;
-	int       have_last_down_notification;
-	int       have_first_unreachable_notification;
-	int       have_last_unreachable_notification;
-#endif
 	int       have_notification_interval;
 	int       have_escalation_options;
 
@@ -732,6 +720,18 @@ typedef struct xodtemplate_hostescalation_struct{
 
         xodtemplate_escalation_condition *condition;
 	struct xodtemplate_hostescalation_struct *next;
+	/*
+	 * we'll use compiler tricks again, putting this at the end,
+	 * invisible, in order to stay compatible with neb modules
+	 */
+	int       first_down_notification;
+	int       last_down_notification;
+	int       first_unreachable_notification;
+	int       last_unreachable_notification;
+	int       have_first_down_notification;
+	int       have_last_down_notification;
+	int       have_first_unreachable_notification;
+	int       have_last_unreachable_notification;
         }xodtemplate_hostescalation;
 
 
@@ -881,6 +881,7 @@ xodtemplate_memberlist *xodtemplate_expand_hostgroups_and_hosts(char *,char *,in
 int xodtemplate_expand_hostgroups(xodtemplate_memberlist **,xodtemplate_memberlist **,char *,int,int);
 int xodtemplate_expand_hosts(xodtemplate_memberlist **,xodtemplate_memberlist **,char *,int,int);
 int xodtemplate_add_hostgroup_members_to_memberlist(xodtemplate_memberlist **,xodtemplate_hostgroup *,int,int);
+int xodtemplate_reject_hosts_from_hostgroup(xodtemplate_memberlist **, xodtemplate_memberlist **);
 
 xodtemplate_memberlist *xodtemplate_expand_servicegroups_and_services(char *,char *,char *,int,int);
 int xodtemplate_expand_servicegroups(xodtemplate_memberlist **,xodtemplate_memberlist **,char *,int,int);
@@ -946,7 +947,7 @@ int xodtemplate_recombobulate_contactgroups(void);
 int xodtemplate_recombobulate_contactgroup_subgroups(xodtemplate_contactgroup *,char **);
 int xodtemplate_recombobulate_object_contacts(void);
 int xodtemplate_recombobulate_hostgroups(void);
-int xodtemplate_recombobulate_hostgroup_subgroups(xodtemplate_hostgroup *, char **);
+int xodtemplate_recombobulate_hostgroup_subgroups(xodtemplate_hostgroup *, xodtemplate_memberlist **, xodtemplate_memberlist **);
 int xodtemplate_recombobulate_servicegroups(void);
 int xodtemplate_recombobulate_servicegroup_subgroups(xodtemplate_servicegroup *,char **);
 

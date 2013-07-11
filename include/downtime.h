@@ -3,8 +3,8 @@
  * DOWNTIME.H - Header file for scheduled downtime functions
  *
  * Copyright (c) 2001-2009 Ethan Galstad (egalstad@nagios.org)
- * Copyright (c) 2009-2011 Nagios Core Development Team and Community Contributors
- * Copyright (c) 2009-2011 Icinga Development Team (http://www.icinga.org)
+ * Copyright (c) 2009-2013 Nagios Core Development Team and Community Contributors
+ * Copyright (c) 2009-2013 Icinga Development Team (http://www.icinga.org)
  *
  * License:
  *
@@ -19,7 +19,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  *****************************************************************************/
 
@@ -56,6 +56,7 @@ typedef struct scheduled_downtime_struct{
 	int incremented_pending_downtime;
 #endif
 	struct scheduled_downtime_struct *next;
+	time_t trigger_time;				/* needed to detect when a flexible downtime starts/triggers */
 	}scheduled_downtime;
 
 
@@ -64,9 +65,9 @@ typedef struct scheduled_downtime_struct{
 int initialize_downtime_data(char *);                                /* initializes scheduled downtime data */
 int cleanup_downtime_data(char *);                                   /* cleans up scheduled downtime data */
 
-int add_new_downtime(int,char *,char *,time_t,char *,char *,time_t,time_t,int,unsigned long,unsigned long,unsigned long *,int);
-int add_new_host_downtime(char *,time_t,char *,char *,time_t,time_t,int,unsigned long,unsigned long,unsigned long *,int);
-int add_new_service_downtime(char *,char *,time_t,char *,char *,time_t,time_t,int,unsigned long,unsigned long,unsigned long *,int);
+int add_new_downtime(int,char *,char *,time_t,char *,char *,time_t,time_t,int,unsigned long,unsigned long,unsigned long *,int,time_t);
+int add_new_host_downtime(char *,time_t,char *,char *,time_t,time_t,int,unsigned long,unsigned long,unsigned long *,int,time_t);
+int add_new_service_downtime(char *,char *,time_t,char *,char *,time_t,time_t,int,unsigned long,unsigned long,unsigned long *,int,time_t);
 
 int delete_host_downtime(unsigned long);
 int delete_service_downtime(unsigned long);
@@ -85,15 +86,15 @@ int check_pending_flex_service_downtime(service *);
 int check_for_expired_downtime(void);
 #endif
 
-int add_host_downtime(char *,time_t,char *,char *,time_t,time_t,int,unsigned long,unsigned long,unsigned long,int);
-int add_service_downtime(char *,char *,time_t,char *,char *,time_t,time_t,int,unsigned long,unsigned long,unsigned long,int);
+int add_host_downtime(char *,time_t,char *,char *,time_t,time_t,int,unsigned long,unsigned long,unsigned long,int,time_t);
+int add_service_downtime(char *,char *,time_t,char *,char *,time_t,time_t,int,unsigned long,unsigned long,unsigned long,int,time_t);
 
 /* If you are going to be adding a lot of downtime in sequence, set
    defer_downtime_sorting to 1 before you start and then call
    sort_downtime afterwards. Things will go MUCH faster. */
 
 extern int defer_downtime_sorting;
-int add_downtime(int,char *,char *,time_t,char *,char *,time_t,time_t,int,unsigned long,unsigned long,unsigned long,int);
+int add_downtime(int,char *,char *,time_t,char *,char *,time_t,time_t,int,unsigned long,unsigned long,unsigned long,int,time_t);
 int sort_downtime(void);
 
 scheduled_downtime *find_downtime(int,unsigned long);

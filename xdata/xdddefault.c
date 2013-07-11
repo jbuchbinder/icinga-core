@@ -3,7 +3,7 @@
  * XDDDEFAULT.C - Default scheduled downtime data routines for Icinga
  *
  * Copyright (c) 1999-2009 Ethan Galstad (egalstad@nagios.org)
- * Copyright (c) 2009-2011 Icinga Development Team (http://www.icinga.org)
+ * Copyright (c) 2009-2013 Icinga Development Team (http://www.icinga.org)
  *
  * License:
  *
@@ -18,7 +18,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  *****************************************************************************/
 
@@ -160,14 +160,14 @@ int xdddefault_cleanup_downtime_data(char *main_config_file) {
 /******************************************************************/
 
 /* adds a new scheduled host downtime entry */
-int xdddefault_add_new_host_downtime(char *host_name, time_t entry_time, char *author, char *comment, time_t start_time, time_t end_time, int fixed, unsigned long triggered_by, unsigned long duration, unsigned long *downtime_id, int is_in_effect) {
+int xdddefault_add_new_host_downtime(char *host_name, time_t entry_time, char *author, char *comment, time_t start_time, time_t end_time, int fixed, unsigned long triggered_by, unsigned long duration, unsigned long *downtime_id, int is_in_effect, time_t trigger_time) {
 
 	/* find the next valid downtime id */
 	while (find_host_downtime(next_downtime_id) != NULL)
 		next_downtime_id++;
 
 	/* add downtime to list in memory */
-	add_host_downtime(host_name, entry_time, author, comment, start_time, end_time, fixed, triggered_by, duration, next_downtime_id, is_in_effect);
+	add_host_downtime(host_name, entry_time, author, comment, start_time, end_time, fixed, triggered_by, duration, next_downtime_id, is_in_effect, trigger_time);
 
 	/* update downtime file */
 	xdddefault_save_downtime_data();
@@ -185,14 +185,14 @@ int xdddefault_add_new_host_downtime(char *host_name, time_t entry_time, char *a
 
 
 /* adds a new scheduled service downtime entry */
-int xdddefault_add_new_service_downtime(char *host_name, char *service_description, time_t entry_time, char *author, char *comment, time_t start_time, time_t end_time, int fixed, unsigned long triggered_by, unsigned long duration, unsigned long *downtime_id, int is_in_effect) {
+int xdddefault_add_new_service_downtime(char *host_name, char *service_description, time_t entry_time, char *author, char *comment, time_t start_time, time_t end_time, int fixed, unsigned long triggered_by, unsigned long duration, unsigned long *downtime_id, int is_in_effect, time_t trigger_time) {
 
 	/* find the next valid downtime id */
 	while (find_service_downtime(next_downtime_id) != NULL)
 		next_downtime_id++;
 
 	/* add downtime to list in memory */
-	add_service_downtime(host_name, service_description, entry_time, author, comment, start_time, end_time, fixed, triggered_by, duration, next_downtime_id, is_in_effect);
+	add_service_downtime(host_name, service_description, entry_time, author, comment, start_time, end_time, fixed, triggered_by, duration, next_downtime_id, is_in_effect, trigger_time);
 
 	/* update downtime file */
 	xdddefault_save_downtime_data();

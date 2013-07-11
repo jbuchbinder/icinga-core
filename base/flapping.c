@@ -3,8 +3,8 @@
  * FLAPPING.C - State flap detection and handling routines for Icinga
  *
  * Copyright (c) 2001-2009 Ethan Galstad (egalstad@nagios.org)
- * Copyright (c) 2009-2011 Nagios Core Development Team and Community Contributors
- * Copyright (c) 2009-2011 Icinga Development Team (http://www.icinga.org)
+ * Copyright (c) 2009-2013 Nagios Core Development Team and Community Contributors
+ * Copyright (c) 2009-2013 Icinga Development Team (http://www.icinga.org)
  *
  * License:
  *
@@ -19,7 +19,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  *****************************************************************************/
 
@@ -141,7 +141,8 @@ void check_for_service_flapping(service *svc, int update, int allow_flapstart_no
 
 	svc->percent_state_change = curved_percent_change;
 
-	log_debug_info(DEBUGL_FLAPPING, 2, "LFT=%.2f, HFT=%.2f, CPC=%.2f, PSC=%.2f%%\n", low_threshold, high_threshold, curved_percent_change, curved_percent_change);
+	log_debug_info(DEBUGL_FLAPPING, 2, "LFT (low_threshold): %.2f, HFT (high_threshold): %.2f, CPC (curved_percent_change): %.2f, PSC (curved_percent_change): %.2f%%\n",
+			low_threshold, high_threshold, curved_percent_change, curved_percent_change);
 
 
 	/* don't do anything if we don't have flap detection enabled on a program-wide basis */
@@ -277,7 +278,8 @@ void check_for_host_flapping(host *hst, int update, int actual_check, int allow_
 
 	hst->percent_state_change = curved_percent_change;
 
-	log_debug_info(DEBUGL_FLAPPING, 2, "LFT=%.2f, HFT=%.2f, CPC=%.2f, PSC=%.2f%%\n", low_threshold, high_threshold, curved_percent_change, curved_percent_change);
+	log_debug_info(DEBUGL_FLAPPING, 2, "LFT (low_threshold): %.2f, HFT (high_threshold): %.2f, CPC (curved_percent_change): %.2f, PSC (curved_percent_change): %.2f%%\n",
+			low_threshold, high_threshold, curved_percent_change, curved_percent_change);
 
 
 	/* don't do anything if we don't have flap detection enabled on a program-wide basis */
